@@ -8,55 +8,34 @@ library(httr)
 
 key <- "2302d0ab728f1b1aa664b9db6585885b"
 
-brewery_db <- handle(paste0("http://api.brewerydb.com/v2", key))
+brewery_db <- handle(paste0("http://api.brewerydb.com/v2"))
 add_key <- paste0("/?key=", key)
 GET(handle = brewery_db, path = "/beer/oeGSxs", add_headers())
 
 GET(handle = brewery_db, path = "/beer/oeGSxs")
 
-GET("http://api.brewerydb.com/v2/?key=2302d0ab728f1b1aa664b9db6585885b&beers")
+
+base_url <- "http://api.brewerydb.com/v2"
+key_preface <- "/?key="
 
 
-request <- paste0("http://api.brewerydb.com/v2/?key=", key, "&format=json", "/beer/oeGSxs")
-
-
-one_beer <- GET(request)
-one_beer
-
-
-fromJSON(paste0("http://api.brewerydb.com/v2/beers/?key=2302d0ab728f1b1aa664b9db6585885b"))
-
-fromJSON(request)
+request <- "/beer/oeGSxs"
+naughty_nienty <- fromJSON(paste0(base_url, request, key_preface, key))
 
 
 
-a_beer <- GET("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
+# same as
+# naughty_nienty <- fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
+
+# also same as 
+# naughty_nienty <- content(GET("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b&format=json"))
 
 
 
-GET("http://api.brewerydb.com/v2/?key=2302d0ab728f1b1aa664b9db6585885b", path = "beers", verbose())
-
-GET("http://api.brewerydb.com/v2/?key=2302d0ab728f1b1aa664b9db6585885b", query = "Goosinator", verbose())
-
+# can't get all beers because not premium?
+all_beers <- fromJSON("http://api.brewerydb.com/v2/beers/?key=2302d0ab728f1b1aa664b9db6585885b")
 
 
-
-GET("http://google.com/", path = "search", query = list(q = "Goosinator"))
-
-
-big_request <- paste0("http://api.brewerydb.com/v2/?key=", key, "&beers")
-
-
-all_beers <- GET(big_request)
-all_beers
-
-
-
-
-
-
-
-fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
-
+hop_84 <- fromJSON("http://api.brewerydb.com/v2/hop/84/?key=2302d0ab728f1b1aa664b9db6585885b")
 
 
