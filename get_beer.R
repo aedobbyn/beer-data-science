@@ -26,6 +26,19 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
                           "location", "socialsite", "style", "menu")
 
 
+# --------- get a given beer the long way ---------
+
+# same as
+# naughty_nienty <- fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
+
+# also same as 
+# naughty_nienty <- content(GET("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b&format=json"))
+
+
+
+
+# ------- now get it using this simple function ------------
+# simple constructor request furnction
 construct_request <- function(endpoint, id) {
   request <- fromJSON(paste0(base_url, "/", endpoint, "/", id, key_preface, key))
   return(request)
@@ -36,6 +49,7 @@ construct_request("hop", "84")
 construct_request("beer", "oeGSxs")
 
 
+# vector of all possible single endpoint requests
 single_endpoint_request <- function() {
   all_requests <- vector()
   for (i in endpoints) {
@@ -47,56 +61,68 @@ single_endpoint_request <- function() {
 
 single_endpoint_request()
 
+# ----------------------------------------------------------------
 
+
+
+
+
+# --------------- splice these out into their own getting functions -------------
+# these won't work until have premium
+# e.g.
+all_beers <- fromJSON("http://api.brewerydb.com/v2/beers/?key=2302d0ab728f1b1aa664b9db6585885b")
+
+# but in theory
 single_endpoint_request_funcs <- function(ep) {
-  # for (i in endpoints) {
     this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key)) }
     this_request
-  # }
-  # this_request
 }
 
 get_breweries <- single_endpoint_request_funcs("breweries")
 get_breweries()
 
 
-power <- function(ep) {
-  function(i) {
-    x ^ exponent
+
+
+# this will work, however, since we're only asking for a single beer
+simple_request_funcs <- function(endpoint_name) {
+  this_request <- function(id) {
+    fromJSON(paste0(base_url, "/", endpoint_name, "/", id, "/", key_preface, key))
   }
-}
-
-square <- power(2)
-square(2)
-
-
-power <- function(exponent) {
-  function(x) {
-    x ^ exponent
-  }
-}
-
-square <- power(2)
-square(2)
-
-
-
-simple_request_funcs <- function(ep) {
-  # for (i in endpoints) {
-  this_request <- function(id) { 
-    fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-    }
   this_request
-  # }
-  # this_request
 }
 
-get_breweries <- simple_request_funcs("beer")
-get_breweries("oeGSxs")
+get_beer <- simple_request_funcs("beer")
+get_beer("oeGSxs")
 
 get_hops <- simple_request_funcs("hop")
 get_hops("84")
 
+
+
+
+
+
+
+# --------------
+# try to dynamically name functions based on their endpoint name using `assign`
+# simple_request_funcs <- function(ep) {
+#   for (id in endpoints) {
+#     this_request <- function(id) {
+#       name <- paste0("get", id)
+#       assign(name, fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key)))
+#       # fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+#       # }
+#       # this_request
+#     }
+#     # this_request
+#   }
+
+
+for(i in 1:6) { #-- Create objects  'r.1', 'r.2', ... 'r.6' --
+  nam <- paste("r", i, sep = ".")
+  assign(nam, 1:i)
+}
 
 
 myf <- function(x) {
@@ -108,16 +134,8 @@ myf(3)
 
 
 
-# same as
-# naughty_nienty <- fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
-
-# also same as 
-# naughty_nienty <- content(GET("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b&format=json"))
 
 
-
-# can't get all beers because not premium?
-all_beers <- fromJSON("http://api.brewerydb.com/v2/beers/?key=2302d0ab728f1b1aa664b9db6585885b")
 
 
 hop_84 <- fromJSON("http://api.brewerydb.com/v2/hop/84/?key=2302d0ab728f1b1aa664b9db6585885b")
