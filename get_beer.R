@@ -22,7 +22,7 @@ endpoints <- c("beers", "breweries", "categories", "events",
                     "search", "search/upc", "socialsites", "styles")
 
 single_param_endpoints <- c("beer", "brewery", "category", "event",
-                          "feature", "glass", "guild", "ingredient",
+                          "feature", "glass", "guild", "hop", "ingredient",
                           "location", "socialsite", "style", "menu")
 
 
@@ -113,12 +113,16 @@ get_hops("84")
 
 
 # --- using `assign`
-simple_request_funcs <- function(ep) {
-  for (id in endpoints) {
+simple_request_funcs <- function() {
+  for (ep in single_param_endpoints) {
+    # ep <- (ep, envir = globalenv())
     # this_request <- function(id) {
-      name <- paste0("get_", id)
+      name <- paste0("get_", ep)
       print(name)
-      assign(name, function(id) { fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))} ,
+      assign(name, function(ep = ep, id) { 
+        fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+        },
+        # print(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))),
              envir = .GlobalEnv) 
       # fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
       # }
@@ -127,11 +131,13 @@ simple_request_funcs <- function(ep) {
     # new_func
 }
 
-simple_request_funcs(endpoints)
+simple_request_funcs()
 
 # get_beers <- simple_request_funcs("beer")
-get_beers("oeGSxs")
+get_beer("oeGSxs")
+get_breweries()
 
+get_hop("84")
 
 
 for(i in 1:6) { #-- Create objects  'r.1', 'r.2', ... 'r.6' --
