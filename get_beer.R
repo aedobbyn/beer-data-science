@@ -105,18 +105,33 @@ get_hops("84")
 
 
 # --------------
-# try to dynamically name functions based on their endpoint name using `assign`
-# simple_request_funcs <- function(ep) {
-#   for (id in endpoints) {
-#     this_request <- function(id) {
-#       name <- paste0("get", id)
-#       assign(name, fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key)))
-#       # fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-#       # }
-#       # this_request
-#     }
-#     # this_request
-#   }
+# try to dynamically name functions based on their endpoint name 
+
+
+
+
+
+
+# --- using `assign`
+simple_request_funcs <- function(ep) {
+  for (id in endpoints) {
+    # this_request <- function(id) {
+      name <- paste0("get_", id)
+      print(name)
+      assign(name, function(id) { fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))} ,
+             envir = .GlobalEnv) 
+      # fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+      # }
+      # this_request
+    }
+    # new_func
+}
+
+simple_request_funcs(endpoints)
+
+# get_beers <- simple_request_funcs("beer")
+get_beers("oeGSxs")
+
 
 
 for(i in 1:6) { #-- Create objects  'r.1', 'r.2', ... 'r.6' --
