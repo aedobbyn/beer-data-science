@@ -48,6 +48,32 @@ simple_request_funcs <- function() {
 
 simple_request_funcs()
 
+
+
+# same deal except using assign to assign the result of the query
+send_request <- function() {
+  
+  for (i in endpoints[1]) {
+    name <- paste0("bar_", i)
+    # print(name)
+    
+    this_request <- paste0(base_url, "/", i, key_preface, key)
+    this_data <- fromJSON(this_request)
+    assign(dQuote(name), this_data, envir = .GlobalEnv)
+    # print(head(boop))
+    print(name)
+    name
+    # print(head(name[["data"]][["name"]]))
+    # this_data
+  }
+  # return(head(name[["data"]][["name"]]))
+}
+
+send_request()
+
+
+# ------------------------------------------------------
+
 # get_beers <- simple_request_funcs("beer")
 get_beer("oeGSxs")
 get_breweries()

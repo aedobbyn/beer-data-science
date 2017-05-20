@@ -2,6 +2,7 @@
 # Documentation
 # http://www.brewerydb.com/developers/docs
 
+library(tidyverse)
 library(tidyjson)
 library(jsonlite)    # fromJSON() is the same as content(GET())
 library(httr)
@@ -35,28 +36,6 @@ single_endpoint_request <- function() {
 
 single_endpoint_request()
 
-
-send_request <- function() {
-  name <- paste0("bar_beer")
-  for (i in endpoints[1]) {
-    # name <- paste0("foo_", i)
-    # print(name)
-    
-    this_request <- paste0(base_url, "/", i, key_preface, key)
-    this_data <- fromJSON(this_request)
-    assign("boop", this_data, envir = .GlobalEnv)
-    # print(head(boop))
-    # name
-    # print(this_data)
-    # this_data
-  }
-  return(head(boop[["data"]][["name"]]))
-}
-
-send_request()
-
-single_endpoint_request()
-
 # ----------------------------------------------------------------
 
 
@@ -64,11 +43,8 @@ single_endpoint_request()
 
 
 # --------------- splice these out into their own getting functions -------------
-# these won't work until have premium
-# e.g.
-all_beers <- fromJSON("http://api.brewerydb.com/v2/beers/?key=2302d0ab728f1b1aa664b9db6585885b")
 
-# but in theory
+# create functions to create functions
 single_endpoint_request_funcs <- function(ep) {
     this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key)) }
     this_request
@@ -83,8 +59,8 @@ get_beers <- single_endpoint_request_funcs("beers")
 all_beer <- get_beers()
 
 
-
-# this will work, however, since we're only asking for a single beer
+# -----------------------------------
+# specify a single id
 simple_request_funcs <- function(endpoint_name) {
   this_request <- function(id) {
     fromJSON(paste0(base_url, "/", endpoint_name, "/", id, "/", key_preface, key))
