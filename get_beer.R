@@ -37,12 +37,20 @@ single_endpoint_request()
 
 
 send_request <- function() {
+  name <- paste0("bar_beer")
   for (i in endpoints[1]) {
+    # name <- paste0("foo_", i)
+    # print(name)
+    
     this_request <- paste0(base_url, "/", i, key_preface, key)
-    print(this_request)
     this_data <- fromJSON(this_request)
+    assign("boop", this_data, envir = .GlobalEnv)
+    # print(head(boop))
+    # name
+    # print(this_data)
+    # this_data
   }
-  this_data$data
+  return(head(boop[["data"]][["name"]]))
 }
 
 send_request()

@@ -66,4 +66,5 @@ myf <- function(x) {
   innerf(x+1)
 }
 myf(3)
+Global.res
 
