@@ -4,7 +4,7 @@ source("./get_beer.R")
 # --------- all the same ---------
 
 # same as
-# naughty_nienty <- fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b")
+# naughty_nienty <- fromJSON("http://api.brewerydb.com/v2/beer/oeGSxs/?key=29db4ead6450247d3e56108b2559071a")
 
 # also same as 
 # naughty_nienty <- content(GET("http://api.brewerydb.com/v2/beer/oeGSxs/?key=2302d0ab728f1b1aa664b9db6585885b&format=json"))
@@ -93,4 +93,46 @@ myf <- function(x) {
 }
 myf(3)
 Global.res
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+single_endpoint_paginated <- function(ep) {
+  full_request <- all_beer[["data"]]
+  for (page in 1:10) {
+    this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                                 , "&p=", page)) }
+    print(this_request)
+    full_request <- rbind(full_request, this_request[["data"]])
+  }
+  full_request
+}
+
+# this is only the first page
+
+# using single_endpoint_request_funcs, create a function to get all beers and save all
+# the beers in an object
+get_beers_paginated <- single_endpoint_paginated("beers")
+really_all_beer <- get_beers_paginated()
+
+
+for (page in 1:3) {
+  full_request <- unnested_beer[["data"]]
+  this_request <- fromJSON(paste0(base_url, "/", "beers", "/", key_preface, key
+                                               , "&p=", page)) 
+  this_req_unnested <- unnest_it(this_request)
+  full_request <- bind_rows(full_request, this_req_unnested[["data"]])
+}
 

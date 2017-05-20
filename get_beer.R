@@ -40,23 +40,57 @@ single_endpoint_request()
 
 
 
-
-
 # --------------- splice these out into their own getting functions -------------
 
-# create functions to create functions
+# create functions to create functions for getting all data for a single endpoint
 single_endpoint_request_funcs <- function(ep) {
     this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key)) }
     this_request
 }
 
-get_breweries <- single_endpoint_request_funcs("breweries")
+# this is only the first page
 
-all_breweries <- get_breweries()
-brewery_names <- all_breweries[["data"]][["name"]]
-
+# using single_endpoint_request_funcs, create a function to get all beers and save all
+# the beers in an object
 get_beers <- single_endpoint_request_funcs("beers")
 all_beer <- get_beers()
+
+get_breweries <- single_endpoint_request_funcs("breweries")
+all_breweries <- get_breweries()
+
+get_glassware <- single_endpoint_request_funcs("glassware")
+all_glassware <- get_glassware()
+
+# names are nested within the data, e.g.
+# all_breweries[["data"]][["name"]]
+
+
+
+# ----------- multiple pagination
+
+
+paginated_request <- function(ep) {
+  full_request <- unnested_beer[["data"]]
+  for (page in 1:3) {
+    this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                    , "&p=", page)) 
+    this_req_unnested <- unnest_it(this_request)
+    full_request <- bind_rows(full_request, this_req_unnested[["data"]])
+  }
+} 
+
+paginated_get_beers <- paginated_request("beers")
+
+more_beers <- paginated_get_beers()
+
+
+
+# -------------------
+
+
+
+
+
 
 
 # -----------------------------------
