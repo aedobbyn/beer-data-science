@@ -35,6 +35,20 @@ single_endpoint_request <- function() {
 
 single_endpoint_request()
 
+
+send_request <- function() {
+  for (i in endpoints[1]) {
+    this_request <- paste0(base_url, "/", i, key_preface, key)
+    print(this_request)
+    this_data <- fromJSON(this_request)
+  }
+  this_data$data
+}
+
+send_request()
+
+single_endpoint_request()
+
 # ----------------------------------------------------------------
 
 
