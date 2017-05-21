@@ -66,17 +66,19 @@ all_glassware <- get_glassware()
 
 
 
-# ----------- multiple pagination
+# ----------- multiple pagination: not working yet
 
 
 paginated_request <- function(ep) {
-  full_request <- unnested_beer[["data"]]
+  full_request <- NULL
   for (page in 1:3) {
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page)) 
     this_req_unnested <- unnest_it(this_request)
+    print(this_req_unnested$currentPage)
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
   }
+  full_request
 } 
 
 paginated_get_beers <- paginated_request("beers")
