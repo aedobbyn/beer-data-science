@@ -71,7 +71,7 @@ all_glassware <- get_glassware()
 
 paginated_request <- function(ep) {
   full_request <- NULL
-  for (page in 1:3) {
+  for (page in 1:1) {
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page)) 
     this_req_unnested <- unnest_it(this_request)
@@ -81,9 +81,8 @@ paginated_request <- function(ep) {
   full_request
 } 
 
-paginated_get_beers <- paginated_request("beers")
+rest_of_beers <- paginated_request("beers")
 
-more_beers <- paginated_get_beers()
 
 
 
