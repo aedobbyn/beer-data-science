@@ -136,3 +136,9 @@ for (page in 1:3) {
   full_request <- bind_rows(full_request, this_req_unnested[["data"]])
 }
 
+
+
+
+
+
+
