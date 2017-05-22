@@ -1,13 +1,18 @@
 
 source("./munge.r")
 
+library(neuralnet)
+library(nnet)
+library(caret)
+
+
+
 beer_dat <- dbGetQuery(con, "select * from all_beers")
 
 # factors that could predict style
 predictors <- c("abv", "glass", "srm", "ibu")
 
 
-library(neuralnet)
 
 # may want to use ids for these instead
 beer_dat$style <- factor(beer_dat$style)
@@ -38,7 +43,7 @@ summary(m_1)
 style_popularity <- beer_dat_pared %>% 
   group_by(style) %>% 
   count() %>% 
-  arrange(desc(style))
+  arrange(desc(n))
 style_popularity
 
 # keep only styles that have >50 beers in their style
@@ -50,7 +55,8 @@ popular_styles <- style_popularity %>%
 popular_beer_dat <- beer_dat_pared %>% 
   filter(
     style %in% popular_styles$style
-  )
+  ) %>% 
+  droplevels()
 nrow(popular_beer_dat)
 
 
@@ -59,15 +65,13 @@ nrow(popular_beer_dat)
 
 # neural nets
 
-library(nnet)
-nn_mod <- nnet(style ~ abv + srm + ibu, size = 2,
+nn_mod <- multinom(style ~ abv + srm + ibu, size = 2,
                    data = popular_beer_dat, maxit=500, trace=T)
 nn_mod
 
 
 # which variables are the most important?
 
-library(caret)
 most_important_vars <- varImp(nn_mod)
 
 
