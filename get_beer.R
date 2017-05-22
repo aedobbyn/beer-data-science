@@ -48,7 +48,7 @@ single_endpoint_request_funcs <- function(ep) {
     this_request
 }
 
-# this is only the first page
+# this is only the first page -- see multiple pagination below
 
 # using single_endpoint_request_funcs, create a function to get all beers and save all
 # the beers in an object
@@ -66,12 +66,12 @@ all_glassware <- get_glassware()
 
 
 
-# ----------- multiple pagination: not working yet
-
+# ----------- multiple pagination
+# total number of pages == 225
 
 paginated_request <- function(ep) {
   full_request <- NULL
-  for (page in 1:1) {
+  for (page in 1:225) {
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page)) 
     this_req_unnested <- unnest_it(this_request)
@@ -81,13 +81,7 @@ paginated_request <- function(ep) {
   full_request
 } 
 
-rest_of_beers <- paginated_request("beers")
-
-
-
-
-# -------------------
-
+all_beer <- paginated_request("beers")
 
 
 

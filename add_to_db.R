@@ -10,7 +10,7 @@ con <- dbConnect(RMySQL::MySQL(), dbname="brewery_db", host='localhost', port=33
 
     
 dbWriteTable(con, "all_beers", 
-             value = rest_of_beers, append = TRUE, row.names = FALSE)
+             value = unnested_beer$data, append = TRUE, row.names = FALSE)
 
 
 dbWriteTable(con, "breweries", 
