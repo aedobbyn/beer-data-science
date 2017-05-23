@@ -139,6 +139,19 @@ for (page in 1:3) {
 
 
 
+# ---------------- add in withIngredients
+
+request_w_additions <- function(ep, addition) {
+  this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key, addition)) }
+  print(this_request)
+  this_request
+}
+
+get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
+beer_w_ingredients <- get_beers_w_ingredients()
+
+
+
 
 
 
