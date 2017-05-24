@@ -29,18 +29,31 @@ nn_mod <- multinom(style ~ abv + srm + ibu,
                    data = beer_train, maxit=500, trace=T)
 nn_mod
 
+# same model on style_collapsed
+nn_collapsed <- multinom(style_collapsed ~ abv + srm + ibu, 
+                   data = beer_train, maxit=500, trace=T)
+nn_collapsed
+
 
 # which variables are the most important in the neural net?
 most_important_vars <- varImp(nn_mod)
 most_important_vars
 
+# which variables are the most important in the neural net?
+most_important_vars_collapsed <- varImp(nn_collapsed)
+most_important_vars_collapsed
+
 
 # how accurate is the model?
 # preds
 nn_preds <- predict(nn_mod, type="class", newdata = beer_test)
+nn_preds_collapsed <- predict(nn_collapsed, type="class", newdata = beer_test)
+
 
 # accuracy
 postResample(beer_test$style, nn_preds)
+postResample(beer_test$style_collapsed, nn_preds_collapsed)
+
 
 
 

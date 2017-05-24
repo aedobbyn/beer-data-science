@@ -61,7 +61,7 @@ popular_beer_dat$style_collapsed <- ifelse(
 
 # most general to most specific such that if something has india pale ale it will be characterized as india pale ale not just pale ale
 collapse_styles <- function(df) {
-  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "Hefeweizen", "Barrel-Aged",
+  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged",
                 "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
                 "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel",
                 "Altbier")
@@ -81,10 +81,10 @@ collapse_styles <- function(df) {
   return(df)
 }
 
-pbd <- collapse_styles(popular_beer_dat[1:100, ])
+popular_beer_dat <- collapse_styles(popular_beer_dat)
 
 
-pbd$style_collapsed <- pbd$style_collapsed %>%
+popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
   fct_collapse(
     "Wheat" = c("Hefeweizen", "Wheat"),
     "Pilsener" = c("Pilsner", "American-Style Pilsener") # someone made a typo
