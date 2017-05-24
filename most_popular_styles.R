@@ -2,6 +2,7 @@
 # may want to cluster the remaining into one of these groups down the road
 
 source("./munge.R")
+library(forcats)
 
 beer_dat <- dbGetQuery(con, "select * from all_beers")
 
@@ -41,3 +42,55 @@ popular_beer_dat <- beer_dat_pared %>%
 nrow(popular_beer_dat)
 
 
+
+
+# collapse styles
+
+popular_beer_dat$style_collapsed <- popular_beer_dat$style %>%
+  fct_collapse(
+    "IPA" = c("American-Style India Pale Ale", "English-Style India Pale Ale"),
+    "Pilsner" = c("American-Style Pilsener", "German-Style Pilsener")
+    # "Stout" = grepl("Stout", popular_beer_dat$style) == TRUE
+  )
+
+popular_beer_dat$style_collapsed <- ifelse(
+  grepl("Stout", popular_beer_dat$style) == TRUE, 
+"Stout", as.character(popular_beer_dat$style))
+
+
+collapse_styles <- function(df) {
+  keywords <- c("India Pale Ale", "Wheat", "Pilsner", "Amber", "Golden", "Brown", "Stout", "Porter",
+                "Red", "Sour")
+  for (keyword in keywords) {
+    for (beer in 1:nrow(popular_beer_dat)) {
+      popular_beer_dat$style_collapsed <- ifelse(
+        grepl(keyword, popular_beer_dat$style) == TRUE, 
+        keyword, as.character(popular_beer_dat$style))
+    }
+  }
+}
+
+
+
+collapse_styles <- function(df) {
+  keyword <- c("India Pale Ale")
+                # "Wheat", "Pilsner", "Amber", "Golden", "Brown", "Stout", "Porter",
+                # "Red", "Sour")
+    for (beer in 1:nrow(df)) {
+      # for (keyword in keywords) {
+        if(grepl(keyword, df$style[beer]) == TRUE) {
+          df$style_collapsed[beer] <- keyword
+        } else {
+          df$style_collapsed[beer] <- as.character(df$style[beer])
+        }
+        print(df$style_collapsed[beer])
+      }
+      # }
+    df
+  }
+
+
+  
+pbd <- collapse_styles(popular_beer_dat)
+
+  

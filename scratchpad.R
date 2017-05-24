@@ -149,6 +149,72 @@ request_w_additions <- function(ep, addition) {
 
 get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
 beer_w_ingredients <- get_beers_w_ingredients()
+str(beer_w_ingredients)
+
+
+
+
+unnest_ingredients <- function(df) {
+  unnested <- df
+  for(col in seq_along(df[["data"]])) {
+    if(! is.null(ncol(df[["data"]][[col]]))) {
+      
+      if (df[["data"]][col] == "ingredients") {
+        unnested[["data"]][["hops_name"]] <- df[["data"]][["ingredients"]][[3]][["hops"]][["name"]]
+        unnested[["data"]][["hops_id"]] <- df[["data"]][["ingredients"]][[3]][["hops"]][["id"]]
+        
+        unnested[["data"]][["malt_name"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][["name"]]
+        unnested[["data"]][["malt_id"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][["id"]]
+        
+        # unnested[["data"]][["yeast_name"]] <- df[["data"]][["ingredients"]][["yeast"]][["name"]]
+        # unnested[["data"]][["yeast_id"]] <- df[["data"]][["ingredients"]][["yeast"]][["id"]]
+        
+      } else if(! is.null(df[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+        
+      } else {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+      }
+    }
+  }
+  unnested
+}
+
+
+beer_w_ingredients_unnested <- unnest_ingredients(beer_w_ingredients)
+
+
+for (i in 1:length(baz$nutrients)) {
+  for (j in 1:4) {
+    # for (j in 1:nrow(nutrients)) {
+    baz$nutrients[[i]]$gm[j] <- as.character(baz$nutrients[[i]]$gm[j])
+    baz$nutrients[[i]]$value[j] <- as.character(baz$nutrients[[i]]$value[j])
+  }
+}
+
+# --------- try to unnest just hops and malts
+
+head(beer_w_ingredients[["data"]][["ingredients"]][["hops"]][[3]][["name"]])
+head(beer_w_ingredients[["data"]][["ingredients"]][["malt"]][[3]][["name"]])
+
+
+unnested <- beer_w_ingredients
+unnested[["data"]]$hops_name <- "x"
+for (row in 1:nrow(unnested[["data"]])) {
+  unnested[["data"]]$hops_name <- unnested[["data"]][["ingredients"]][[row]][["hops"]][["name"]]
+  # unnested[["data"]][["hops_id"]] <- unnested[["data"]][["ingredients"]][[row]][["hops"]][["id"]]
+}
+
+
+unnested[["data"]][["malt_name"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][["name"]]
+unnested[["data"]][["malt_id"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][["id"]]
+
+
+
+############################
+
+
+
 
 
 
