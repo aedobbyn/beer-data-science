@@ -153,5 +153,38 @@ beer_w_ingredients <- get_beers_w_ingredients()
 
 
 
+srms <- beer_dat %>% 
+  group_by(srm) %>% 
+  count() %>% 
+  arrange(desc(srm))
+srms
+
+
+# turn page into a while loop
+
+paginated_request <- function(ep) {
+  full_request <- NULL
+  first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                , "&p=1"))
+  number_of_pages <- first_page$numberOfPages
+  for (page in 1263:number_of_pages) {    ############ use a while loop instead
+    this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                    , "&p=", page)) 
+    this_req_unnested <- unnest_it(this_request)
+    print(this_req_unnested$currentPage)
+    full_request <- bind_rows(full_request, this_req_unnested[["data"]])
+  }
+  full_request
+} 
+
+test_all_beer <- paginated_request("beers")
+
+
+
+
+
+
+
+
 
 

@@ -49,12 +49,12 @@ postResample(beer_test$style, nn_preds)
 
 
 # using neuralnet package
-
-beer_train_mm <- model.matrix( 
-  ~ styleId + abv + srm + ibu, data = beer_train)
-
-beer_train$style_dummy <- class.ind(beer_train$style)
-
-neural_net <- neuralnet(style_dummy ~ abv + srm + ibu, data = beer_train, hidden = 2, threshold=0.01)
-print(neural_net)
+# 
+# beer_train_mm <- model.matrix( 
+#   ~ styleId + abv + srm + ibu, data = beer_train)
+# 
+# beer_train$style_dummy <- class.ind(beer_train$style)
+# 
+# neural_net <- neuralnet(style_dummy ~ abv + srm + ibu, data = beer_train, hidden = 2, threshold=0.01)
+# print(neural_net)
 

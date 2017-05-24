@@ -1,8 +1,12 @@
 
-# kmeans
+library(tsne)
 
+
+# ------------------- kmeans ------------
+
+# only using top beer styles
 # select only predictor and outcome columns, take out NAs, and scale the data
-beer_for_clustering <- beer_dat %>% 
+beer_for_clustering <- popular_beer_dat %>% 
   select(style, styleId, abv, ibu, srm) %>% 
   na.omit() %>% 
   filter(
@@ -12,10 +16,10 @@ beer_for_clustering <- beer_dat %>%
 # beer_for_clustering <- beer_for_clustering %>% scale(abv, ibu, srm)
 
 # separate into predictors and outcomes and scale the predictors
-beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu) %>% rename(
+beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
   abv_scaled = abv,
-  ibu_scaled = ibu
-  # srm_scaled = srm
+  ibu_scaled = ibu,
+  srm_scaled = srm
   ) %>% scale() 
   
 beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
@@ -34,7 +38,7 @@ clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_bee
 # the three combinations of plots
 clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
-  ggtitle("k-Means Clustering of Beer by ABV, IBU") +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
   labs(x = "ABV", y = "IBU") 
 clustered_beer_plot_abv_ibu
 
@@ -54,7 +58,7 @@ clustered_beer_plot_ibu_srm
 
 
 
-# cluster 1
+# take a look at individual clusters
 cluster_1 <- clustered_beer %>% filter(cluster_assignment == "1")
 cluster_1
 
@@ -65,18 +69,29 @@ cluster_9 <- clustered_beer %>% filter(cluster_assignment == "9")
 cluster_9
 
 
+# see how styles clustered themselves
+
+# table of counts
+table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
+
+
+cb_spread <- clustered_beer %>% select(
+  cluster_assignment, style
+) %>% group_by(cluster_assignment) %>%
+  spread(key = cluster_assignment, value = style, convert = TRUE)
 
 
 
 # tsne
+cb <- clustered_beer %>% sample_n(100)
 
-colors = rainbow(length(unique(ab$Shrt_Desc)))
-names(colors) = unique(ab$Shrt_Desc)
+colors = rainbow(length(unique(cb$style)))
+names(colors) = unique(cb$style)
 
 ecb = function (x,y) { 
   plot(x,t='n'); 
-  text(x, labels=ab$Shrt_Desc, col=colors[ab$Shrt_Desc]) }
+  text(x, labels=cb$style, col=colors[cb$style]) }
 
-tsne_ab = tsne(ab[,3:6], epoch_callback = ecb, perplexity=20)
+tsne_beer = tsne(cb[,4:6], epoch_callback = ecb, perplexity=20)
 
 

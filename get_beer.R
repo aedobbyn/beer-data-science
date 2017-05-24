@@ -12,6 +12,8 @@ source("./key.R")
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
+# canonical get all beers api call
+# http://api.brewerydb.com/v2/beers/?key=29db4ead6450247d3e56108b2559071a
 
 endpoints <- c("beers", "breweries", "categories", "events",
                     "featured", "features", "fluidsizes", "glassware",
@@ -67,11 +69,14 @@ all_glassware <- get_glassware()
 
 
 # ----------- multiple pagination
-# total number of pages == 225
+# find the total number of pages and use that to loop through
 
 paginated_request <- function(ep) {
   full_request <- NULL
-  for (page in 1:225) {
+  first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                , "&p=1"))
+  number_of_pages <- first_page$numberOfPages
+  for (page in 1:number_of_pages) {    ############ use a while loop instead
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page)) 
     this_req_unnested <- unnest_it(this_request)
@@ -81,7 +86,7 @@ paginated_request <- function(ep) {
   full_request
 } 
 
-all_beer <- paginated_request("beers")
+test_all_beer <- paginated_request("beers")
 
 
 
