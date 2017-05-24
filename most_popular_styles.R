@@ -58,24 +58,13 @@ popular_beer_dat$style_collapsed <- ifelse(
 "Stout", as.character(popular_beer_dat$style))
 
 
+
+# most general to most specific such that if something has india pale ale it will be characterized as india pale ale not just pale ale
 collapse_styles <- function(df) {
-  keywords <- c("India Pale Ale", "Wheat", "Pilsner", "Amber", "Golden", "Brown", "Stout", "Porter",
-                "Red", "Sour")
-  for (keyword in keywords) {
-    for (beer in 1:nrow(popular_beer_dat)) {
-      popular_beer_dat$style_collapsed <- ifelse(
-        grepl(keyword, popular_beer_dat$style) == TRUE, 
-        keyword, as.character(popular_beer_dat$style))
-    }
-  }
-}
-
-
-
-collapse_styles <- function(df) {
-  keywords <- c("India Pale Ale",
-                "Wheat", "Pilsner", "Amber", "Golden", "Blonde", "Brown", "Stout", "Porter",
-                "Red", "Sour")
+  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "Hefeweizen", "Barrel-Aged",
+                "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
+                "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel",
+                "Altbier")
   
   for (beer in 1:nrow(df)) {
     if (grepl(paste(keywords, collapse="|"), popular_beer_dat$style[beer])) {    # if one of the keywords exists in the style
@@ -92,5 +81,12 @@ collapse_styles <- function(df) {
   return(df)
 }
 
-pbd <- collapse_styles(popular_beer_dat[1:30, ])
+pbd <- collapse_styles(popular_beer_dat[1:100, ])
+
+
+pbd$style_collapsed <- pbd$style_collapsed %>%
+  fct_collapse(
+    "Wheat" = c("Hefeweizen", "Wheat"),
+    "Pilsener" = c("Pilsner", "American-Style Pilsener") # someone made a typo
+  )
 
