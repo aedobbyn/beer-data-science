@@ -73,24 +73,41 @@ collapse_styles <- function(df) {
 
 
 collapse_styles <- function(df) {
-  keyword <- c("India Pale Ale")
-                # "Wheat", "Pilsner", "Amber", "Golden", "Brown", "Stout", "Porter",
-                # "Red", "Sour")
+  keywords <- c("India Pale Ale",
+                "Wheat", "Pilsner", "Amber", "Golden", "Brown", "Stout", "Porter",
+                "Red", "Sour")
     for (beer in 1:nrow(df)) {
-      # for (keyword in keywords) {
-        if(grepl(keyword, df$style[beer]) == TRUE) {
-          df$style_collapsed[beer] <- keyword
-        } else {
-          df$style_collapsed[beer] <- as.character(df$style[beer])
-        }
-        print(df$style_collapsed[beer])
+      if (grepl(paste(keywords, collapse="|"), popular_beer_dat$style[beer])) {    # if one of the keywords exists in the style
+        for (keyword in keywords) {
+          if(grepl(keyword, df$style[beer]) == TRUE) {
+            match <- keyword
+            # df$style_collapsed[beer] <- keyword
+            break
+          }
+        } 
+        df$style_collapsed[beer] <- match
+      } else {
+        df$style_collapsed[beer] <- as.character(df$style[beer])
       }
-      # }
+      print(df$style_collapsed[beer])
+      }
     df
   }
 
+pbd <- collapse_styles(popular_beer_dat[1:10, ])
 
-  
-pbd <- collapse_styles(popular_beer_dat)
 
+grepl(paste(keywords, collapse="|"), popular_beer_dat$style[1])
+
+grep(keywords, popular_beer_dat$style[5])
+
+matches <- unique (grep(paste(keywords,collapse="|"), 
+                        popular_beer_dat$style[3], value=TRUE))
+matches
+
+matched_keyword <- keywords[which(grepl(keywords), popular_beer_dat$style[1]) == TRUE]
   
+
+}
+matched_keyword <- keywords[which(grepl((keyword %in% keywords), popular_beer_dat$style[beer]) == TRUE)]
+}
