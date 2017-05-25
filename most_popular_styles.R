@@ -19,7 +19,8 @@ beer_dat$abv <- as.numeric(beer_dat$abv)
 # pare down to only cases where style is not NA
 beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
 
-# pare to most popular styles
+
+# ------------------ pare to most popular styles ---------------
 
 # arrange beer dat by style popularity
 style_popularity <- beer_dat_pared %>% 
@@ -44,7 +45,7 @@ nrow(popular_beer_dat)
 
 
 
-# ------ collapse styles ---------
+# ------------------ collapse styles ---------------
 # create a new column that merges styles that contain certain keywords into the same style
 
 # most general to most specific such that if something has india pale ale it will be
@@ -77,6 +78,9 @@ popular_beer_dat <- collapse_styles(popular_beer_dat)
 popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
   fct_collapse(
     "Wheat" = c("Hefeweizen", "Wheat"),
-    "Pilsener" = c("Pilsner", "American-Style Pilsener") # someone made a typo
+    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
   )
+
+
+
 

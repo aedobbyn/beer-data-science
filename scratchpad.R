@@ -201,9 +201,13 @@ head(beer_w_ingredients[["data"]][["ingredients"]][["malt"]][[3]][["name"]])
 unnested <- beer_w_ingredients
 unnested[["data"]]$hops_name <- "x"
 for (row in 1:nrow(unnested[["data"]])) {
-  unnested[["data"]]$hops_name <- unnested[["data"]][["ingredients"]][[row]][["hops"]][["name"]]
+  if (!is.null(unnested[["data"]][["ingredients.hops"]][[row]][["name"]])) {
+    unnested[["data"]][["hops_name"]][[row]] <- paste(unnested[["data"]][["ingredients.hops"]][[row]][["name"]],
+                                                      collapse = ", ")
+  }
   # unnested[["data"]][["hops_id"]] <- unnested[["data"]][["ingredients"]][[row]][["hops"]][["id"]]
 }
+View(unnested$data)
 
 
 unnested[["data"]][["malt_name"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][["name"]]

@@ -64,3 +64,20 @@ get_hop <- simple_request_funcs("hop")
 get_hop("84")
 
 
+
+# -------------- add an addition, e.g. ingredients --------
+request_w_additions <- function(ep, addition) {
+  this_request <- function() { fromJSON(paste0(base_url, "/", ep, 
+                                               "/", key_preface, key, addition),
+                                        flatten = TRUE) }
+  this_request
+}
+
+get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
+beer_w_ingredients <- get_beers_w_ingredients()
+
+fully_unnested <- unnest(beer_w_ingredients$data$ingredients.hops)
+
+fully_unnested <- flatten(beer_w_ingredients$data)
+str(fully_unnested)
+
