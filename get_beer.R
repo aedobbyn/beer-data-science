@@ -30,14 +30,15 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
 # ----------- multiple pagination
 # find the total number of pages and use that to loop through
 
-paginated_request <- function(ep) {
+paginated_request <- function(ep, addition) {
   full_request <- NULL
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
   number_of_pages <- first_page$numberOfPages
-  for (page in 1:number_of_pages) {    
+  for (page in 1:5) {    
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
-                                    , "&p=", page)) 
+                                    , "&p=", page, addition),
+                             flatten = TRUE) 
     this_req_unnested <- unnest_it(this_request)
     print(this_req_unnested$currentPage)
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
@@ -45,7 +46,7 @@ paginated_request <- function(ep) {
   full_request
 } 
 
-all_beer <- paginated_request("beers")
+all_beer_toTen <- paginated_request("beers", "&withIngredients=Y")
 
 all_breweries <- paginated_request("breweries")
 

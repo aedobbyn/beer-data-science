@@ -37,8 +37,42 @@ head(unnested_glassware[["data"]])
 
 
 
+# ------------ unnest ingredients ---------
+# this df has to come from a request with &withIngredients=Y attached, and with flatten = TRUE included in the fromJSON function
+
+# if either the name in ingredients.hops or malt is available, we know id is also available
+# add a new column that extracts the name out of the list_col and saves it in that new column. if there are multiple
+# hop names, they're separated by commas
 
 
+
+unnest_ingredients <- function(df) {
+  df$hops_name <- "Not available"
+  df$hops_id <- "Not available"
+  df$malt_name <- "Not available"
+  df$malt_id <- "Not available"
+  
+  for (row in 1:nrow(df)) {
+    if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) | 
+        !is.null(df[["ingredients.malt"]][[row]][["name"]])) {
+      
+      df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]],
+                                                        collapse = ", ")
+      df[["hops_id"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["id"]],
+                                                      collapse = ", ")
+      
+      df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]],
+                                                        collapse = ", ")
+      df[["malt_id"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["id"]],
+                                                      collapse = ", ")
+    }
+  }
+  return(df)
+}
+
+
+all_beer_toTen_munged <- unnest_it(all_beer_toTen)
+all_beer_toTen_munged_2 <- unnest_ingredients(all_beer_toTen_munged)
 
 
 

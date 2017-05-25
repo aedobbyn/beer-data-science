@@ -199,10 +199,22 @@ head(beer_w_ingredients[["data"]][["ingredients"]][["malt"]][[3]][["name"]])
 
 
 unnested <- beer_w_ingredients
-unnested[["data"]]$hops_name <- "x"
+unnested[["data"]]$hops_name <- "Not available"
+unnested[["data"]]$hops_id <- "Not available"
+unnested[["data"]]$malt_name <- "Not available"
+unnested[["data"]]$malt_id <- "Not available"
+
 for (row in 1:nrow(unnested[["data"]])) {
-  if (!is.null(unnested[["data"]][["ingredients.hops"]][[row]][["name"]])) {
+  if (!is.null(unnested[["data"]][["ingredients.hops"]][[row]][["name"]]) | 
+      !is.null(unnested[["data"]][["ingredients.malt"]][[row]][["name"]])) {
     unnested[["data"]][["hops_name"]][[row]] <- paste(unnested[["data"]][["ingredients.hops"]][[row]][["name"]],
+                                                      collapse = ", ")
+    unnested[["data"]][["hops_id"]][[row]] <- paste(unnested[["data"]][["ingredients.hops"]][[row]][["id"]],
+                                                      collapse = ", ")
+    
+    unnested[["data"]][["malt_name"]][[row]] <- paste(unnested[["data"]][["ingredients.malt"]][[row]][["name"]],
+                                                      collapse = ", ")
+    unnested[["data"]][["malt_id"]][[row]] <- paste(unnested[["data"]][["ingredients.malt"]][[row]][["id"]],
                                                       collapse = ", ")
   }
   # unnested[["data"]][["hops_id"]] <- unnested[["data"]][["ingredients"]][[row]][["hops"]][["id"]]
@@ -218,6 +230,12 @@ unnested[["data"]][["malt_id"]] <- df[["data"]][["ingredients"]][[3]][["malt"]][
 ############################
 
 
+# unnesting w unnest doesn't do much
+
+fully_unnested <- unnest(beer_w_ingredients$data$ingredients.hops)
+
+fully_unnested <- flatten(beer_w_ingredients$data)
+str(fully_unnested)
 
 
 

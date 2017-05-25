@@ -76,8 +76,4 @@ request_w_additions <- function(ep, addition) {
 get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
 beer_w_ingredients <- get_beers_w_ingredients()
 
-fully_unnested <- unnest(beer_w_ingredients$data$ingredients.hops)
-
-fully_unnested <- flatten(beer_w_ingredients$data)
-str(fully_unnested)
 
