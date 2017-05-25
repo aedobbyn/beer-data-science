@@ -77,3 +77,9 @@ get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
 beer_w_ingredients <- get_beers_w_ingredients()
 
 
+
+
+
+
+
+
