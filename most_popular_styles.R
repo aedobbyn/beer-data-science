@@ -44,22 +44,11 @@ nrow(popular_beer_dat)
 
 
 
-# collapse styles
+# ------ collapse styles ---------
+# create a new column that merges styles that contain certain keywords into the same style
 
-popular_beer_dat$style_collapsed <- popular_beer_dat$style %>%
-  fct_collapse(
-    "IPA" = c("American-Style India Pale Ale", "English-Style India Pale Ale"),
-    "Pilsner" = c("American-Style Pilsener", "German-Style Pilsener")
-    # "Stout" = grepl("Stout", popular_beer_dat$style) == TRUE
-  )
-
-popular_beer_dat$style_collapsed <- ifelse(
-  grepl("Stout", popular_beer_dat$style) == TRUE, 
-"Stout", as.character(popular_beer_dat$style))
-
-
-
-# most general to most specific such that if something has india pale ale it will be characterized as india pale ale not just pale ale
+# most general to most specific such that if something has india pale ale it will be
+# characterized as india pale ale not just pale ale
 collapse_styles <- function(df) {
   keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged",
                 "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
@@ -68,15 +57,15 @@ collapse_styles <- function(df) {
   
   for (beer in 1:nrow(df)) {
     if (grepl(paste(keywords, collapse="|"), popular_beer_dat$style[beer])) {    # if one of the keywords exists in the style
-      for (keyword in keywords) {
+      for (keyword in keywords) {         # loop through the keywords to see which one it matches
         if(grepl(keyword, df$style[beer]) == TRUE) {
-          df$style_collapsed[beer] <- keyword
-        }
+          df$style_collapsed[beer] <- keyword    # if we have a match assign the keyword to that row's style_collpased
+        }                         # if multiple matches, it gets the later one in keywords
       } 
     } else {
-      df$style_collapsed[beer] <- as.character(df$style[beer])
+      df$style_collapsed[beer] <- as.character(df$style[beer])       # else style_collapsed is just style
     }
-      print(df$style_collapsed[beer])
+  print(df$style_collapsed[beer])
   }
   return(df)
 }
@@ -84,6 +73,7 @@ collapse_styles <- function(df) {
 popular_beer_dat <- collapse_styles(popular_beer_dat)
 
 
+# collapse some more
 popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
   fct_collapse(
     "Wheat" = c("Hefeweizen", "Wheat"),

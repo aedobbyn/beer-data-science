@@ -1,0 +1,20 @@
+# general workflow
+
+# -------- getting, munging, adding to db --------
+
+- get_beer.R
+	- get all pages for a given endpoint with paginated_request()
+
+- munge.R
+	- unnest_it() into something that can be added to db
+
+- add_to_db.R
+	- add the $data portion of the unnested df to the db as its own table
+
+
+# -------- data science part -------
+
+- cluster.R
+
+- model.R
+

@@ -26,47 +26,6 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
 
 
 
-# vector of all possible single endpoint requests
-single_endpoint_request <- function() {
-  all_requests <- vector()
-  for (i in endpoints) {
-    this_request <- paste0(base_url, "/", i, key_preface, key)
-    all_requests <- c(all_requests, this_request)
-  }
-  all_requests
-}
-
-single_endpoint_request()
-
-# ----------------------------------------------------------------
-
-
-
-# --------------- splice these out into their own getting functions -------------
-
-# create functions to create functions for getting all data for a single endpoint
-single_endpoint_request_funcs <- function(ep) {
-    this_request <- function() { fromJSON(paste0(base_url, "/", ep, "/", key_preface, key)) }
-    this_request
-}
-
-# this is only the first page -- see multiple pagination below
-
-# using single_endpoint_request_funcs, create a function to get all beers and save all
-# the beers in an object
-get_beers <- single_endpoint_request_funcs("beers")
-all_beer <- get_beers()
-
-get_breweries <- single_endpoint_request_funcs("breweries")
-all_breweries <- get_breweries()
-
-get_glassware <- single_endpoint_request_funcs("glassware")
-all_glassware <- get_glassware()
-
-# names are nested within the data, e.g.
-# all_breweries[["data"]][["name"]]
-
-
 
 # ----------- multiple pagination
 # find the total number of pages and use that to loop through
@@ -76,7 +35,7 @@ paginated_request <- function(ep) {
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
   number_of_pages <- first_page$numberOfPages
-  for (page in 1:number_of_pages) {    ############ use a while loop instead
+  for (page in 1:number_of_pages) {    
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page)) 
     this_req_unnested <- unnest_it(this_request)
@@ -86,27 +45,13 @@ paginated_request <- function(ep) {
   full_request
 } 
 
-test_all_beer <- paginated_request("beers")
+all_beer <- paginated_request("beers")
+
+all_breweries <- paginated_request("breweries")
 
 
 
 
-
-
-# -----------------------------------
-# specify a single id
-simple_request_funcs <- function(endpoint_name) {
-  this_request <- function(id) {
-    fromJSON(paste0(base_url, "/", endpoint_name, "/", id, "/", key_preface, key))
-  }
-  this_request
-}
-
-get_beer <- simple_request_funcs("beer")
-get_beer("oeGSxs")
-
-get_hops <- simple_request_funcs("hop")
-get_hops("84")
 
 
 
