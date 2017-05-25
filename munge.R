@@ -11,6 +11,8 @@ all_beer_unnested <- str(all_beer$data)
 
 # this takes the column named "name" nested within a column in the data portion of the response
 # if the "name" column doesn't exist, it takes the first nested column
+
+# this function written before ingredients were requested in url and flatten = TRUE was inluded in fromJSON
 unnest_it <- function(df) {
   unnested <- df
   for(col in seq_along(df[["data"]])) {
@@ -34,6 +36,7 @@ head(unnested_breweries[["data"]])
 unnested_glassware <- unnest_it(all_glassware)
 head(unnested_glassware[["data"]])
 
+all_beer <- unnest_it(all_beer)
 
 
 
@@ -47,10 +50,10 @@ head(unnested_glassware[["data"]])
 
 
 unnest_ingredients <- function(df) {
-  df$hops_name <- "Not available"
-  df$hops_id <- "Not available"
-  df$malt_name <- "Not available"
-  df$malt_id <- "Not available"
+  df$hops_name <- NA
+  df$hops_id <- NA
+  df$malt_name <- NA
+  df$malt_id <- NA
   
   for (row in 1:nrow(df)) {
     if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) | 
@@ -71,9 +74,21 @@ unnest_ingredients <- function(df) {
 }
 
 
-all_beer_toTen_munged <- unnest_it(all_beer_toTen)
-all_beer_toTen_munged_2 <- unnest_ingredients(all_beer_toTen_munged)
+all_beer <- unnest_ingredients(all_beer_raw)
 
 
+
+
+# keep only columns we care about
+all_beer <- all_beer %>% 
+  rename(
+    glass = glass.name,
+    srm = srm.name,
+    style = style.name
+  ) %>% select(
+    id, name, description, abv, ibu, srm, glass, 
+    hops_name, hops_id, malt_name, malt_id,
+    glasswareId, styleId, style.categoryId
+  )
 
 

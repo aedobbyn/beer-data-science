@@ -37,7 +37,7 @@ paginated_request <- function(ep, addition) {
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
   number_of_pages <- first_page$numberOfPages
-  for (page in 1:2) {    
+  for (page in 1:number_of_pages) {    
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page, addition),
                              flatten = TRUE) 
@@ -48,7 +48,7 @@ paginated_request <- function(ep, addition) {
   full_request
 } 
 
-all_beer <- paginated_request("beers", "&withIngredients=Y")
+all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
 
