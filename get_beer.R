@@ -31,6 +31,7 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
 # find the total number of pages and use that to loop through
 
 # including ingredients in here and flattening
+# full url: http://api.brewerydb.com/v2/beers/?key=29db4ead6450247d3e56108b2559071a&withIngredients=Y
 
 paginated_request <- function(ep, addition) {
   full_request <- NULL

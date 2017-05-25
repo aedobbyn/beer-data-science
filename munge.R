@@ -36,7 +36,6 @@ head(unnested_breweries[["data"]])
 unnested_glassware <- unnest_it(all_glassware)
 head(unnested_glassware[["data"]])
 
-all_beer <- unnest_it(all_beer)
 
 
 
@@ -80,7 +79,7 @@ all_beer <- unnest_ingredients(all_beer_raw)
 
 
 # keep only columns we care about
-all_beer <- all_beer %>% 
+beer_necessities <- all_beer %>% 
   rename(
     glass = glass.name,
     srm = srm.name,

@@ -21,3 +21,7 @@ dbWriteTable(con, "glassware",
              value = unnested_glassware$data, append = TRUE, row.names = FALSE)
 
 
+dbWriteTable(con, "beer_necessities", 
+             value = beer_necessities, append = TRUE, row.names = FALSE)
+
+
