@@ -85,9 +85,19 @@ beer_necessities <- all_beer %>%
     srm = srm.name,
     style = style.name
   ) %>% select(
-    id, name, description, abv, ibu, srm, glass, 
+    id, name, description, style,
+    abv, ibu, srm, glass, 
     hops_name, hops_id, malt_name, malt_id,
     glasswareId, styleId, style.categoryId
   )
 
+
+beer_necessities$style <- factor(beer_necessities$style)
+beer_necessities$styleId <- factor(beer_necessities$styleId)  
+beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)  
+beer_necessities$glass <- factor(beer_necessities$glass)
+
+beer_necessities$ibu <- as.numeric(beer_necessities$ibu)
+beer_necessities$srm <- as.numeric(beer_necessities$srm)
+beer_necessities$abv <- as.numeric(beer_necessities$abv)
 

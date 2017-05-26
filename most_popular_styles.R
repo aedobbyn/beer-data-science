@@ -73,6 +73,9 @@ collapse_styles <- function(df) {
 
 popular_beer_dat <- collapse_styles(popular_beer_dat)
 
+beer_necessities <- collapse_styles(beer_necessities)   # error
+
+
 
 # collapse some more
 popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%

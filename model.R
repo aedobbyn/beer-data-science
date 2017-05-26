@@ -24,6 +24,12 @@ summary(m_1)
 beer_train <- sample_n(popular_beer_dat, 3000)
 beer_test <- popular_beer_dat %>% filter(! (id %in% beer_train$id))
 
+
+beer_necessities_train <- sample_n(beer_necessities, 21102)
+beer_necessities_test <- beer_necessities %>% filter(! (id %in% beer_necessities_train$id))
+
+
+
 # build multinomail neural net
 nn_mod <- multinom(style ~ abv + srm + ibu, 
                    data = beer_train, maxit=500, trace=T)
@@ -31,7 +37,7 @@ nn_mod
 
 # same model on style_collapsed
 nn_collapsed <- multinom(style_collapsed ~ abv + srm + ibu, 
-                   data = beer_train, maxit=500, trace=T)
+                   data = beer_necessities_train, maxit=500, trace=T)
 nn_collapsed
 
 
@@ -47,12 +53,12 @@ most_important_vars_collapsed
 # how accurate is the model?
 # preds
 nn_preds <- predict(nn_mod, type="class", newdata = beer_test)
-nn_preds_collapsed <- predict(nn_collapsed, type="class", newdata = beer_test)
+nn_preds_collapsed <- predict(nn_collapsed, type="class", newdata = beer_necessities_test)
 
 
 # accuracy
 postResample(beer_test$style, nn_preds)
-postResample(beer_test$style_collapsed, nn_preds_collapsed)
+postResample(beer_necessities$style_collapsed, nn_preds_collapsed)
 
 
 
