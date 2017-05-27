@@ -64,6 +64,23 @@ postResample(beer_necessities$style_collapsed, nn_preds_collapsed)
 
 
 
+medalla
+
+Medalla <- beer_necessities %>% 
+  filter(
+    grepl("Warm Front", name) == TRUE
+  )
+View(Medalla)
+
+
+pale_ales <- beer_necessities %>% 
+  filter(
+    style_collapsed == "Pale Ale"
+  )
+pale_ales
+
+
+
 
 
 
