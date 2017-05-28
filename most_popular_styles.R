@@ -81,17 +81,23 @@ collapse_styles <- function(df) {
   return(df)
 }
 
+# collapse styles, drop newly unused levels
 popular_beer_dat <- collapse_styles(popular_beer_dat)
-popular_beer_dat <- popular_beer_dat %>% droplevels()
+popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
 
-beer_necessities <- collapse_styles(beer_necessities)   
-
-beer_necessities <- as_tibble(beer_necessities)
+beer_necessities <- collapse_styles(beer_necessities) 
+beer_necessities <- beer_necessities %>% droplevels(style_collapsed) %>% as_tibble()
 
 
 
 # collapse some more
 popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
+  fct_collapse(
+    "Wheat" = c("Hefeweizen", "Wheat"),
+    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
+  )
+
+beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
   fct_collapse(
     "Wheat" = c("Hefeweizen", "Wheat"),
     "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils

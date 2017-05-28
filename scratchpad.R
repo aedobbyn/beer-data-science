@@ -273,6 +273,25 @@ test_all_beer <- paginated_request("beers")
 
 
 
+to_name <- c("a", "b", "c")
+
+my_f <- function() {
+  all_names <- list()
+  
+  for (i in to_name) {
+    this_key <- paste0("key_", i)
+
+    this_value <- paste0("value_", i)
+
+    assign(this_key, this_value, envir = .GlobalEnv)
+
+    all_names <- c(all_names, this_key)
+  }
+  return(all_names)
+}
+
+my_f()
+
 
 
 
