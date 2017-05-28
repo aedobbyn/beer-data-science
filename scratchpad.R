@@ -399,3 +399,39 @@ key_c  # value_c
 
 
 
+
+
+
+
+
+
+
+
+
+to_name <- c("a", "b", "c")
+
+func_ <- function(x, key_name) {
+  paste0("key_name:  ", key_name, " -----  value_x: ", x)
+}
+
+func_a <- partial(func_, key_name = "a")
+
+create_funcs <- function() {
+  all_funcs <- list()
+  
+  for (name in to_name) {
+    
+    func_ <- function(x) { 
+      paste0("key_name:  ", name, " -----  value_x: ", x)
+    }
+    
+    all_funcs <- c(all_funcs, partial(func_, name = name, envir = .GlobalEnv))
+  }
+  return(all_funcs)
+}
+
+create_funcs()
+
+func_a("foo")  # key_name:  c -----  value_x: foo
+func_b("bar")  # key_name:  c -----  value_x: bar
+
