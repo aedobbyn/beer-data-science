@@ -320,6 +320,31 @@ get_beer("HZ9xM2")
 
 
 
+simple_request_funcs <- function() {
+  all_funcs <- list()
+  
+  for (ep in single_param_endpoints) {
+    func_ <- function(id, ep) {
+        fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+      }
+    
+    all_funcs <- c(all_funcs, func_)
+  }
+  all_funcs
+}
+
+simple_request_funcs()
+
+func_beer <- partial(func_, ep = "beer")
+func_beer("HZ9xM2")
+
+
+
+
+
+
+
+
 
 
 
