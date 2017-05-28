@@ -6,6 +6,8 @@ library(forcats)
 
 beer_dat <- dbGetQuery(con, "select * from all_beers")
 
+beer_dat <- beer_necessities
+
 # set types
 beer_dat$style <- factor(beer_dat$style)
 beer_dat$styleId <- factor(beer_dat$styleId)  
@@ -29,10 +31,18 @@ style_popularity <- beer_dat_pared %>%
   arrange(desc(n))
 style_popularity
 
+
+# n beer instances per style
+# n_beers_per_style <- beer_dat_pared %>% group_by(style) %>% count() 
+
+style_popularity <- bind_cols(style_popularity, 
+                               n_scaled = as.vector(scale(style_popularity$n)))
+
+
 # keep only styles that have >50 beers in their style
-# comes out to 56 styles
+# comes out to 47 styles
 popular_styles <- style_popularity %>% 
-  filter(n > 50)
+  filter(n_scaled > 0)
 
 # pare dat down to only beers that fall into those styles
 popular_beer_dat <- beer_dat_pared %>% 
@@ -72,8 +82,11 @@ collapse_styles <- function(df) {
 }
 
 popular_beer_dat <- collapse_styles(popular_beer_dat)
+popular_beer_dat <- popular_beer_dat %>% droplevels()
 
-beer_necessities <- collapse_styles(beer_necessities)   # error
+beer_necessities <- collapse_styles(beer_necessities)   
+
+beer_necessities <- as_tibble(beer_necessities)
 
 
 
