@@ -320,53 +320,57 @@ get_beer("HZ9xM2")
 
 
 
+
+
+
+
 to_name <- c("a", "b", "c")
 
 create_funcs <- function() {
   all_funcs <- list()
   
-  for (i in to_name) {
-    this_key <- paste0("func_", i)
+  for (name in to_name) {
+    this_key <- paste0("func_", name)
     
-    this_value <- function() { 
-      paste0("key_i:  ", i, " -----  value_j: ", j)
+    this_value <<- function(x) { 
+      paste0("key_name:  ", name, " -----  value_x: ", x)
     }
-
-    this_func <- assign(this_key, this_value, envir = .GlobalEnv) 
+    assign(this_key, this_value, envir = .GlobalEnv) 
     
-    all_funcs <- c(all_funcs, this_func)
-    print(i)
+    all_funcs <- c(all_funcs, this_key)
   }
-  
   return(all_funcs)
 }
 
 create_funcs()
 
-func_a("foo")
-func_b("foo")
+func_a("foo")  # key_name:  c -----  value_x: foo
+func_b("bar")  # key_name:  c -----  value_x: bar
 
 
 
 
 
 create_objects <- function() {
-  all_names <- list()
+  all_objs <- list()
   
-  for (i in to_name) {
-    this_key <- paste0("key_", i)
+  for (name in to_name) {
+    this_key <- paste0("key_", name)
     
-    this_value <- paste0("value_", i)
+    this_value <- paste0("value_", name)
     
     assign(this_key, this_value, envir = .GlobalEnv)
     
-    all_names <- c(all_names, this_key)
+    all_objs <- c(all_objs, this_key)
   }
-  return(all_names)
+  return(all_objs)
 }
 
 create_objects()
 
+key_a  # value_a
+key_b  # value_b
+key_c  # value_c
 
 
 
