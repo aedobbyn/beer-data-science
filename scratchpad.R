@@ -295,3 +295,78 @@ my_f()
 
 
 
+simple_request_funcs <- function() {
+  all_funcs <- list()
+  
+  for (ep in single_param_endpoints) {
+    this_name <- paste0("get_", ep)
+    
+    this_func <- (function(id) { 
+      fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+    })
+    
+    out <- assign(this_name, this_func, envir = .GlobalEnv) 
+    
+    all_funcs <- c(all_funcs, out)
+    
+  }
+  all_funcs
+}
+
+simple_request_funcs()
+
+get_beer("HZ9xM2")
+
+
+
+
+to_name <- c("a", "b", "c")
+
+create_funcs <- function() {
+  all_funcs <- list()
+  
+  for (i in to_name) {
+    this_key <- paste0("func_", i)
+    
+    this_value <- function() { 
+      paste0("key_i:  ", i, " -----  value_j: ", j)
+    }
+
+    this_func <- assign(this_key, this_value, envir = .GlobalEnv) 
+    
+    all_funcs <- c(all_funcs, this_func)
+    print(i)
+  }
+  
+  return(all_funcs)
+}
+
+create_funcs()
+
+func_a("foo")
+func_b("foo")
+
+
+
+
+
+create_objects <- function() {
+  all_names <- list()
+  
+  for (i in to_name) {
+    this_key <- paste0("key_", i)
+    
+    this_value <- paste0("value_", i)
+    
+    assign(this_key, this_value, envir = .GlobalEnv)
+    
+    all_names <- c(all_names, this_key)
+  }
+  return(all_names)
+}
+
+create_objects()
+
+
+
+
