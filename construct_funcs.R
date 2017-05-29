@@ -1,85 +1,45 @@
 # construct funcs
 
-# ---- build functions for requesting just a single beer, brewery, menu, etc. (from single_param_endpoints)
-# uses purrr::partial 
+source("./get_beer.R")
 
-build_single_arg_requests <- function() {
-  all_funcs <- list()
-  
-  for (ep in single_param_endpoints) {
-    get_ <- function(id, ep) {
-      fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-    }
-    
-    this_func <- partial(get_, ep = ep, envir = .GlobalEnv)
-    
-    all_funcs <- c(all_funcs, this_func)
-    
-  }
-  all_funcs
-}
+# ---- build functions for requesting just a single beer, brewery, menu, etc. 
+# (from single_param_endpoints)
+# using purrr::partial and purr::walk
+# https://stackoverflow.com/questions/44223711/use-assign-to-create-multiple-functions-inside-of-a-function-in-r/44223805?noredirect=1#comment75477312_44223805
 
 
-single_param_endpoints %>% walk(~ assign(x = paste0("func_", .x),
-                                         value = partial(func_, key_name = .x),
-                                         envir = .GlobalEnv))
-
-build_single_arg_requests()
-get_beer("HZ9xM2")
-this_func
-
-
+# set up the base function
 get_ <- function(id, ep) {
   fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
 }
 
+# for each of the endoints, pipe each single_param_endpoint through
+# as .x, so both as the second half of the get_<ep> function name
+# and the second argument of the get_ function defined above (so the ep in the fromJSON() call) 
+
 single_param_endpoints %>% walk(~ assign(x = paste0("get_", .x),
-                                         value = partial(func_, ep = .x),
+                                         value = partial(get_, ep = .x),
                                          envir = .GlobalEnv))
-
 get_beer("HZ9xM2")
-
-
-# actually make the functions
-get_beer <- partial(get_, ep = "beer")
-get_brewery <- partial(get_, ep = "brewery")
-
-# example use case
-get_beer("HZ9xM2")
-
-get_event("1")
+get_brewery("pnLmiu")
 
 
 
-
-
-
-# ------ SO answer 
-
-func_ <- function(x, key_name) {
-  paste0("key_name:  ", key_name, " -----  value_x: ", x)
-}
-
-
-
-letters %>% walk(~ assign(x = paste0("func_", .x),
-                          value = partial(func_, key_name = .x),
-                          envir = .GlobalEnv))
-
-func_b("foo") # "key_name:  b -----  value_x: foo"
-func_a("foo")
-
-
-
-
-
-
-get_bar_ <- function(id, ep) {
-  fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-}
-
-single_param_endpoints %>% walk(~ assign(x = paste0("get_bar_", .x),
-                                         value = partial(get_bar_, ep = .x),
-                                         envir = .GlobalEnv))
-get_bar_beer("HZ9xM2")
+# ------ original thoughts on how to do this ------
+# build_single_arg_requests <- function() {
+#   all_funcs <- list()
+# 
+#   for (ep in single_param_endpoints) {
+#     get_ <- function(id, ep) {
+#       fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+#     }
+# 
+#     this_func <- partial(get_, ep = ep, envir = .GlobalEnv)
+# 
+#     all_funcs <- c(all_funcs, this_func)
+# 
+#   }
+#   all_funcs
+# }
+# build_single_arg_requests()
 

@@ -1,8 +1,6 @@
 # munge
 
-source("./get_beer.R")
-
-all_beer_unnested <- str(all_beer$data)
+# source("./get_beer.R")
 
 
 # write a function that essentially does this
@@ -12,7 +10,7 @@ all_beer_unnested <- str(all_beer$data)
 # this takes the column named "name" nested within a column in the data portion of the response
 # if the "name" column doesn't exist, it takes the first nested column
 
-# this function written before ingredients were requested in url and flatten = TRUE was inluded in fromJSON
+# ~ ~ this function written before ingredients were requested in url and flatten = TRUE was inluded in fromJSON
 unnest_it <- function(df) {
   unnested <- df
   for(col in seq_along(df[["data"]])) {
@@ -27,17 +25,6 @@ unnest_it <- function(df) {
   unnested
 }
 
-unnested_beer <- unnest_it(all_beer)
-head(unnested_beer[["data"]])
-
-unnested_breweries <- unnest_it(all_breweries)
-head(unnested_breweries[["data"]])
-
-unnested_glassware <- unnest_it(all_glassware)
-head(unnested_glassware[["data"]])
-
-
-
 
 # ------------ unnest ingredients ---------
 # this df has to come from a request with &withIngredients=Y attached, and with flatten = TRUE included in the fromJSON function
@@ -45,8 +32,6 @@ head(unnested_glassware[["data"]])
 # if either the name in ingredients.hops or malt is available, we know id is also available
 # add a new column that extracts the name out of the list_col and saves it in that new column. if there are multiple
 # hop names, they're separated by commas
-
-
 
 unnest_ingredients <- function(df) {
   df$hops_name <- NA
@@ -73,31 +58,4 @@ unnest_ingredients <- function(df) {
 }
 
 
-all_beer <- unnest_ingredients(all_beer_raw)
-
-
-
-
-# keep only columns we care about
-beer_necessities <- all_beer %>% 
-  rename(
-    glass = glass.name,
-    srm = srm.name,
-    style = style.name
-  ) %>% select(
-    id, name, description, style,
-    abv, ibu, srm, glass, 
-    hops_name, hops_id, malt_name, malt_id,
-    glasswareId, styleId, style.categoryId
-  )
-
-
-beer_necessities$style <- factor(beer_necessities$style)
-beer_necessities$styleId <- factor(beer_necessities$styleId)  
-beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)  
-beer_necessities$glass <- factor(beer_necessities$glass)
-
-beer_necessities$ibu <- as.numeric(beer_necessities$ibu)
-beer_necessities$srm <- as.numeric(beer_necessities$srm)
-beer_necessities$abv <- as.numeric(beer_necessities$abv)
 

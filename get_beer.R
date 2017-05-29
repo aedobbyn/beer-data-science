@@ -52,17 +52,5 @@ paginated_request <- function(ep, addition) {
   full_request
 } 
 
-all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
-
-all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
-
-
-
-
-
-
-
-
-
 
 

@@ -4,7 +4,7 @@
 source("./munge.R")
 library(forcats)
 
-beer_dat <- dbGetQuery(con, "select * from all_beers")
+# beer_dat <- dbGetQuery(con, "select * from all_beers")
 
 beer_dat <- beer_necessities
 
@@ -31,16 +31,12 @@ style_popularity <- beer_dat_pared %>%
   arrange(desc(n))
 style_popularity
 
-
-# n beer instances per style
-# n_beers_per_style <- beer_dat_pared %>% group_by(style) %>% count() 
-
+# and add a column that scales it
 style_popularity <- bind_cols(style_popularity, 
                                n_scaled = as.vector(scale(style_popularity$n)))
 
 
-# keep only styles that have >50 beers in their style
-# comes out to 47 styles
+# find styles that are above a z-score of 0
 popular_styles <- style_popularity %>% 
   filter(n_scaled > 0)
 
@@ -53,67 +49,7 @@ popular_beer_dat <- beer_dat_pared %>%
 nrow(popular_beer_dat)
 
 
-
-
-# ------------------ collapse styles ---------------
-# create a new column that merges styles that contain certain keywords into the same style
-
-# most general to most specific such that if something has india pale ale it will be
-# characterized as india pale ale not just pale ale
-collapse_styles <- function(df) {
-  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged",
-                "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
-                "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel",
-                "Altbier")
-  
-  for (beer in 1:nrow(df)) {
-    if (grepl(paste(keywords, collapse="|"), popular_beer_dat$style[beer])) {    # if one of the keywords exists in the style
-      for (keyword in keywords) {         # loop through the keywords to see which one it matches
-        if(grepl(keyword, df$style[beer]) == TRUE) {
-          df$style_collapsed[beer] <- keyword    # if we have a match assign the keyword to that row's style_collpased
-        }                         # if multiple matches, it gets the later one in keywords
-      } 
-    } else {
-      df$style_collapsed[beer] <- as.character(df$style[beer])       # else style_collapsed is just style
-    }
-  print(df$style_collapsed[beer])
-  }
-  return(df)
-}
-
-# collapse styles, drop newly unused levels
-popular_beer_dat <- collapse_styles(popular_beer_dat)
-popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
-
-clustered_beer$style_collapsed <- "x"
-clustered_beer <- collapse_styles(clustered_beer)
-clustered_beer$style_collapsed <- factor(clustered_beer$style_collapsed)
-clustered_beer <- droplevels(clustered_beer)$style_collapsed %>% as_tibble() 
-clustered_beer <- clustered_beer %>% 
-  filter(
-   !(style_collapsed == "x")
-  )
-
-beer_necessities <- collapse_styles(beer_necessities) 
-beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
-
-
-
-# collapse some more
-popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
-  fct_collapse(
-    "Wheat" = c("Hefeweizen", "Wheat"),
-    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
-  )
-
-beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
-  fct_collapse(
-    "Wheat" = c("Hefeweizen", "Wheat"),
-    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
-  )
-
-
-
+# find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
   summarise(
@@ -127,7 +63,6 @@ style_centers <- popular_beer_dat %>%
 
 ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
   geom_point()
-
 
 ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
   geom_point()
