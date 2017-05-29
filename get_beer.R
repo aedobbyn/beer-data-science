@@ -41,11 +41,11 @@ paginated_request <- function(ep, addition) {
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
   number_of_pages <- first_page$numberOfPages
-  for (page in 1:number_of_pages) {    
+  for (page in 1:4) {    
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page, addition),
                              flatten = TRUE) 
-    this_req_unnested <- unnest_it(this_request)
+    this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
     print(this_req_unnested$currentPage)
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
   }

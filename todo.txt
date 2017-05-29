@@ -1,0 +1,4 @@
+- tsne
+- adversarial networks
+	- name generator
+	- 

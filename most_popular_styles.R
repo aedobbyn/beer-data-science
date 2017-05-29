@@ -8,14 +8,14 @@ library(forcats)
 
 beer_dat <- beer_necessities
 
-# set types
-beer_dat$style <- factor(beer_dat$style)
-beer_dat$styleId <- factor(beer_dat$styleId)  
-beer_dat$glass <- factor(beer_dat$glass)
-
-beer_dat$ibu <- as.numeric(beer_dat$ibu)
-beer_dat$srm <- as.numeric(beer_dat$srm)
-beer_dat$abv <- as.numeric(beer_dat$abv)
+# # set types
+# beer_dat$style <- factor(beer_dat$style)
+# beer_dat$styleId <- factor(beer_dat$styleId)  
+# beer_dat$glass <- factor(beer_dat$glass)
+# 
+# beer_dat$ibu <- as.numeric(beer_dat$ibu)
+# beer_dat$srm <- as.numeric(beer_dat$srm)
+# beer_dat$abv <- as.numeric(beer_dat$abv)
 
 
 # pare down to only cases where style is not NA
@@ -48,7 +48,6 @@ popular_beer_dat <- beer_dat_pared %>%
   droplevels()
 nrow(popular_beer_dat)
 
-
 # find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
@@ -60,10 +59,11 @@ style_centers <- popular_beer_dat %>%
   drop_na() %>% 
   droplevels()
   
-
+# popular style centers: abv and ibu
 ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
   geom_point()
 
+# popular style centers: srm and ibu
 ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
   geom_point()
 

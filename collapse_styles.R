@@ -46,11 +46,14 @@ beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
 
 
 # collapse some more
-popular_beer_dat$style_collapsed <- popular_beer_dat$style_collapsed %>%
-  fct_collapse(
-    "Wheat" = c("Hefeweizen", "Wheat"),
-    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
-  )
+collapse_further <- function(df) {
+  df[["style_collapsed"]] <- df[["style_collapsed"]] %>%
+    fct_collapse(
+      "Wheat" = c("Hefeweizen", "Wheat"),
+      "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
+    )
+}
+
 
 beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
   fct_collapse(

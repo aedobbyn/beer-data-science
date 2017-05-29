@@ -1,6 +1,5 @@
 
 library(tsne)
-
 library(NbClust)
 
 
@@ -25,7 +24,6 @@ beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) 
   ibu_scaled = ibu,
   srm_scaled = srm
   ) %>% scale() 
-
   
 beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
 
@@ -97,12 +95,10 @@ cluster_9
 # table of counts
 table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
 
-
 cb_spread <- clustered_beer %>% select(
   cluster_assignment, style
 ) %>% group_by(cluster_assignment) %>%
   spread(key = cluster_assignment, value = style, convert = TRUE)
-
 
 
 # tsne

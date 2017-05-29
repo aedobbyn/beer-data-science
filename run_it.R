@@ -1,5 +1,7 @@
 # run it
 
+source("./get_beer.R")
+source("./munge.R")
 
 # ----- get all beer and breweries
 # paginated_request() from get_beer.R
@@ -9,20 +11,23 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
 
 
-
 # ------- unnest_ingredients() from munge.R
-all_beer <- unnest_ingredients(all_beer_raw)
+all_beer <- unnest_ingredients(all_beer_raw) %>% as_tibble()
+
+# some_beer <- unnest_ingredients(some_beer_raw) %>% as_tibble()
 
 
-# ----- unnest_it() from munge.R
-unnested_beer <- unnest_it(all_beer)
-head(unnested_beer[["data"]])
-
-unnested_breweries <- unnest_it(all_breweries)
-head(unnested_breweries[["data"]])
-
-unnested_glassware <- unnest_it(all_glassware)
-head(unnested_glassware[["data"]])
+# ----- unnest_it() from munge.R: might be obsolete now that we're using flatten = TRUE within the JSON
+# request
+# unnested_beer <- unnest_it(all_beer)
+# head(unnested_beer[["data"]])
+# 
+# 
+# unnested_breweries <- unnest_it(all_breweries)
+# head(unnested_breweries[["data"]])
+# 
+# unnested_glassware <- unnest_it(all_glassware)
+# head(unnested_glassware[["data"]])
 
 
 # keep only columns we care about
@@ -48,6 +53,50 @@ beer_necessities$glass <- factor(beer_necessities$glass)
 beer_necessities$ibu <- as.numeric(beer_necessities$ibu)
 beer_necessities$srm <- as.numeric(beer_necessities$srm)
 beer_necessities$abv <- as.numeric(beer_necessities$abv)
+
+
+
+# ----------- paring down ---------
+
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
+
+
+# ------------------ pare to most popular styles ---------------
+
+# arrange beer dat by style popularity
+style_popularity <- beer_dat_pared %>% 
+  group_by(style) %>% 
+  count() %>% 
+  arrange(desc(n))
+style_popularity
+
+# and add a column that scales it
+style_popularity <- bind_cols(style_popularity, 
+                              n_scaled = as.vector(scale(style_popularity$n)))
+
+
+# find styles that are above a z-score of 0
+popular_styles <- style_popularity %>% 
+  filter(n_scaled > 0)
+
+# pare dat down to only beers that fall into those styles
+popular_beer_dat <- beer_dat_pared %>% 
+  filter(
+    style %in% popular_styles$style
+  ) %>% 
+  droplevels()
+nrow(popular_beer_dat)
+
+# find the centers (mean abv, ibu, srm) of the most popular styles
+style_centers <- popular_beer_dat %>% 
+  group_by(style_collapsed) %>% 
+  summarise(
+    mean_abv = mean(abv, na.rm = TRUE),
+    mean_ibu = mean(ibu, na.rm = TRUE), 
+    mean_srm = mean(srm, na.rm = TRUE)
+  ) %>% 
+  drop_na() %>% 
+  droplevels()
 
 
 

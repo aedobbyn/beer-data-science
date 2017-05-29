@@ -10,7 +10,7 @@
 # this takes the column named "name" nested within a column in the data portion of the response
 # if the "name" column doesn't exist, it takes the first nested column
 
-# ~ ~ this function written before ingredients were requested in url and flatten = TRUE was inluded in fromJSON
+# ~ ~ this function used inside paginated_request()
 unnest_it <- function(df) {
   unnested <- df
   for(col in seq_along(df[["data"]])) {
@@ -58,4 +58,34 @@ unnest_ingredients <- function(df) {
 }
 
 
+
+
+# unnest ingredients without first unnesting all data
+# unlike unnest_ingredients, if you don't unnest everything first with unnest_it()
+# then the argument is the full json response so you need to work with df[["data]] rather than just df
+
+unnest_just_ingredients <- function(df) {
+  df[["data"]]$hops_name <- "Not available"
+  df[["data"]]$hops_id <- "Not available"
+  df[["data"]]$malt_name <- "Not available"
+  df[["data"]]$malt_id <- "Not available"
+  
+  for (row in 1:nrow(df[["data"]])) {
+    if (!is.null(df[["data"]][["ingredients.hops"]][[row]][["name"]]) | 
+        !is.null(df[["data"]][["ingredients.malt"]][[row]][["name"]])) {
+      df[["data"]][["hops_name"]][[row]] <- paste(df[["data"]][["ingredients.hops"]][[row]][["name"]],
+                                                  collapse = ", ")
+      df[["data"]][["hops_id"]][[row]] <- paste(df[["data"]][["ingredients.hops"]][[row]][["id"]],
+                                                collapse = ", ")
+      
+      df[["data"]][["malt_name"]][[row]] <- paste(df[["data"]][["ingredients.malt"]][[row]][["name"]],
+                                                  collapse = ", ")
+      df[["data"]][["malt_id"]][[row]] <- paste(df[["data"]][["ingredients.malt"]][[row]][["id"]],
+                                                collapse = ", ")
+    }
+  }
+  return(df)
+}
+
+# beer_w_ingredients_unnested <- unnest_just_ingredients(beer_w_ingredients)
 
