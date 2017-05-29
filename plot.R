@@ -12,7 +12,8 @@ dIPAs <- cluster_dat %>%
   )
 
 ggplot(data = dIPAs, aes(x = abv, y = ibu, colour = cluster_assignment)) +
-  geom_point()
+  geom_point() %>% 
+  scale_fill_discrete("Cluster Assignment")
 
 
 # - take out unpopular styles not by an absolute number but by st. dev or somethings
@@ -20,5 +21,11 @@ ggplot(data = dIPAs, aes(x = abv, y = ibu, colour = cluster_assignment)) +
 
 # plot 
 # - how styles compare to clusters
-# 
+# - mean of each style
+
+
+
+
+
+
 

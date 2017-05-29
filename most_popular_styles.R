@@ -105,4 +105,24 @@ beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
 
 
 
+style_centers <- popular_beer_dat %>% 
+  group_by(style_collapsed) %>% 
+  summarise(
+    mean_abv = mean(abv, na.rm = TRUE),
+    mean_ibu = mean(ibu, na.rm = TRUE), 
+    mean_srm = mean(srm, na.rm = TRUE)
+  ) %>% 
+  droplevels() %>%
+  drop_na()
+  # filter(
+  #   !is.finite(mean_abv) | !is.finite(mean_ibu) | !is.finite(mean_srm)
+  # )
+
+ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
+  geom_point()
+
+
+
+
+
 

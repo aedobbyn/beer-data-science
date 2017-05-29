@@ -25,3 +25,6 @@ dbWriteTable(con, "beer_necessities",
              value = beer_necessities, append = TRUE, row.names = FALSE)
 
 
+
+
+

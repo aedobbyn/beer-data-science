@@ -1,6 +1,8 @@
 
 library(tsne)
 
+library(NbClust)
+
 
 # ------------------- kmeans ------------
 
@@ -10,10 +12,12 @@ beer_for_clustering <- popular_beer_dat %>%
   select(style, styleId, abv, ibu, srm) %>% 
   na.omit() %>% 
   filter(
-    !(ibu > 300)     # take out the outlier with ibu of 1000
+    !(ibu > 300)      # take out outliers
+  ) %>% 
+  filter(
+    !(abv > 20)
   )
 
-# beer_for_clustering <- beer_for_clustering %>% scale(abv, ibu, srm)
 
 # separate into predictors and outcomes and scale the predictors
 beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
@@ -21,8 +25,24 @@ beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) 
   ibu_scaled = ibu,
   srm_scaled = srm
   ) %>% scale() 
+
   
 beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
+
+
+
+# what's the optimal number of clusters?
+
+nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean", 
+              min.nc=2, max.nc=15, method = "kmeans", 
+              index = "alllong", alphaBeale = 0.1)
+hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
+
+
+num_clust <- NbClust(beer_for_clustering_predictors, min.nc = 2,
+                     max.nc = 15,   # set max number of clusters to less than number of groups
+                     method = "average")
+
 
 
 # do clustering
@@ -39,19 +59,22 @@ clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_bee
 clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
   ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "IBU") 
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment")
 clustered_beer_plot_abv_ibu
 
 clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
   ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "SRM") 
+  labs(x = "ABV", y = "SRM") +
+  labs(colour = "Cluster Assignment")
 clustered_beer_plot_abv_srm
 
 clustered_beer_plot_ibu_srm <- ggplot(data = clustered_beer, aes(x = ibu, y = srm, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
   ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "IBU", y = "SRM") 
+  labs(x = "IBU", y = "SRM") +
+  labs(colour = "Cluster Assignment")
 clustered_beer_plot_ibu_srm
 
 
