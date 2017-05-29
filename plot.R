@@ -40,7 +40,7 @@ style_centers <- clustered_beer %>%
     mean_srm = mean(srm, na.rm = TRUE)
   ) %>% 
   drop_na() %>% 
-  droplevels()
+  droplevels(.)
 
 
 centers_abv_ibu <- ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
