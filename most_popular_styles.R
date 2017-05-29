@@ -85,8 +85,17 @@ collapse_styles <- function(df) {
 popular_beer_dat <- collapse_styles(popular_beer_dat)
 popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
 
+clustered_beer$style_collapsed <- "x"
+clustered_beer <- collapse_styles(clustered_beer)
+clustered_beer$style_collapsed <- factor(clustered_beer$style_collapsed)
+clustered_beer <- droplevels(clustered_beer)$style_collapsed %>% as_tibble() 
+clustered_beer <- clustered_beer %>% 
+  filter(
+   !(style_collapsed == "x")
+  )
+
 beer_necessities <- collapse_styles(beer_necessities) 
-beer_necessities <- beer_necessities %>% droplevels(style_collapsed) %>% as_tibble()
+beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
 
 
 
@@ -112,16 +121,16 @@ style_centers <- popular_beer_dat %>%
     mean_ibu = mean(ibu, na.rm = TRUE), 
     mean_srm = mean(srm, na.rm = TRUE)
   ) %>% 
-  droplevels() %>%
-  drop_na()
-  # filter(
-  #   !is.finite(mean_abv) | !is.finite(mean_ibu) | !is.finite(mean_srm)
-  # )
+  drop_na() %>% 
+  droplevels()
+  
 
 ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
   geom_point()
 
 
+ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
+  geom_point()
 
 
 

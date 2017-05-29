@@ -33,15 +33,15 @@ beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
 
 # what's the optimal number of clusters?
 
-nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean", 
-              min.nc=2, max.nc=15, method = "kmeans", 
-              index = "alllong", alphaBeale = 0.1)
-hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
-
-
-num_clust <- NbClust(beer_for_clustering_predictors, min.nc = 2,
-                     max.nc = 15,   # set max number of clusters to less than number of groups
-                     method = "average")
+# nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean", 
+#               min.nc=2, max.nc=15, method = "kmeans", 
+#               index = "alllong", alphaBeale = 0.1)
+# hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
+# 
+# 
+# num_clust <- NbClust(beer_for_clustering_predictors, min.nc = 2,
+#                      max.nc = 15,   # set max number of clusters to less than number of groups
+#                      method = "average")
 
 
 
