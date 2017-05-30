@@ -2,6 +2,8 @@
 
 source("./get_beer.R")
 source("./munge.R")
+source("./collapse_styles.R")
+
 
 # ----- get all beer and breweries
 # paginated_request() from get_beer.R
@@ -47,7 +49,6 @@ beer_necessities <- all_beer %>%
 # set types
 beer_necessities$style <- factor(beer_necessities$style)
 beer_necessities$styleId <- factor(beer_necessities$styleId)
-beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)
 beer_necessities$glass <- factor(beer_necessities$glass)
 
 beer_necessities$ibu <- as.numeric(beer_necessities$ibu)
@@ -55,9 +56,17 @@ beer_necessities$srm <- as.numeric(beer_necessities$srm)
 beer_necessities$abv <- as.numeric(beer_necessities$abv)
 
 
+# ---------- collapse styles
+beer_necessities$style_collapsed <- NA
+beer_necessities <- collapse_styles(beer_necessities)
+
+beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)
+beer_necessities <- collapse_further(beer_necessities)
+
+droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
+
 
 # ----------- paring down ---------
-
 beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
 
 

@@ -1,5 +1,5 @@
 
-
+library(forcats)
 
 # ------------------ collapse styles ---------------
 # create a new column that merges styles that contain certain keywords into the same style
@@ -13,7 +13,7 @@ collapse_styles <- function(df) {
                 "Altbier")
   
   for (beer in 1:nrow(df)) {
-    if (grepl(paste(keywords, collapse="|"), popular_beer_dat$style[beer])) {    # if one of the keywords exists in the style
+    if (grepl(paste(keywords, collapse="|"), df$style[beer])) {    # if one of the keywords exists in the style
       for (keyword in keywords) {         # loop through the keywords to see which one it matches
         if(grepl(keyword, df$style[beer]) == TRUE) {
           df$style_collapsed[beer] <- keyword    # if we have a match assign the keyword to that row's style_collpased
@@ -27,21 +27,21 @@ collapse_styles <- function(df) {
   return(df)
 }
 
-# collapse styles, drop newly unused levels
-popular_beer_dat <- collapse_styles(popular_beer_dat)
-popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
-
-clustered_beer$style_collapsed <- "x"
-clustered_beer <- collapse_styles(clustered_beer)
-clustered_beer$style_collapsed <- factor(clustered_beer$style_collapsed)
-clustered_beer <- droplevels(clustered_beer)$style_collapsed %>% as_tibble() 
-clustered_beer <- clustered_beer %>% 
-  filter(
-    !(style_collapsed == "x")
-  )
-
-beer_necessities <- collapse_styles(beer_necessities) 
-beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
+# # collapse styles, drop newly unused levels
+# popular_beer_dat <- collapse_styles(popular_beer_dat)
+# popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
+# 
+# clustered_beer$style_collapsed <- "x"
+# clustered_beer <- collapse_styles(clustered_beer)
+# clustered_beer$style_collapsed <- factor(clustered_beer$style_collapsed)
+# clustered_beer <- droplevels(clustered_beer)$style_collapsed %>% as_tibble() 
+# clustered_beer <- clustered_beer %>% 
+#   filter(
+#     !(style_collapsed == "x")
+#   )
+# 
+# beer_necessities <- collapse_styles(beer_necessities) 
+# beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
 
 
 
@@ -52,11 +52,12 @@ collapse_further <- function(df) {
       "Wheat" = c("Hefeweizen", "Wheat"),
       "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
     )
+  return(df)
 }
 
 
-beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
-  fct_collapse(
-    "Wheat" = c("Hefeweizen", "Wheat"),
-    "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
-  )
+# beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
+#   fct_collapse(
+#     "Wheat" = c("Hefeweizen", "Wheat"),
+#     "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
+#   )
