@@ -101,6 +101,14 @@ cb_spread <- clustered_beer %>% select(
   spread(key = cluster_assignment, value = style, convert = TRUE)
 
 
+
+
+
+
+
+
+
+
 # tsne
 cb <- clustered_beer %>% sample_n(100)
 

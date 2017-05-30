@@ -25,21 +25,3 @@ get_brewery("pnLmiu")
 
 
 
-# ------ original thoughts on how to do this ------
-# build_single_arg_requests <- function() {
-#   all_funcs <- list()
-# 
-#   for (ep in single_param_endpoints) {
-#     get_ <- function(id, ep) {
-#       fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-#     }
-# 
-#     this_func <- partial(get_, ep = ep, envir = .GlobalEnv)
-# 
-#     all_funcs <- c(all_funcs, this_func)
-# 
-#   }
-#   all_funcs
-# }
-# build_single_arg_requests()
-

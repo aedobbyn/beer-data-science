@@ -5,32 +5,16 @@ source("./munge.R")
 source("./collapse_styles.R")
 
 
-# ----- get all beer and breweries
+# --------------- get all raw beer and breweries --------------
 # paginated_request() from get_beer.R
-
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
 
 
-# ------- unnest_ingredients() from munge.R
+# --------------- get the columns we care about ---------------
+# unnest_ingredients() from munge.R
 all_beer <- unnest_ingredients(all_beer_raw) %>% as_tibble()
-
-# some_beer <- unnest_ingredients(some_beer_raw) %>% as_tibble()
-
-
-# ----- unnest_it() from munge.R: might be obsolete now that we're using flatten = TRUE within the JSON
-# request
-# unnested_beer <- unnest_it(all_beer)
-# head(unnested_beer[["data"]])
-# 
-# 
-# unnested_breweries <- unnest_it(all_breweries)
-# head(unnested_breweries[["data"]])
-# 
-# unnested_glassware <- unnest_it(all_glassware)
-# head(unnested_glassware[["data"]])
-
 
 # keep only columns we care about
 beer_necessities <- all_beer %>%
@@ -45,7 +29,6 @@ beer_necessities <- all_beer %>%
     glasswareId, styleId, style.categoryId
   )
 
-
 # set types
 beer_necessities$style <- factor(beer_necessities$style)
 beer_necessities$styleId <- factor(beer_necessities$styleId)
@@ -56,7 +39,8 @@ beer_necessities$srm <- as.numeric(beer_necessities$srm)
 beer_necessities$abv <- as.numeric(beer_necessities$abv)
 
 
-# ---------- collapse styles
+# ------------------- collapse styles ------------------- 
+# collapse_styles() and collapse_further() from collapse_styles.R
 beer_necessities$style_collapsed <- NA
 beer_necessities <- collapse_styles(beer_necessities)
 
@@ -66,11 +50,10 @@ beer_necessities <- collapse_further(beer_necessities)
 droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
 
 
-# ----------- paring down ---------
-beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
 
 
 # ------------------ pare to most popular styles ---------------
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
 
 # arrange beer dat by style popularity
 style_popularity <- beer_dat_pared %>% 
@@ -79,10 +62,9 @@ style_popularity <- beer_dat_pared %>%
   arrange(desc(n))
 style_popularity
 
-# and add a column that scales it
+# and add a column that scales popularity so we can filter by z-score
 style_popularity <- bind_cols(style_popularity, 
                               n_scaled = as.vector(scale(style_popularity$n)))
-
 
 # find styles that are above a z-score of 0
 popular_styles <- style_popularity %>% 

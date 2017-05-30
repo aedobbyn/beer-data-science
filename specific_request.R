@@ -1,5 +1,7 @@
 # specific requests
 
+# ~ ~ this somewhat deprecated: see construct_funcs.R for better solution to single_endpoint_request_funcs()
+
 endpoints <- c("beers", "breweries", "categories", "events",
                "featured", "features", "fluidsizes", "glassware",
                "locations", "guilds", "heartbeat", "ingredients",
@@ -10,7 +12,7 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
                             "location", "socialsite", "style", "menu")
 
 
-# vector of all possible single endpoint requests
+# vector of all possible single endpoint requests (e.g., all beers, all breweries)
 single_endpoint_request <- function() {
   all_requests <- vector()
   for (i in endpoints) {
@@ -64,6 +66,25 @@ get_hop <- simple_request_funcs("hop")
 get_hop("84")
 
 
+# # ------ pre-stack overflow thougths on how to do this (now superceded by construct_funcs.R) ------
+# build_single_arg_requests <- function() {
+#   all_funcs <- list()
+# 
+#   for (ep in single_param_endpoints) {
+#     get_ <- function(id, ep) {
+#       fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+#     }
+# 
+#     this_func <- partial(get_, ep = ep, envir = .GlobalEnv)
+# 
+#     all_funcs <- c(all_funcs, this_func)
+# 
+#   }
+#   all_funcs
+# }
+# build_single_arg_requests()
+
+
 
 # -------------- add an addition, e.g. ingredients --------
 request_w_additions <- function(ep, addition) {
@@ -75,8 +96,6 @@ request_w_additions <- function(ep, addition) {
 
 get_beers_w_ingredients <- request_w_additions("beers", "&withIngredients=Y")
 beer_w_ingredients <- get_beers_w_ingredients()
-
-
 
 
 
