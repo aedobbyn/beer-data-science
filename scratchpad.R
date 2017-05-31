@@ -435,3 +435,71 @@ create_funcs()
 func_a("foo")  # key_name:  c -----  value_x: foo
 func_b("bar")  # key_name:  c -----  value_x: bar
 
+
+
+
+
+
+
+
+# ---------- db updates -------------
+
+# ------ working on insert statement -------
+test <- data.frame(list(test = c(rep("baz", 1))))
+test_2 <- data.frame(list(test = c(rep("bars", 14))))
+test_4 <- data.frame(list(test_4 = c(rep("foo", 14))))
+
+insert_query <- paste("INSERT INTO glassware (test_2) VALUES(", paste(test, collapse = ","), ")")
+insert_query
+
+test_one <- data.frame(list(test = "foo"))
+insert_one_query <- paste("INSERT INTO glassware (test) VALUES(", test_one, ")")
+insert_one_query
+
+
+dbSendStatement(con, insert_query)
+dbSendStatement(con, insert_one_query)
+
+
+gware <- dbReadTable(con, "glassware")
+gware
+
+
+dbWriteTable(con, "glassware", test_3, append = TRUE, rownames = FALSE)
+
+
+
+db_write_table(con, "all_glassware", test_2)
+
+
+dbSendStatement(con, "ALTER TABLE glassware ADD test_4 TEXT")
+dbWriteTable(con, "glassware", test_4, overwrite = TRUE, rownames = FALSE)
+
+
+
+
+
+
+# -- this seems like the best solution but doesn't work
+test_4 <- data.frame(list(test_4 = c(rep("bar", 14))))
+update_query <- paste("UPDATE glassware SET test_4 = (", paste(test_4, collapse = ","), ")")
+update_query
+dbSendQuery(con, update_query)
+
+
+# this works, though
+update_query <- paste("UPDATE glassware SET test_4 = ", "\"foo\"")
+update_query
+dbSendQuery(con, update_query)
+
+
+
+# this works, though
+update_query <- paste("UPDATE glassware SET test_4 = ", "\"foo\"")
+update_query
+dbSendQuery(con, update_query)
+
+
+update_query <- paste("UPDATE glassware SET test_4 = ", c("\"foo\", \"baz\""))
+update_query
+dbSendQuery(con, update_query)
