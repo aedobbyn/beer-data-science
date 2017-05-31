@@ -11,6 +11,8 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
 
+all_glassware <- paginated_request("glassware", "")
+
 
 # --------------- get the columns we care about ---------------
 # unnest_ingredients() from munge.R
