@@ -49,17 +49,18 @@ beer_necessities <- collapse_styles(beer_necessities)
 beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)
 beer_necessities <- collapse_further(beer_necessities)
 
+# drop unused levels
 droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
 
 
 
-
 # ------------------ pare to most popular styles ---------------
+# ----- pare down by style or style_collapsed? -----
 beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
 
 # arrange beer dat by style popularity
 style_popularity <- beer_dat_pared %>% 
-  group_by(style) %>% 
+  group_by(style_collapsed) %>% 
   count() %>% 
   arrange(desc(n))
 style_popularity
@@ -75,19 +76,25 @@ popular_styles <- style_popularity %>%
 # pare dat down to only beers that fall into those styles
 popular_beer_dat <- beer_dat_pared %>% 
   filter(
-    style %in% popular_styles$style
+    style_collapsed %in% popular_styles$style_collapsed
   ) %>% 
-  droplevels()
+  droplevels() %>% 
+  as_tibble() 
+
 nrow(popular_beer_dat)
+
 
 # find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
+  add_count() %>% 
   summarise(
     mean_abv = mean(abv, na.rm = TRUE),
     mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_srm = mean(srm, na.rm = TRUE)
+    mean_srm = mean(srm, na.rm = TRUE),
+    n = median(n, na.rm = TRUE)          # median here only for summarise. should be just the same as n
   ) %>% 
+  arrange(desc(n)) %>% 
   drop_na() %>% 
   droplevels()
 

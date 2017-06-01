@@ -64,7 +64,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
                   box.padding = unit(0.45, "lines"),
                   family = "Courier",
-                  label.size = 0.5) +
+                  label.size = 0.3) +
   theme_bw()
 abv_ibu_clusters_vs_style_centers
 

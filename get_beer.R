@@ -41,7 +41,7 @@ paginated_request <- function(ep, addition) {
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
   number_of_pages <- first_page$numberOfPages
-  for (page in 1:4) {                               # change this back to number_of_pages to get full result list
+  for (page in 1:number_of_pages) {                               # change this back to number_of_pages to get full result list
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page, addition),
                              flatten = TRUE) 

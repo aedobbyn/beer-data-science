@@ -45,17 +45,21 @@ popular_beer_dat <- beer_dat_pared %>%
   filter(
     style %in% popular_styles$style
   ) %>% 
-  droplevels()
+  droplevels() %>% 
+  as_tibble() 
 nrow(popular_beer_dat)
 
 # find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
+  add_count() %>% 
   summarise(
     mean_abv = mean(abv, na.rm = TRUE),
     mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_srm = mean(srm, na.rm = TRUE)
+    mean_srm = mean(srm, na.rm = TRUE),
+    n = median(n, na.rm = TRUE)          # median here only for summarise. should be just the same as n
   ) %>% 
+  arrange(desc(n)) %>% 
   drop_na() %>% 
   droplevels()
   

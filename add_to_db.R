@@ -22,7 +22,11 @@ dbWriteTable(con, "all_glassware",
 
 
 dbWriteTable(con, "beer_necessities", 
-             value = beer_necessities, append = TRUE, row.names = FALSE)
+             value = beer_necessities, overwrite = TRUE, row.names = FALSE)
+
+
+dbWriteTable(con, "beer_dat", 
+             value = beer_dat, append = TRUE, row.names = FALSE)
 
 
 

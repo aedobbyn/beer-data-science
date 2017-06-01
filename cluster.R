@@ -8,7 +8,7 @@ library(NbClust)
 # only using top beer styles
 # select only predictor and outcome columns, take out NAs, and scale the data
 beer_for_clustering <- popular_beer_dat %>% 
-  select(style, styleId, abv, ibu, srm) %>% 
+  select(style, styleId, abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
   na.omit() %>% 
   filter(
     !(ibu > 300)      # take out outliers
@@ -31,15 +31,10 @@ beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
 
 # what's the optimal number of clusters?
 
-# nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean", 
-#               min.nc=2, max.nc=15, method = "kmeans", 
-#               index = "alllong", alphaBeale = 0.1)
+nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean",
+              min.nc = 2, max.nc = 15, method = "kmeans")
 # hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
-# 
-# 
-# num_clust <- NbClust(beer_for_clustering_predictors, min.nc = 2,
-#                      max.nc = 15,   # set max number of clusters to less than number of groups
-#                      method = "average")
+
 
 
 
@@ -95,10 +90,10 @@ cluster_9
 # table of counts
 table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
 
-cb_spread <- clustered_beer %>% select(
-  cluster_assignment, style
-) %>% group_by(cluster_assignment) %>%
-  spread(key = cluster_assignment, value = style, convert = TRUE)
+# cb_spread <- clustered_beer %>% select(
+#   cluster_assignment, style
+# ) %>% group_by(cluster_assignment) %>%
+#   spread(key = cluster_assignment, value = style, convert = TRUE)
 
 
 
