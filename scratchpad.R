@@ -503,3 +503,66 @@ dbSendQuery(con, update_query)
 update_query <- paste("UPDATE glassware SET test_4 = ", c("\"foo\", \"baz\""))
 update_query
 dbSendQuery(con, update_query)
+
+
+
+
+
+names(beer_necessities)
+head(beer_necessities$hops_id)
+
+
+beer_nec_ingredients <- beer_necessities
+
+
+library(stringr)
+split_ingredients <- function(df) {
+  ncol_df <- ncol(df)
+  
+  # df[, ncol_df + 1] <- NULL
+  
+  hops_split <- str_split(df[["hops_name"]], ", ")
+  num_new_cols <- max(lengths(hops_split))
+  
+  for (num in num_new_cols) {
+    df[, ncol_df + num] <- NULL
+  }
+  
+  for (h in hops_split) {
+    df[, ]
+  }
+}
+
+sbn <- simple_beer_necessities
+
+split_sbn <- do.call("rbind", str_split(sbn$hops_name, ", "))
+split_sbn <- data.frame(apply(split_sbn, 2, as.character))
+
+
+
+
+
+
+
+names(splitdat) = paste("trial", 1:4, sep = "")
+
+
+hops_split <- str_split(simple_beer_necessities[100:105, ][["hops_name"]], ", ")
+
+hops_split_unnest <- unnest(hops_split)
+
+for (i in hops_split) {
+  print(length(i))
+}
+
+max(length(hops_split[]))
+
+
+
+
+
+
+# --- split hops out
+split_sbn <- separate(data = simple_beer_necessities[100:105, ],
+                      col = hops_name, into = c("hop_1", "hop_2", "hop_3", "hop_4"), sep = ", ")
+
