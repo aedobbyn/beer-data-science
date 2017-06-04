@@ -4,7 +4,7 @@ library(stringr)
 
 simple_beer_necessities
 
-ingredients <- c("hop_name", "malt_name")
+ingredients <- c("hops_name", "malt_name")
 
 split_ingredients <- function(df) {
   ncol_df <- ncol(df)
@@ -33,8 +33,11 @@ split_ingredients <- function(df) {
 }
 
 sbn_added <- sbn
-sbn_added <- ingredient_split(sbn)
+sbn_added <- split_ingredients(sbn)
 View(sbn_added)
+
+
+debugonce(split_ingredients)
 
 
 
