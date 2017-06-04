@@ -13,7 +13,7 @@ predictors <- c("abv", "glass", "srm", "ibu")
 
 
 # linear model
-m_1 <- glm(style ~ abv + srm + ibu, data = beer_dat_pared)
+m_1 <- glm(style_collapsed ~ abv + srm + ibu, data = beer_dat_pared, na.rm = TRUE)
 summary(m_1)
 
 

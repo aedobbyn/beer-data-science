@@ -58,14 +58,25 @@ centers_srm_ibu <- ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour =
 library(ggrepel)
 abv_ibu_clusters_vs_style_centers <- ggplot() +   
   geom_point(data = clustered_beer, 
-             aes(x = abv, y = ibu, colour = cluster_assignment)) +
+             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_abv, mean_ibu), colour = "black") +
   geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
                   box.padding = unit(0.45, "lines"),
-                  family = "Courier",
+                  family = "Calibri",
                   label.size = 0.3) +
+  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment") +
   theme_bw()
 abv_ibu_clusters_vs_style_centers
 
 
+
+
+library(plot3D)
+library(scatterplot3d)
+three_d <- scatterplot3d(x = beer_dat_pared$abv[1:100], y = beer_dat_pared$ibu[1:100], 
+                  z = beer_dat_pared$srm[1:100])
+
+three_d

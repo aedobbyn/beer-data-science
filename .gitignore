@@ -4,3 +4,4 @@
 .Ruserdata
 *.log*
 key.R
+.ipynb_checkpoints/
