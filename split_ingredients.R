@@ -2,25 +2,26 @@
 
 library(stringr)
 
+simple_beer_necessities
 
-add_new_cols <- function(df) {
+split_ingredients <- function(df, ingredient) {
   ncol_df <- ncol(df)
   
-  hops_split <- str_split(sbn[["hops_name"]], ", ")
-  num_new_cols <- max(lengths(hops_split))
+  ingredient_split <- str_split(sbn[[ingredient]], ", ")    # this returns a list
+  num_new_cols <- max(lengths(ingredient_split))
 
   new_col_names <- vector()
   
   for (num in 1:num_new_cols) {
     this_col <- ncol_df + 1
     
-    df[, this_col] <- "foo"
-    names(df)[this_col] <- paste0("hop_", num)
+    df[, this_col] <- NA
+    names(df)[this_col] <- paste0(ingredient, "_", num)
     ncol_df <- ncol(df)
     
-    for (row in seq_along(hops_split)) {
+    for (row in seq_along(ingredient_split)) {
       if (!is.null(hops_split[[row]][num])) {
-        df[row, this_col] <- hops_split[[row]][num]
+        df[row, this_col] <- ingredient_split[[row]][num]
       }
     }
   }
@@ -28,9 +29,8 @@ add_new_cols <- function(df) {
   return(df)
 }
 
-add_new_cols(sbn)
 
-sbn_added <- add_new_cols(sbn)
+sbn_added <- ingredient_split(sbn, "malt_name")
 View(sbn_added)
 
 
