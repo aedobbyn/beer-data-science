@@ -516,6 +516,52 @@ beer_nec_ingredients <- beer_necessities
 
 
 library(stringr)
+
+
+add_new_cols <- function(df) {
+  ncol_df <- ncol(df)
+  
+  hops_split <- str_split(df[["hops_name"]], ", ")
+  num_new_cols <- max(lengths(hops_split))
+  # print(paste0("number new cols is: ", num_new_cols))
+  
+  new_col_names <- vector()
+  
+  for (num in 1:num_new_cols) {
+    this_col <- ncol_df + 1
+    
+    df[, this_col] <- "foo"
+    names(df)[this_col] <- paste0("hop_", num)
+    # new_col_names <- c(new_col_names, names(df[, this_col]))
+    # print(paste0("column names: ", new_col_names))
+    ncol_df <- ncol(df)
+  }
+  
+  # return(new_col_names)
+  return(df)
+}
+
+add_new_cols(sbn)
+
+sbn_added <- add_new_cols(sbn)
+View(sbn_added)
+
+names(sbn_added)[20] <- paste0("hop_", "4")
+
+
+hops_split <- str_split(df[["hops_name"]], ", ")
+num_new_cols <- max(lengths(hops_split))
+
+split_sbn <- separate(data = sbn_added,
+                      col = hops_name, into = setdiff(names(sbn_added), names(sbn)), sep = ", ")
+View(split_sbn)
+
+
+
+
+
+
+  
 split_ingredients <- function(df) {
   ncol_df <- ncol(df)
   
@@ -524,9 +570,19 @@ split_ingredients <- function(df) {
   hops_split <- str_split(df[["hops_name"]], ", ")
   num_new_cols <- max(lengths(hops_split))
   
+  new_col_names <- vector()
+  
   for (num in num_new_cols) {
     df[, ncol_df + num] <- NULL
+    names(df[, ncol_df + num]) <- paste0("hop_", num)
+    new_col_names <- c(new_col_names, names(df[, ncol_df + num]))
   }
+  new_cols <- names(df)
+  
+  split_sbn <- separate(data = df,
+                        col = hops_name, into = c("hop_1", "hop_2", "hop_3", "hop_4"), sep = ", ")
+  
+  
   
   for (h in hops_split) {
     df[, ]
