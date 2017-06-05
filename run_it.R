@@ -53,6 +53,10 @@ beer_necessities <- collapse_further(beer_necessities)
 droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
 
 
+# ------ simple beer necessities
+simple_beer_necessities <- sample_n(beer_necessities, 200)
+
+
 
 # ------------------ pare to most popular styles ---------------
 # ----- pare down by style or style_collapsed? -----

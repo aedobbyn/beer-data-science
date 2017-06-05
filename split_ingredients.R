@@ -1,10 +1,12 @@
-# split ingredients
+# split ingredients on commas
 
 library(stringr)
 
-simple_beer_necessities
+sbn <- simple_beer_necessities
 
+# add columns we want to split up here
 ingredients <- c("hops_name", "malt_name")
+
 
 split_ingredients <- function(df) {
   ncol_df <- ncol(df)
@@ -20,33 +22,30 @@ split_ingredients <- function(df) {
       df[, this_col] <- NA
       names(df)[this_col] <- paste0(ingredient, "_", num)
       ncol_df <- ncol(df)             # update the number of columns
-      
       for (row in seq_along(ingredient_split)) {           # for each element in our list of split up ingredients
+        print((paste0("On row number: ", row)))
         if (!is.null(ingredient_split[[row]][num])) {         # if it exists, add it to the correct column in our df
           df[row, this_col] <- ingredient_split[[row]][num]
         }
       }
+      df[, this_col] <- factor(this_col)
     }
     ncol_df <- ncol(df)
   }
   return(df)
 }
 
-sbn_added <- sbn
-sbn_added <- split_ingredients(sbn)
-View(sbn_added)
+sbn_split <- split_ingredients(sbn)
 
 
-debugonce(split_ingredients)
+bn <- split_ingredients(beer_necessities)
 
 
 
-hops_split <- str_split(df[["hops_name"]], ", ")
-num_new_cols <- max(lengths(hops_split))
+
 
 
 # # a more functional way of doing this using separate()
 
-# split_sbn <- separate(data = sbn_added,
-#                       col = hops_name, into = setdiff(names(sbn_added), names(sbn)), sep = ", ")
-# View(split_sbn)
+# split_sbn <- separate(data = simple_beer_necessities,
+#                       col = hops_name, into = setdiff(names(sbn_added), names(simple_beer_necessities)), sep = ", ")

@@ -8,7 +8,8 @@ library(NbClust)
 # only using top beer styles
 # select only predictor and outcome columns, take out NAs, and scale the data
 beer_for_clustering <- popular_beer_dat %>% 
-  select(style, styleId, abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
+  select(style, styleId, style_collapsed,
+         abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
   na.omit() %>% 
   filter(
     !(ibu > 300)      # take out outliers
@@ -25,14 +26,14 @@ beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) 
   srm_scaled = srm
   ) %>% scale() 
   
-beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId)
+beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId, style_collapsed)
 
 
 
 # what's the optimal number of clusters?
 
-nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean",
-              min.nc = 2, max.nc = 15, method = "kmeans")
+# nb <- NbClust(beer_for_clustering_predictors, distance = "euclidean",
+#               min.nc = 2, max.nc = 15, method = "kmeans")
 # hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
 
 

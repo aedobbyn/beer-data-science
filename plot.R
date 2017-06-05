@@ -6,7 +6,7 @@ ggplot(data = beer_necessities[1:200, ], aes(x = abv, y = ibu, colour = style_co
   geom_point()
 
 
-dIPAs <- cluster_dat %>% 
+dIPAs <- beer_necessities %>% 
   filter(
     style_collapsed == "Double India Pale Ale"
   )
