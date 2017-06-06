@@ -1,12 +1,8 @@
 - tsne
 - adversarial networks
 	- name generator
-	- 
 	
 paginated_request() 
   - if is.null(number_of_pages), only take the fist page
     - use case is glassware
-  - 
-  
-- hops and malts
-  - instead of concating strings, split into their own columns on comma
+

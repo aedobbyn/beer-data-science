@@ -23,12 +23,13 @@ split_ingredients <- function(df) {
       names(df)[this_col] <- paste0(ingredient, "_", num)
       ncol_df <- ncol(df)             # update the number of columns
       for (row in seq_along(ingredient_split)) {           # for each element in our list of split up ingredients
-        print((paste0("On row number: ", row)))
+        print((paste0("On ingredient ", ingredient, ", row  ", row)))
         if (!is.null(ingredient_split[[row]][num])) {         # if it exists, add it to the correct column in our df
           df[row, this_col] <- ingredient_split[[row]][num]
+          # browser()
         }
       }
-      df[, this_col] <- factor(this_col)
+      df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
     }
     ncol_df <- ncol(df)
   }
@@ -36,13 +37,17 @@ split_ingredients <- function(df) {
 }
 
 sbn_split <- split_ingredients(sbn)
+simple_beer_necessities <- sbn_split
 
 
 bn <- split_ingredients(beer_necessities)
+beer_necessities <- bn
 
 
+bn <- bn[, c(1:16, 40:62)]
 
-
+names(bn) <- str_replace_all(names(bn), "(\\.1)", "")
+str_extract_all(names(bn), "(\\.1)")
 
 
 # # a more functional way of doing this using separate()

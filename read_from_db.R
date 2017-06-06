@@ -1,4 +1,5 @@
 # read from db
+library(RMySQL)
 
 drv <- dbDriver("RMySQL")
 con <- dbConnect(RMySQL::MySQL(), dbname="brewery_db", host='localhost', port=3306, user="root")
@@ -22,6 +23,11 @@ beer_necessities$malt_name <- factor(beer_necessities$malt_name)
 beer_necessities$hops_id <- factor(beer_necessities$hops_id)
 beer_necessities$malt_id <- factor(beer_necessities$malt_id)
 
+
+
+# from csv
+
+beer_necessities <-read_csv("./beer_necessities.csv")
 
 
 

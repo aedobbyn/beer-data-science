@@ -20,15 +20,21 @@ dbWriteTable(con, "breweries",
 dbWriteTable(con, "all_glassware", 
              value = all_glassware, append = TRUE, row.names = FALSE)
 
-
 dbWriteTable(con, "beer_necessities", 
              value = beer_necessities, overwrite = TRUE, row.names = FALSE)
+
+dbWriteTable(con, "simple_beer_necessities", 
+             value = simple_beer_necessities, append = TRUE, row.names = FALSE)
 
 
 dbWriteTable(con, "beer_dat", 
              value = beer_dat, append = TRUE, row.names = FALSE)
 
 
+
+# ------------- write to csv
+
+write_csv(beer_necessities, "./beer_necessities.csv", append = FALSE, na = "")
 
 
 
