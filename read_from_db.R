@@ -28,13 +28,11 @@ factorize_ingredients <- function(df) {
   for(col_name in names(df)) {
     if (grepl(("hops_name_|malt_name_"), col_name) == TRUE) {
       print(col_name)
-      # df[[names(df)[which(names(df) == col_name)]]] <- factor(df[[names(df)[which(names(df) == col_name)]]])
       df[[col_name]] <- factor(df[[col_name]])
     }
   }
   return(df)
 }
-# factorize_ingredients(beer_necessities_expanded)
 
 bne <- factorize_ingredients(beer_necessities_expanded)
 

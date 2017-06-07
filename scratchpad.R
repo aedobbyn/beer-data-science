@@ -636,7 +636,7 @@ library(forcats)
 
 # factorize ingredients columns two ways
 
-factorize_ingredients <- function(df) {
+factorize_ingredients_col_name <- function(df) {
   for(col_name in names(df)) {
     if (grepl(("hops_name_|malt_name_"), col_name) == TRUE) {
       print(col_name)
@@ -646,13 +646,46 @@ factorize_ingredients <- function(df) {
   return(df)
 }
 
-bne <- factorize_ingredients(beer_necessities_expanded)
+
+factorize_ingredients_col_num <- function(df) {
+  for (col_num in 1:ncol(df)) {
+    if (grepl(("hops_name_|malt_name_"), names(df)[col_num]) == TRUE) {
+      print(names(df)[col_num])
+      df[, col_num] <- factor(df[, col_num])
+    }
+  }
+  return(df)
+}
+
+bne <- factorize_ingredients_col_num(beer_necessities_expanded)
 
 
 
+names(bne)
+
+hop_cols <- bne[, 17:29]
+
+setdiff(levels(bne$hops_name_1), levels(bne$hops_name_2))
+
+bne_collapse_levs <- bne %>%
+  fct_collapse(
+  "all_hops" = hop_cols
+)
+
+levels(hop_cols)
 
 
-# all_hop_levels <- beer_necessities %>% 
-#   fct_collapse(
-#   "all_hops" = c("hops_name_1", "hops_name_2")
-# )
+get_hop_levels <- function() {
+  hop_levels <- vector()
+  
+  for (col_num in 1:ncol(hop_cols)) {
+    this_col_levels <- levels(hop_cols[, col_num])
+    hop_levels <- c(hop_levels, this_col_levels)
+  }
+  unique_hop_levels <- unique(hop_levels)
+  return(unique_hop_levels)
+}
+
+all_hop_levels <- get_hop_levels()
+
+length(all_hop_levels)
