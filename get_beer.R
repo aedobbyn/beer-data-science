@@ -40,8 +40,11 @@ paginated_request <- function(ep, addition) {
   full_request <- NULL
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
-  number_of_pages <- first_page$numberOfPages
-  for (page in 1:number_of_pages) {                               # change this back to number_of_pages to get full result list
+  number_of_pages <- ifelse(!(is.null(first_page$numberOfPages)), 
+                            first_page$numberOfPages, 1)      # if there's only one page (like for glassware), 
+                                                              # numberOfPages won't be returned, so we set number_of_pages to 1
+
+    for (page in 1:number_of_pages) {                               # change number_of_pages to 3 if only want first 3 pages
     this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                     , "&p=", page, addition),
                              flatten = TRUE) 
@@ -53,4 +56,4 @@ paginated_request <- function(ep, addition) {
 } 
 
 
-
+first_p <- paginated_request("glassware", "")
