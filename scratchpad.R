@@ -628,3 +628,12 @@ split_sbn <- separate(data = simple_beer_necessities[100:105, ],
 names(bn) <- str_replace_all(names(bn), "(\\.1)", "")
 
 
+
+
+library(forcats)
+all_hop_levels <- beer_necessities %>% 
+  fct_collapse(
+  "all_hops" = c("hops_name_1", "hops_name_2"
+)
+
+

@@ -4,7 +4,7 @@ library(RMySQL)
 drv <- dbDriver("RMySQL")
 con <- dbConnect(RMySQL::MySQL(), dbname="brewery_db", host='localhost', port=3306, user="root")
 
-beer_necessities <- dbReadTable(con, "beer_necessities")
+beer_necessities_expanded <- dbReadTable(con, "beer_necessities")
 
 # set types
 beer_necessities$style <- factor(beer_necessities$style)
@@ -24,10 +24,24 @@ beer_necessities$hops_id <- factor(beer_necessities$hops_id)
 beer_necessities$malt_id <- factor(beer_necessities$malt_id)
 
 
+factorize_ingredients <- function(df) {
+  for (col_num in 1:ncol(df)) {
+    if (grepl(("hops_name_|malt_name_"), names(df)[col_num]) == TRUE) {
+      print(names(df)[col_num])
+      # df[[names(df)[which(names(df) == col_name)]]] <- factor(df[[names(df)[which(names(df) == col_name)]]])
+      df[, col_num] <- factor(df[, col_num])
+    }
+  }
+  return(df)
+}
+# factorize_ingredients(beer_necessities_expanded)
+
+bne <- factorize_ingredients(beer_necessities_expanded)
+
 
 # from csv
 
-beer_necessities <-read_csv("./beer_necessities.csv")
+beer_necessities <- read_csv("./beer_necessities.csv")
 
 
 
