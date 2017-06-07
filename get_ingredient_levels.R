@@ -50,28 +50,56 @@ table(bne_slice)
 
 
 
-bne_slice_gather <- bne_slice %>% 
+bne_slice_hops <- bne_slice %>% 
+  select(
+    name, style, style_collapsed, hops_name_1:hops_name_13
+  ) %>% 
   gather(
     key = hops,
     value = hops_nme,
     hops_name_1:hops_name_13
   ) %>% 
-  gather(
-    key = malt,
-    value = malt_nme,
-    malt_name_1:malt_name_10
-  ) %>% 
   mutate(
     count = 1
-  )
+  ) 
 
-bne_slice_spread_hops <- bne_slice_gather %>% 
+bne_slice_spread_hops <- bne_slice_hops %>% 
+  # select(
+  #   -hops
+  # ) %>% 
+  # select(
+  #   name, style, style_collapsed, hops_nme, count 
+  # ) %>% 
+  # select(
+  #   -num_range(26)
+  # ) %>% 
   spread(
     key = hops_nme,
     value = count
-  ) 
+  ) %>% 
+  select(
+    name:style_collapsed, Amarillo:`Sorachi Ace`
+  )
 View(bne_slice_spread_hops)
 
+bne_slice_spread_hops_group <- bne_slice_spread_hops %>% 
+  group_by(name, style, style_collapsed) %>% 
+  summarise_all(
+    sum, na.rm = TRUE
+  )
+View(bne_slice_spread_hops_group)
+
+
+# ind <- apply(bne_slice_spread_hops[, 4:23], 1, function(x) all(is.na(x)))
+# bne_slice_spread_hops_group <- bne_slice_spread_hops[ !ind, ]
+
+
+gather(
+  key = malt,
+  value = malt_nme,
+  malt_name_1:malt_name_10
+) %>% 
+  
 bne_slice_spread_malt <- bne_slice_gather %>% 
   spread(
     key = malt_nme,
