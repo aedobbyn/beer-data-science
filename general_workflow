@@ -2,17 +2,28 @@
 
 # -------- getting, munging, adding to db --------
 
+- ### run_it.R calls all the functions for munging defined here: ###
+
 - get_beer.R
 	- get all pages for a given endpoint with paginated_request()
 
 - munge.R
-	- unnest_it() into something that can be added to db
+	- unnest_it() called within paginated_request() to unnest JSON
+	- further unnest_ingredients into their own concatenated row
+	
+- split_ingredients.R
+  - split_ingredients() into their own columns if so desired
+  
+- collapse_styles.R
+  - collapse_styles() and collapse_further()
 
 - add_to_db.R
 	- add the $data portion of the unnested df to the db as its own table
 
 
 # -------- data science part -------
+
+- plot.R
 
 - cluster.R
 

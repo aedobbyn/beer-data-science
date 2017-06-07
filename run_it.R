@@ -3,6 +3,7 @@
 source("./get_beer.R")
 source("./munge.R")
 source("./collapse_styles.R")
+source("./split_ingredients.R")
 
 
 # --------------- get all raw beer and breweries --------------
@@ -52,8 +53,18 @@ beer_necessities <- collapse_further(beer_necessities)
 # drop unused levels
 droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
 
+# save this into beer_necessities_bundled as we'll use the name beer_necessities when we split out ingredients
+beer_necessities_bundled <- beer_necessities
 
-# ------ simple beer necessities
+
+# ---------------- split out ingredients that were concatenated in `ingredient`_name
+# split_ingredients() from split_ingredients.R
+
+ingredients_2_split <- c("hops_name", "malt_name")
+beer_necessities <- split_ingredients(beer_necessities_bundled, ingredients_2_split) 
+
+
+# ------ simple beer necessities: random sample of 200
 simple_beer_necessities <- sample_n(beer_necessities, 200)
 
 

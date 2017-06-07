@@ -2,7 +2,12 @@
 - adversarial networks
 	- name generator
 	
+- get other ingredients (yeast, spices)
+
 paginated_request() 
   - if is.null(number_of_pages), only take the fist page
     - use case is glassware
+
+- which hops are used most often in which styles?
+  - are they predictive?
 

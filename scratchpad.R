@@ -622,3 +622,9 @@ max(length(hops_split[]))
 split_sbn <- separate(data = simple_beer_necessities[100:105, ],
                       col = hops_name, into = c("hop_1", "hop_2", "hop_3", "hop_4"), sep = ", ")
 
+
+
+# if need to fix duped names (second set gets .1 after the name), replace the .1 with nothing using
+names(bn) <- str_replace_all(names(bn), "(\\.1)", "")
+
+
