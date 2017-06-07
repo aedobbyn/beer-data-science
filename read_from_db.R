@@ -25,11 +25,11 @@ beer_necessities$malt_id <- factor(beer_necessities$malt_id)
 
 
 factorize_ingredients <- function(df) {
-  for (col_num in 1:ncol(df)) {
-    if (grepl(("hops_name_|malt_name_"), names(df)[col_num]) == TRUE) {
-      print(names(df)[col_num])
+  for(col_name in names(df)) {
+    if (grepl(("hops_name_|malt_name_"), col_name) == TRUE) {
+      print(col_name)
       # df[[names(df)[which(names(df) == col_name)]]] <- factor(df[[names(df)[which(names(df) == col_name)]]])
-      df[, col_num] <- factor(df[, col_num])
+      df[[col_name]] <- factor(df[[col_name]])
     }
   }
   return(df)

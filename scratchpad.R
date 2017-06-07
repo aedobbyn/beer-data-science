@@ -631,9 +631,28 @@ names(bn) <- str_replace_all(names(bn), "(\\.1)", "")
 
 
 library(forcats)
-all_hop_levels <- beer_necessities %>% 
-  fct_collapse(
-  "all_hops" = c("hops_name_1", "hops_name_2"
-)
 
 
+
+# factorize ingredients columns two ways
+
+factorize_ingredients <- function(df) {
+  for(col_name in names(df)) {
+    if (grepl(("hops_name_|malt_name_"), col_name) == TRUE) {
+      print(col_name)
+      df[[col_name]] <- factor(df[[col_name]])
+    }
+  }
+  return(df)
+}
+
+bne <- factorize_ingredients(beer_necessities_expanded)
+
+
+
+
+
+# all_hop_levels <- beer_necessities %>% 
+#   fct_collapse(
+#   "all_hops" = c("hops_name_1", "hops_name_2")
+# )
