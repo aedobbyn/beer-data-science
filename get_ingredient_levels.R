@@ -60,13 +60,17 @@ bne_slice_gather <- bne_slice %>%
     key = malt,
     value = malt_nme,
     malt_name_1:malt_name_10
+  ) %>% 
+  mutate(
+    count = 1
   )
 
 bne_slice_spread_hops <- bne_slice_gather %>% 
   spread(
     key = hops_nme,
-    value = name
+    value = count
   ) 
+View(bne_slice_spread_hops)
 
 bne_slice_spread_malt <- bne_slice_gather %>% 
   spread(
