@@ -46,10 +46,6 @@ bne_slice <- bne_slice %>%
   as_tibble()
 
 
-table(bne_slice)
-
-
-
 bne_slice_hops <- bne_slice %>% 
   select(
     name, style, style_collapsed, hops_name_1:hops_name_13
@@ -64,15 +60,6 @@ bne_slice_hops <- bne_slice %>%
   ) 
 
 bne_slice_spread_hops <- bne_slice_hops %>% 
-  # select(
-  #   -hops
-  # ) %>% 
-  # select(
-  #   name, style, style_collapsed, hops_nme, count 
-  # ) %>% 
-  # select(
-  #   -num_range(26)
-  # ) %>% 
   spread(
     key = hops_nme,
     value = count
@@ -84,27 +71,67 @@ View(bne_slice_spread_hops)
 
 bne_slice_spread_hops_group <- bne_slice_spread_hops %>% 
   group_by(name, style, style_collapsed) %>% 
-  summarise_all(
+  summarise_all(                            # summarises all non-grouping columns
     sum, na.rm = TRUE
   )
 View(bne_slice_spread_hops_group)
 
+hops_by_style <- bne_slice_spread_hops_group %>% 
+  ungroup() %>% 
+  select(-c(name, style)) %>% 
+  group_by(style_collapsed) %>% 
+  summarise_all(
+    sum, na.rm = TRUE
+  )
+View(hops_by_style)
 
-# ind <- apply(bne_slice_spread_hops[, 4:23], 1, function(x) all(is.na(x)))
-# bne_slice_spread_hops_group <- bne_slice_spread_hops[ !ind, ]
 
 
-gather(
-  key = malt,
-  value = malt_nme,
-  malt_name_1:malt_name_10
-) %>% 
-  
-bne_slice_spread_malt <- bne_slice_gather %>% 
+
+
+
+
+
+
+
+
+bne_slice_malt <- bne_slice %>% 
+  select(
+    name, style, style_collapsed, malt_name_1:malt_name_10
+  ) %>% 
+  gather(
+    key = malt,
+    value = malt_nme,
+    malt_name_1:malt_name_10
+  ) %>% 
+  mutate(
+    count = 1
+  ) 
+
+bne_slice_spread_malt <- bne_slice_malt %>% 
   spread(
     key = malt_nme,
-    value = name
+    value = count
+  ) %>% 
+  select(
+    name:style_collapsed, `Aromatic Malt`:`Wheat Malt - White`
   )
+View(bne_slice_spread_malt)
+
+bne_slice_spread_malt_group <- bne_slice_spread_malt %>% 
+  group_by(name, style, style_collapsed) %>% 
+  summarise_all(                            
+    sum, na.rm = TRUE
+  )
+View(bne_slice_spread_malt_group)
 
 
+malt_by_style <- bne_slice_spread_malt_group %>% 
+  ungroup() %>% 
+  select(-c(name, style)) %>% 
+  group_by(style_collapsed) %>% 
+  summarise_all(
+    sum, na.rm = TRUE
+  )
+View(malt_by_style)
 
