@@ -1,3 +1,4 @@
+source("./run_it.R")
 
 library(tsne)
 library(NbClust)

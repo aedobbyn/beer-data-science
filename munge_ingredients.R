@@ -4,6 +4,7 @@ source("./get_ingredient_levels.R")
 length(all_hops_levels)
 length(all_malt_levels)
 
+
 # find the length of the longest ingredient vector
 ingredient_types_length <- max(length(all_hops_levels), length(all_malt_levels))
 
@@ -23,7 +24,7 @@ View(ingredient_types)
 
 bne_slice <- bne %>% 
   select(
-    -c(id, description, abv, ibu, srm, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
+    -c(id, description, srm, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
   ) %>% 
   as_tibble()
 

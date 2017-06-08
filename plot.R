@@ -1,5 +1,6 @@
 
 source("./most_popular_styles.R")
+source("./cluster.R")
 
 
 ggplot(data = beer_necessities[1:200, ], aes(x = abv, y = ibu, colour = style_collapsed)) +
@@ -32,7 +33,7 @@ clustered_beer <- clustered_beer %>%
   drop_na() %>% 
   droplevels()
 
-style_centers <- clustered_beer %>% 
+style_centers <- clustered_beer %>%             #### these style_centers different from style_centers in run_it.R
   group_by(style_collapsed) %>% 
   summarise(
     mean_abv = mean(abv, na.rm = TRUE),
