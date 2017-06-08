@@ -57,7 +57,11 @@ bne_slice_spread_hops <- bne_slice_hops %>%
   )
 View(bne_slice_spread_hops)
 
-bne_slice_spread_hops_group <- bne_slice_spread_hops %>% 
+# take out all rows that have no ingredients specified at all
+ind <- apply(bne_slice_spread_hops[, 4:ncol(bne_slice_spread_hops)], 1, function(x) all(is.na(x)))
+bne_slice_spread_hops_no_na <- bne_slice_spread_hops[ !ind, ]
+
+bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>% 
   group_by(name, style, style_collapsed) %>% 
   summarise_all(                            # summarises all non-grouping columns
     sum, na.rm = TRUE
@@ -74,8 +78,22 @@ hops_by_style <- bne_slice_spread_hops_group %>%
 View(hops_by_style)
 
 
-
-
+total_hops_per_style <- hops_by_style %>% 
+  # group_by(style_collapsed) %>%
+  select(-style_collapsed) %>% 
+  mutate(
+    total_hops = rowSums(., na.rm = TRUE)
+  ) %>% as_tibble() %>% 
+  # summarise_all(
+  #   sum, na.rm = TRUE
+  # ) %>% 
+  select(
+    total_hops
+  )
+total_hops_per_style <- as_tibble(cbind(total_hops_per_style,
+                                   hops_by_style)) 
+total_hops_per_style <- total_hops_per_style[, 1:2] 
+total_hops_per_style
 
 
 
@@ -98,7 +116,7 @@ bne_slice_malt <- bne_slice %>%
 
 bne_slice_spread_malt <- bne_slice_malt %>% 
   mutate(
-    row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for row
+    row = 1:nrow(bne_slice_malt)        # add a unique idenfitier for row
   ) %>%  
   spread(
     key = malt_nme,
@@ -109,14 +127,20 @@ bne_slice_spread_malt <- bne_slice_malt %>%
   )
 View(bne_slice_spread_malt)
 
-bne_slice_spread_malt_group <- bne_slice_spread_malt %>% 
+
+# take out all rows that have no ingredients specified at all
+ind <- apply(bne_slice_spread_malt[, 4:ncol(bne_slice_spread_malt)], 1, function(x) all(is.na(x)))
+bne_slice_spread_malt_no_na <- bne_slice_spread_malt[ !ind, ]
+
+
+bne_slice_spread_malt_group <- bne_slice_spread_malt_no_na %>% 
   group_by(name, style, style_collapsed) %>% 
   summarise_all(                            
     sum, na.rm = TRUE
   )
 View(bne_slice_spread_malt_group)
 
-
+# matrix of total number of ingredient instances per beer style
 malt_by_style <- bne_slice_spread_malt_group %>% 
   ungroup() %>% 
   select(-c(name, style)) %>% 
@@ -125,4 +149,14 @@ malt_by_style <- bne_slice_spread_malt_group %>%
     sum, na.rm = TRUE
   )
 View(malt_by_style)
+
+
+
+
+
+
+
+
+ggplot() +
+  geom_bar(aes(x = ))
 
