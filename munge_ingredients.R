@@ -21,7 +21,7 @@ View(ingredient_types)
 
 # bne_slice <- beer_necessities_expanded[100:200, ] 
 
-bne_slice <- beer_necessities_expanded %>% 
+bne_slice <- bne %>% 
   select(
     -c(id, description, abv, ibu, srm, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
   ) %>% 
@@ -75,32 +75,18 @@ hops_by_style <- bne_slice_spread_hops_group %>%
   group_by(style_collapsed) %>% 
   summarise_all(
     sum, na.rm = TRUE
-  ) %>% count()
-View(hops_by_style)
-
-
-total_hops_per_style <- hops_by_style %>% 
-  select(-style_collapsed) %>% 
+  ) %>%
   mutate(
-    total_hops = rowSums(., na.rm = TRUE)
-  ) %>% as_tibble() %>% 
-  select(
-    total_hops
-  )
-total_hops_per_style <- as_tibble(cbind(total_hops_per_style,
-                                   hops_by_style)) 
-total_hops_per_style <- total_hops_per_style[, 1:2] %>% 
+    total_hops = rowSums(.[2:ncol(.)])
+  ) %>% 
   arrange(
     desc(total_hops)
   )
-total_hops_per_style
-
-total_hops_per_style_all <- cbind(total_hops_per_style, hops_by_style[, 2:ncol(hops_by_style)])
-
+View(hops_by_style[, c(1, 147:ncol(hops_by_style))])
 
 
 # bar chart
-ggplot(total_hops_per_style_all, aes(style_collapsed, total_hops)) +
+ggplot(hops_by_style, aes(style_collapsed, total_hops)) +
   geom_bar(stat = "identity")
 
 
@@ -153,6 +139,11 @@ malt_by_style <- bne_slice_spread_malt_group %>%
   group_by(style_collapsed) %>% 
   summarise_all(
     sum, na.rm = TRUE
+  ) %>%  mutate(
+    total_malt = rowSums(.[2:ncol(.)])
+  ) %>% 
+  arrange(
+    desc(total_malt)
   )
 View(malt_by_style)
 
