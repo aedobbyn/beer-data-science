@@ -65,7 +65,8 @@ bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>%
   group_by(name, style, style_collapsed) %>% 
   summarise_all(                            # summarises all non-grouping columns
     sum, na.rm = TRUE
-  )
+    # n = count()
+  ) 
 View(bne_slice_spread_hops_group)
 
 hops_by_style <- bne_slice_spread_hops_group %>% 
@@ -74,28 +75,33 @@ hops_by_style <- bne_slice_spread_hops_group %>%
   group_by(style_collapsed) %>% 
   summarise_all(
     sum, na.rm = TRUE
-  )
+  ) %>% count()
 View(hops_by_style)
 
 
 total_hops_per_style <- hops_by_style %>% 
-  # group_by(style_collapsed) %>%
   select(-style_collapsed) %>% 
   mutate(
     total_hops = rowSums(., na.rm = TRUE)
   ) %>% as_tibble() %>% 
-  # summarise_all(
-  #   sum, na.rm = TRUE
-  # ) %>% 
   select(
     total_hops
   )
 total_hops_per_style <- as_tibble(cbind(total_hops_per_style,
                                    hops_by_style)) 
-total_hops_per_style <- total_hops_per_style[, 1:2] 
+total_hops_per_style <- total_hops_per_style[, 1:2] %>% 
+  arrange(
+    desc(total_hops)
+  )
 total_hops_per_style
 
+total_hops_per_style_all <- cbind(total_hops_per_style, hops_by_style[, 2:ncol(hops_by_style)])
 
+
+
+# bar chart
+ggplot(total_hops_per_style_all, aes(style_collapsed, total_hops)) +
+  geom_bar(stat = "identity")
 
 
 
