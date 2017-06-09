@@ -22,16 +22,16 @@ View(ingredient_types)
 
 # bne_slice <- beer_necessities_expanded[100:200, ] 
 
-bne_slice <- bne %>% 
+bne_slice <- clustered_beer %>%       ### replace bne with whatever we want here
   select(
-    -c(id, description, srm, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
+    -c(id, description, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
   ) %>% 
   as_tibble()
 
 
 bne_slice_hops <- bne_slice %>% 
   select(
-    name, style, style_collapsed, hops_name_1:hops_name_13
+    name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
   ) %>% 
   gather(
     key = hops,
@@ -150,11 +150,9 @@ View(malt_by_style)
 
 
 
+# ----------- add all hops to all beers
+hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
 
 
 
-
-
-ggplot() +
-  geom_bar(aes(x = ))
 

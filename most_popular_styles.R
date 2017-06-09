@@ -1,7 +1,8 @@
 # most popular beers
 # may want to cluster the remaining into one of these groups down the road
 
-source("./munge.R")
+# source("./munge.R")
+source("./read_from_db.R")
 library(forcats)
 
 # beer_dat <- dbGetQuery(con, "select * from all_beers")
@@ -63,13 +64,6 @@ style_centers <- popular_beer_dat %>%
   drop_na() %>% 
   droplevels()
   
-# popular style centers: abv and ibu
-ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
-  geom_point()
-
-# popular style centers: srm and ibu
-ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
-  geom_point()
 
 
 

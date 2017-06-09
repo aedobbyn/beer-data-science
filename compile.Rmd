@@ -1,0 +1,35 @@
+---
+title: "Beer data"
+author:
+  name: Amanda Dobbyn
+date: 
+output: 
+  html_document:
+    keep_md: true
+    toc: true
+    theme: yeti
+  github_document:
+    toc: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+# source("./read_from_db.R")
+source("./cluster.R")
+# source("./plot.R")
+```
+
+## R Markdown
+
+```{r cars}
+beer_for_clustering
+clustered_beer_plot_abv_ibu
+```
+
+## Plot clusters related to style centers
+
+```{r pressure, echo=FALSE}
+# abv_ibu_clusters_vs_style_centers
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.

@@ -2,11 +2,11 @@
 library(RMySQL)
 library(tidyverse)
 
-drv <- dbDriver("RMySQL")
+# drv <- dbDriver("RMySQL")
 con <- dbConnect(RMySQL::MySQL(), dbname="brewery_db", host='localhost', port=3306, user="root")
 
-beer_necessities_expanded <- dbReadTable(con, "beer_necessities")
-beer_necessities <- beer_necessities_expanded
+beer_necessities <- dbReadTable(con, "beer_necessities")
+# beer_necessities <- beer_necessities_expanded
 
 # set types
 beer_necessities$style <- factor(beer_necessities$style)
@@ -36,14 +36,14 @@ factorize_ingredients <- function(df) {
   return(df)
 }
 
-beer_necessities_expanded <- factorize_ingredients(beer_necessities_expanded)
+# beer_necessities_expanded <- factorize_ingredients(beer_necessities_expanded)
 beer_necessities <- factorize_ingredients(beer_necessities)
 
 
 
 # ------ read in from csv
 
-beer_necessities <- read_csv("./beer_necessities.csv")
+# beer_necessities <- read_csv("./beer_necessities.csv")
 
 
 

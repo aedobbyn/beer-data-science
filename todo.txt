@@ -10,6 +10,7 @@
 
 - for each beer, plot ibu vs. number of hops; should see linear trend
   - which hops contribute most to bitterness?
+- and abv vs ibu, fill = hops
   
   
   

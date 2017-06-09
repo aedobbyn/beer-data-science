@@ -1,6 +1,8 @@
-source("./run_it.R")
+# source("./run_it.R")
 
-library(tsne)
+# source("./read_from_db.R")
+source("./most_popular_styles.R")
+
 library(NbClust)
 
 
@@ -107,15 +109,17 @@ table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
 
 
 # tsne
-cb <- clustered_beer %>% sample_n(100)
-
-colors = rainbow(length(unique(cb$style)))
-names(colors) = unique(cb$style)
-
-ecb = function (x,y) { 
-  plot(x,t='n'); 
-  text(x, labels=cb$style, col=colors[cb$style]) }
-
-tsne_beer = tsne(cb[,4:6], epoch_callback = ecb, perplexity=20)
-
-
+# library(tsne)
+# 
+# cb <- clustered_beer %>% sample_n(100)
+# 
+# colors = rainbow(length(unique(cb$style)))
+# names(colors) = unique(cb$style)
+# 
+# ecb = function (x,y) { 
+#   plot(x,t='n'); 
+#   text(x, labels=cb$style, col=colors[cb$style]) }
+# 
+# tsne_beer = tsne(cb[,4:6], epoch_callback = ecb, perplexity=20)
+# 
+# 
