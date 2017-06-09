@@ -160,3 +160,101 @@ hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ---------- do this w function
+
+
+# take for the ingredient we want, take e.g. colums hops_name_1, hops_name_2 and make the hops names the columns
+# if a given beer contains that ingredient, it gets a 1 in that column, a 0 otherwise
+
+# gather all the hops_name_1, hops_name_2, etc. columns into one long key column called hops
+# its corresponding value column, hops_nme specifies the actual hops name (Centennial, Apollo)
+# add a new count column with a 1 for every beer that we'll use as the value when we spread ingredients out in their
+# own columns
+
+ingredient_want <- "hops"
+
+get_last_ing_name_col <- function(df) {
+  for (col in names(df)) {
+    if (grepl(paste(ingredient_want, "_name_", sep = ""), col) == TRUE) {
+      name_last_ing_col <- col
+    }
+  }
+  return(name_last_ing_col)
+}
+get_last_ing_name_col(bne_slice)
+
+
+bne_slice_hops <- bne_slice %>% 
+  select(
+    cluster_assignment,
+    name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
+  ) %>% 
+  gather(
+    key = hops,
+    value = hops_nme,
+    hops_name_1:hops_name_13
+  ) %>% 
+  mutate(
+    count = 1
+  ) 
+
+# bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
+# bne_slice_hops$hops_nme <- as.character(bne_slice_hops$hops_nme)
+
+bne_slice_spread_hops <- bne_slice_hops %>% 
+  mutate(
+    row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for each row. we'll drop this later
+  ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+  spread(
+    key = hops_nme,
+    value = count
+  ) %>% 
+  select(
+    name:style_collapsed, Ahtanum:Zythos
+  )
+
+# take out all rows that have no ingredients specified at all
+ind <- apply(bne_slice_spread_hops[, 4:ncol(bne_slice_spread_hops)], 1, function(x) all(is.na(x)))
+bne_slice_spread_hops_no_na <- bne_slice_spread_hops[ !ind, ]
+
+bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>% 
+  group_by(name, style, style_collapsed) %>% 
+  summarise_all(                            # summarises all non-grouping columns
+    sum, na.rm = TRUE
+    # n = count()
+  ) 
+
+hops_by_style <- bne_slice_spread_hops_group %>% 
+  ungroup() %>% 
+  select(-c(name, style)) %>% 
+  group_by(style_collapsed) %>% 
+  summarise_all(
+    sum, na.rm = TRUE
+  ) %>%
+  mutate(
+    total_hops = rowSums(.[2:ncol(.)])
+  ) %>% 
+  arrange(
+    desc(total_hops)
+  )
+
+
