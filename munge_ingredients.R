@@ -22,15 +22,19 @@ View(ingredient_types)
 
 # bne_slice <- beer_necessities_expanded[100:200, ] 
 
-bne_slice <- clustered_beer %>%       ### replace bne with whatever we want here
-  select(
-    -c(id, description, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
-  ) %>% 
-  as_tibble()
+bne_slice <- clustered_beer %>% 
+  inner_join(beer_necessities)
+
+# bne_slice <- clustered_beer %>%       ### replace bne with whatever we want here
+#   select(
+#     -c(id, description, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
+#   ) %>% 
+#   as_tibble()
 
 
 bne_slice_hops <- bne_slice %>% 
   select(
+    cluster_assignment,
     name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
   ) %>% 
   gather(
@@ -54,7 +58,7 @@ bne_slice_spread_hops <- bne_slice_hops %>%
     value = count
   ) %>% 
   select(
-    name:style_collapsed, Admiral:Zythos
+    name:style_collapsed, Ahtanum:Zythos
   )
 View(bne_slice_spread_hops)
 

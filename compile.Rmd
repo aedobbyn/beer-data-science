@@ -1,12 +1,12 @@
 ---
-title: "Beer data"
+title: Musings on Beer
 author:
   name: Amanda Dobbyn
-date: 
+date: "`r format(Sys.time(), '%B %d, %Y')`"
 output: 
   html_document:
     keep_md: true
-    toc: true
+    toc: false
     theme: yeti
   github_document:
     toc: true
@@ -16,20 +16,30 @@ output:
 knitr::opts_chunk$set(echo = FALSE)
 # source("./read_from_db.R")
 source("./cluster.R")
-# source("./plot.R")
+source("./plot.R")
+library(knitr)
 ```
 
-## R Markdown
+* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
+    * Special thanks to [Kris Kroksi](https://kro.ski/)
 
-```{r cars}
-beer_for_clustering
+
+## Unsupervised Clustering 
+* Pare down to beers that have ABV, IBU, and SRM
+* K-means cluster beers based on these predictors
+
+```{r}
+kable(head(beer_for_clustering))
 clustered_beer_plot_abv_ibu
 ```
 
 ## Plot clusters related to style centers
 
-```{r pressure, echo=FALSE}
-# abv_ibu_clusters_vs_style_centers
+```{r, echo=FALSE}
+abv_ibu_clusters_vs_style_centers
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r, echo=FALSE}
+three_d
+```
+

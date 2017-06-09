@@ -15,7 +15,7 @@ get_ingredient_levels <- function(df, ing_name) {
   return(unique_ing_levels)
 }
 
-all_hops_levels <- get_ingredient_levels(bne, "hops")
-all_malt_levels <- get_ingredient_levels(bne, "malt")
+all_hops_levels <- get_ingredient_levels(beer_necessities, "hops")
+all_malt_levels <- get_ingredient_levels(beer_necessities, "malt")
 
 

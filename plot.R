@@ -1,6 +1,6 @@
 
-source("./most_popular_styles.R")
-source("./cluster.R")
+# source("./most_popular_styles.R")
+# source("./cluster.R")
 
 
 ggplot(data = beer_necessities[1:200, ], aes(x = abv, y = ibu, colour = style_collapsed)) +
@@ -16,15 +16,6 @@ ggplot(data = dIPAs_clusters, aes(x = abv, y = ibu, colour = cluster_assignment)
   geom_point()
 
 
-# - take out unpopular styles not by an absolute number but by st. dev or somethings
-
-
-# plot 
-# - how styles compare to clusters
-# - mean of each style
-
-
-
 
 
 
@@ -32,7 +23,7 @@ clustered_beer <- clustered_beer %>%
   drop_na() %>% 
   droplevels()
 
-style_centers <- clustered_beer %>%             #### these style_centers different from style_centers in run_it.R
+clustered_style_centers <- clustered_beer %>%             #### these style_centers different from style_centers in run_it.R
   group_by(style_collapsed) %>% 
   summarise(
     mean_abv = mean(abv, na.rm = TRUE),
@@ -43,11 +34,11 @@ style_centers <- clustered_beer %>%             #### these style_centers differe
   droplevels(.)
 
 # popular style centers: abv and ibu
-centers_abv_ibu <- ggplot(data = style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
+centers_abv_ibu <- ggplot(data = clustered_style_centers, aes(mean_abv, mean_ibu, colour = style_collapsed)) +
   geom_point()
 
 # popular style centers: srm and ibu
-centers_srm_ibu <- ggplot(data = style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
+centers_srm_ibu <- ggplot(data = clustered_style_centers, aes(mean_srm, mean_ibu, colour = style_collapsed)) +
   geom_point()
 
 
@@ -86,27 +77,27 @@ three_d
 
 
 
-
-# --- centers of each style
-# size of dot is number of beers per that style
-style_summary <- inner_join(style_centers, hops_by_style, by = "style_collapsed")
-style_summary$style_collapsed <- factor(style_summary$style_collapsed)
-
-ggplot(style_summary) +
-  geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n))
-
-
-# hops in hops_name_1 of double IPAs
-dIPAs_hops <- hops_join %>% 
-  filter(
-    style_collapsed == "Double India Pale Ale"
-  )
-
-dIPAs_hops$hops_name_1 <- factor(dIPAs_hops$hops_name_1) %>% droplevels() 
-dIPAs_hops <- dIPAs_hops[!is.na(dIPAs_hops$hops_name_1), ]
-
-ggplot(dIPAs_hops) +
-  geom_point(aes(abv, ibu, colour = hops_name_1))
+# source("./munge_ingredients.R")
+# # --- centers of each style
+# # size of dot is number of beers per that style
+# style_summary <- inner_join(style_centers, hops_by_style, by = "style_collapsed")
+# style_summary$style_collapsed <- factor(style_summary$style_collapsed)
+# 
+# ggplot(style_summary) +
+#   geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n))
+# 
+# 
+# # hops in hops_name_1 of double IPAs
+# dIPAs_hops <- hops_join %>% 
+#   filter(
+#     style_collapsed == "Double India Pale Ale"
+#   )
+# 
+# dIPAs_hops$hops_name_1 <- factor(dIPAs_hops$hops_name_1) %>% droplevels() 
+# dIPAs_hops <- dIPAs_hops[!is.na(dIPAs_hops$hops_name_1), ]
+# 
+# ggplot(dIPAs_hops) +
+#   geom_point(aes(abv, ibu, colour = hops_name_1))
 
 
 

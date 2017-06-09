@@ -11,7 +11,7 @@ library(NbClust)
 # only using top beer styles
 # select only predictor and outcome columns, take out NAs, and scale the data
 beer_for_clustering <- popular_beer_dat %>% 
-  select(style, styleId, style_collapsed,
+  select(name, style, styleId, style_collapsed,
          abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
   na.omit() %>% 
   filter(
@@ -29,7 +29,7 @@ beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) 
   srm_scaled = srm
   ) %>% scale() 
   
-beer_for_clustering_outcome <- beer_for_clustering %>% select(style, styleId, style_collapsed)
+beer_for_clustering_outcome <- beer_for_clustering %>% select(name, style, styleId, style_collapsed)
 
 
 
