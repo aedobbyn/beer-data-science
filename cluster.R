@@ -13,22 +13,35 @@ library(NbClust)
 beer_for_clustering <- popular_beer_dat %>% 
   select(name, style, styleId, style_collapsed,
          abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
-  na.omit() %>% 
-  filter(
-    !(ibu > 300)      # take out outliers
-  ) %>% 
-  filter(
-    !(abv > 20)
-  )
+  na.omit() 
 
 
 # separate into predictors and outcomes and scale the predictors
-beer_for_clustering_predictors <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
+beer_for_clustering_predictors_w_outliers <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
   abv_scaled = abv,
   ibu_scaled = ibu,
   srm_scaled = srm
-  ) %>% scale() 
+  ) %>% scale() %>% 
+  as_tibble()
   
+
+# take out some abv and ibu outliers from the clustered beer data
+beer_for_clustering_predictors <- beer_for_clustering_predictors_w_outliers %>% 
+  filter(
+   abv_scaled < 5 & abv_scaled > -2    # take out the nonalcoholic beers
+  ) %>%
+  filter(
+    ibu_scaled < 5
+  )
+
+# filter(
+# !(ibu > 300)      # take out outliers
+# ) %>% 
+# filter(
+#   !(abv > 20)
+# )
+
+
 beer_for_clustering_outcome <- beer_for_clustering %>% select(name, style, styleId, style_collapsed)
 
 

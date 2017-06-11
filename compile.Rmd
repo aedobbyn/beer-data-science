@@ -1,5 +1,5 @@
 ---
-title: Musings on Beer
+title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
 date: "`r format(Sys.time(), '%B %d, %Y')`"
@@ -20,13 +20,41 @@ source("./plot.R")
 library(knitr)
 ```
 
+* Main motivation of the project
+  * Are there natural clusters in beer that are defined by styles? Or are style boundaries more or less arbitrary?
+    * Unsupervised (k-means) clustering based on 
+      * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
+    * Style centers defined by mean of ABV, IBU, and SRM
+      
+* Answer
+  * Looks more or less fluid: there aren't really pockets centered around a style
+  
+
+### General Workflow
+
+* Hit the BreweryDB API to iteratively pull in all beers and their ingredients
+  * Dump them into a MySQL database along with other things we'd want like breweries and glassware
+* Unnest the JSON response including all the ingredients columns
+* Create a `style_collapsed` column
+  * Look for main style strings like `Pale Ale` and chop out everything else
+* Unnest the ingredients `hops` and `malts` into a sparse matrix
+
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
-    * Special thanks to [Kris Kroksi](https://kro.ski/)
+    * Special thanks to [Kris Kroksi](https://kro.ski/) for data ideation and beer
 
 
 ## Unsupervised Clustering 
 * Pare down to beers that have ABV, IBU, and SRM
 * K-means cluster beers based on these predictors
+
+```{r}
+kable(style_popularity)
+```
+
+```{r}
+
+```
+
 
 ```{r}
 kable(head(beer_for_clustering))

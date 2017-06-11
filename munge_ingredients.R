@@ -200,50 +200,84 @@ get_last_ing_name_col <- function(df) {
   }
   return(name_last_ing_col)
 }
-get_last_ing_name_col(bne_slice)
+last_ingredient_name <- get_last_ing_name_col(bne_slice)
+last_ingredient_index <- which(colnames(bne_slice)==last_ingredient_name)
 
 
-bne_slice_hops <- bne_slice %>% 
-  select(
-    cluster_assignment,
-    name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
-  ) %>% 
-  gather(
-    key = hops,
-    value = hops_nme,
-    hops_name_1:hops_name_13
-  ) %>% 
-  mutate(
-    count = 1
-  ) 
+first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
+first_ingredient_index <- which(colnames(bne_slice)==first_ingredient_name)
+
+
+gather_ingredients <- function(df) {
+  to_select <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed",
+                 first_ingredient_name:last_ingredient_name)
+  
+  ing_cols <- bne_slice[, first_ingredient_name:last_ingredient_name]
+  
+  df_gathered <- df %>% 
+    select_(
+      to_select
+    ) %>% 
+    gather(
+      key = hops,
+      value = hops_nme,
+      hops_name_1:hops_name_13
+    ) %>% 
+    mutate(
+      count = 1
+    ) 
+  df_gathered
+}
+beer_gathered <- gather_ingredients(bne_slice)
+
 
 # bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
 # bne_slice_hops$hops_nme <- as.character(bne_slice_hops$hops_nme)
 
-bne_slice_spread_hops <- bne_slice_hops %>% 
-  mutate(
-    row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for each row. we'll drop this later
-  ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
-  spread(
-    key = hops_nme,
-    value = count
-  ) %>% 
-  select(
-    name:style_collapsed, Ahtanum:Zythos
-  )
+spread_ingredients <- function(df) {
+  df_spread <- df %>% 
+    mutate(
+      row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for each row. we'll drop this later
+    ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+    spread(
+      key = hops_nme,
+      value = count
+    ) 
+}
+
+beer_spread <- spread_ingredients(beer_gathered)
+
+select_beer_spread <- function(df) {
+  
+  
+  df %>% 
+    select(
+      name:style_collapsed, Ahtanum:Zythos
+    )
+}
+
 
 # take out all rows that have no ingredients specified at all
-ind <- apply(bne_slice_spread_hops[, 4:ncol(bne_slice_spread_hops)], 1, function(x) all(is.na(x)))
-bne_slice_spread_hops_no_na <- bne_slice_spread_hops[ !ind, ]
+inds_to_remove <- apply(beer_spread[, first_ingredient_index:last_ingredient_index], 
+             1, function(x) all(is.na(x)))
+beer_spread_no_na <- beer_spread[ !inds_to_remove, ]
 
-bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>% 
+
+groupers <- c("name", "style", "style_collapsed")
+groupers_indices <- which(groupers %in% colnames(beer_spread_no_na))
+max_grouper_index <- max(groupers_indices)
+  
+ingredients_per_beer <- beer_spread_no_na %>% 
   group_by(name, style, style_collapsed) %>% 
   summarise_all(                            # summarises all non-grouping columns
     sum, na.rm = TRUE
     # n = count()
-  ) 
+  ) %>% 
+  mutate(
+    total = rowSums(.[2:ncol(.)])
+  )
 
-hops_by_style <- bne_slice_spread_hops_group %>% 
+ingredients_per_style <- ingredients_per_beer %>% 
   ungroup() %>% 
   select(-c(name, style)) %>% 
   group_by(style_collapsed) %>% 

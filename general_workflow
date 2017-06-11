@@ -29,3 +29,20 @@
 
 - model.R
 
+
+
+# ---------
+- in compile.Rmd
+
+- cluster.R sources from
+  - most_popular_styles.R sources from
+    - read_from_db.R
+
+- plot.R doesn't source anything
+
+
+
+
+
+
+
