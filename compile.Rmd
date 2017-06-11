@@ -51,10 +51,10 @@ library(knitr)
 kable(style_popularity)
 ```
 
+Cluster counts vs. styles
 ```{r}
-
+kable(cluster_table_counts)
 ```
-
 
 ```{r}
 kable(head(beer_for_clustering))

@@ -13,26 +13,51 @@ library(NbClust)
 beer_for_clustering <- popular_beer_dat %>% 
   select(name, style, styleId, style_collapsed,
          abv, ibu, srm) %>%       # not very many beers have SRM so may not want to omit based on it...
-  na.omit() 
+  na.omit() %>% 
+  # filter(
+  #   abv < 20 & abv > 3
+  # ) %>% 
+  # filter(
+  #   ibu < 200
+  # )
 
-
-# separate into predictors and outcomes and scale the predictors
-beer_for_clustering_predictors_w_outliers <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
-  abv_scaled = abv,
-  ibu_scaled = ibu,
-  srm_scaled = srm
-  ) %>% scale() %>% 
+beer_for_clustering_w_scaled <- beer_for_clustering %>% 
+  select(abv, ibu, srm) %>%
+  rename(
+    abv_scaled = abv,
+    ibu_scaled = ibu,
+    srm_scaled = srm
+    ) %>% scale() %>% 
   as_tibble()
-  
 
-# take out some abv and ibu outliers from the clustered beer data
-beer_for_clustering_predictors <- beer_for_clustering_predictors_w_outliers %>% 
+# take out outliers
+beer_for_clustering <- beer_for_clustering_w_scaled %>% 
   filter(
-   abv_scaled < 5 & abv_scaled > -2    # take out the nonalcoholic beers
+    abv_scaled < 5 & abv_scaled > -2    # take out the nonalcoholic beers
   ) %>%
   filter(
     ibu_scaled < 5
   )
+  
+beer_for_clustering <- bind_cols(beer_for_clustering, beer_for_clustering_w_scaled)
+
+
+beer_for_clustering_predictors <- beer_for_clustering %>% 
+  select(
+    abv_scaled, ibu_scaled, srm_scaled
+  )
+
+# # separate into predictors and outcomes and scale the predictors
+# beer_for_clustering_predictors_w_outliers <- beer_for_clustering %>% select(abv, ibu, srm) %>% rename(
+#   abv_scaled = abv,
+#   ibu_scaled = ibu,
+#   srm_scaled = srm
+#   ) %>% scale() %>% 
+#   as_tibble()
+   
+
+# take out some abv and ibu outliers from the clustered beer data
+
 
 # filter(
 # !(ibu > 300)      # take out outliers
@@ -105,7 +130,7 @@ cluster_9
 # see how styles clustered themselves
 
 # table of counts
-table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
+cluster_table_counts <- table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
 
 # cb_spread <- clustered_beer %>% select(
 #   cluster_assignment, style
