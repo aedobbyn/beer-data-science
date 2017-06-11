@@ -200,6 +200,7 @@ get_last_ing_name_col <- function(df) {
   }
   return(name_last_ing_col)
 }
+
 last_ingredient_name <- get_last_ing_name_col(bne_slice)
 last_ingredient_index <- which(colnames(bne_slice)==last_ingredient_name)
 
@@ -207,11 +208,13 @@ last_ingredient_index <- which(colnames(bne_slice)==last_ingredient_name)
 first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
 first_ingredient_index <- which(colnames(bne_slice)==first_ingredient_name)
 
-ingredient_names <- names(bne_slice)[first_ingredient_index:last_ingredient_index]
+# vector of all ingredient names
+ingredient_colnames <- names(bne_slice)[first_ingredient_index:last_ingredient_index]
 
+
+to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
 
 gather_ingredients <- function(df, cols_to_gather) {
-  to_keep_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
   to_keep_indices <- which(colnames(df) %in% to_keep_names)
   
   selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
@@ -229,12 +232,20 @@ gather_ingredients <- function(df, cols_to_gather) {
     )
   df_gathered
 }
-beer_gathered <- gather_ingredients(bne_slice, ingredient_names)
+beer_gathered <- gather_ingredients(bne_slice, ingredient_colnames)  # ingredient colnames defined above function
+
+# get a vector of all ingredient levels
+beer_gathered$ing_names <- factor(beer_gathered$ing_names)
+ingredient_levels <- levels(beer_gathered$ing_names) 
+# %>% arrange()
+
+# take out the level that's just an empty string
+# first, get all indices in ingredient_levels except for the one that's an empty string
+to_keep_levels <- !(c(1:length(ingredient_levels)) %in% which(ingredient_levels == ""))
+# then pare down ingredient_levels to only those indices
+ingredient_levels <- ingredient_levels[to_keep_levels]
 
 
-
-# bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
-# bne_slice_hops$hops_nme <- as.character(bne_slice_hops$hops_nme)
 
 spread_ingredients <- function(df) {
   df_spread <- df %>% 
@@ -249,15 +260,18 @@ spread_ingredients <- function(df) {
 
 beer_spread <- spread_ingredients(beer_gathered)
 
-select_beer_spread <- function(df) {
-  
+
+select_spread_cols <- function(df) {
+  to_keep_col_indices <- which(colnames(df) %in% to_keep_col_names)
+  to_keep_ingredient_indices <- which(colnames(df) %in% ingredient_levels)
   
   df %>% 
-    select(
-      name:style_collapsed, Ahtanum:Zythos
-    )
+    select_(
+      names(df)[c(to_keep_indices, to_keep_ingredient_indices)]
+      )
+  df
 }
-
+beer_spread <- select_spread_cols(beer_spread)
 
 # take out all rows that have no ingredients specified at all
 inds_to_remove <- apply(beer_spread[, first_ingredient_index:last_ingredient_index], 
@@ -270,7 +284,7 @@ groupers_indices <- which(groupers %in% colnames(beer_spread_no_na))
 max_grouper_index <- max(groupers_indices)
   
 ingredients_per_beer <- beer_spread_no_na %>% 
-  group_by(name, style, style_collapsed) %>% 
+  group_by_(groupers) %>% 
   summarise_all(                            # summarises all non-grouping columns
     sum, na.rm = TRUE
     # n = count()
