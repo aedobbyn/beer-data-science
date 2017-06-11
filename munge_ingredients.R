@@ -260,39 +260,62 @@ spread_ingredients <- function(df) {
 
 beer_spread <- spread_ingredients(beer_gathered)
 
-
+# df <- beer_spread
 select_spread_cols <- function(df) {
   to_keep_col_indices <- which(colnames(df) %in% to_keep_col_names)
   to_keep_ingredient_indices <- which(colnames(df) %in% ingredient_levels)
   
-  df %>% 
+  to_keep_inds_all <- c(to_keep_col_indices, to_keep_ingredient_indices)
+
+  new_df <- df %>% 
     select_(
-      names(df)[c(to_keep_indices, to_keep_ingredient_indices)]
+      .dots = to_keep_inds_all
+      # .dots = names(df)[c(to_keep_col_indices, to_keep_ingredient_indices)]   # this won't work because 
       )
-  df
+  return(new_df)
 }
-beer_spread <- select_spread_cols(beer_spread)
+beer_spread_selected <- select_spread_cols(beer_spread)
 
 # take out all rows that have no ingredients specified at all
-inds_to_remove <- apply(beer_spread[, first_ingredient_index:last_ingredient_index], 
+inds_to_remove <- apply(beer_spread_selected[, first_ingredient_index:last_ingredient_index], 
              1, function(x) all(is.na(x)))
-beer_spread_no_na <- beer_spread[ !inds_to_remove, ]
+beer_spread_no_na <- beer_spread_selected[ !inds_to_remove, ]
 
 
+# --------- group by all factor columns (even though we're only interested in name right now) so that
+# they won't be included in the summarise_all() function
+# we sum each cell of each of the ingredient columns which turns our NAs into 0s. 1 is the max outcome per cell.
 groupers <- c("name", "style", "style_collapsed")
 groupers_indices <- which(groupers %in% colnames(beer_spread_no_na))
-max_grouper_index <- max(groupers_indices)
-  
+
+not_for_summing <- which(colnames(beer_spread_no_na) %in% to_keep_col_names)
+max_not_for_summing <- max(not_for_summing)
+
+# # ------ what I'd like to be able to do -----
+# ingredients_per_beer <- beer_spread_no_na %>%
+#   group_by_(.dots = groupers) %>%           # not sure why not grouping by style_collapsed
+#   summarise_all(
+#     sum, na.rm = TRUE
+#   ) %>%
+#   mutate(
+#     total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
+#   )
+
+# make sure all grouping columns are characters
 ingredients_per_beer <- beer_spread_no_na %>% 
-  group_by_(groupers) %>% 
-  summarise_all(                            # summarises all non-grouping columns
+  group_by(name, style, style_collapsed) %>%
+  summarise_if(
+    is.numeric,
     sum, na.rm = TRUE
     # n = count()
-  ) %>% 
+  ) 
+
+ingredients_per_beer_w_sums <- ingredients_per_beer %>%
   mutate(
-    total = rowSums(.[2:ncol(.)])
+    total = rowSums(.[, (max_not_for_summing + 1):ncol(.)])
   )
 
+# works fine
 ingredients_per_style <- ingredients_per_beer %>% 
   ungroup() %>% 
   select(-c(name, style)) %>% 
