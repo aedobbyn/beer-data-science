@@ -76,7 +76,7 @@ abv_ibu_clusters_vs_style_centers
 
 # colors are clusters
 ggplot() +   
-  geom_point(data = clustered_beer_no_outliers, 
+  geom_point(data = clustered_beer, 
              aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_abv, mean_ibu), colour = "black") +
@@ -92,7 +92,7 @@ ggplot() +
 
 
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-clustered_beer_certain_styles <- clustered_beer_no_outliers %>% 
+clustered_beer_certain_styles <- clustered_beer %>% 
   filter(
    style_collapsed %in% styles_to_keep 
   )

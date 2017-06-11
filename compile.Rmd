@@ -47,6 +47,7 @@ library(knitr)
 * Pare down to beers that have ABV, IBU, and SRM
 * K-means cluster beers based on these predictors
 
+How do things stack up per styles
 ```{r}
 kable(style_popularity)
 ```
@@ -56,18 +57,34 @@ Cluster counts vs. styles
 kable(cluster_table_counts)
 ```
 
+Head of the data
 ```{r}
 kable(head(beer_for_clustering))
+```
+
+Just the clusters
+```{r}
 clustered_beer_plot_abv_ibu
 ```
 
-## Plot clusters related to style centers
 
-```{r, echo=FALSE}
+### Plot clusters related to style centers
+
+```{r}
 abv_ibu_clusters_vs_style_centers
 ```
 
-```{r, echo=FALSE}
-three_d
+
+
+### Ingredients
+
+All hops types
+```{r}
+kable(all_hops_levels)
+```
+
+All malt types
+```{r}
+kable(all_malt_levels)
 ```
 
