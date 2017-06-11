@@ -37,7 +37,9 @@ library(knitr)
 * Unnest the JSON response including all the ingredients columns
 * Create a `style_collapsed` column
   * Look for main style strings like `Pale Ale` and chop out everything else
+  * Further collpase styles that are similar like Hefeweizen and Wit into Wheat
 * Unnest the ingredients `hops` and `malts` into a sparse matrix
+  * Individual ingredients as columns, beers as rows; cell gets a 1 if ingredient is present and 0 otherwise 
 
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
     * Special thanks to [Kris Kroksi](https://kro.ski/) for data ideation and beer
@@ -47,12 +49,12 @@ library(knitr)
 * Pare down to beers that have ABV, IBU, and SRM
 * K-means cluster beers based on these predictors
 
-How do things stack up per styles
+Compare popular styles      
 ```{r}
-kable(style_popularity)
+kable(style_centers)
 ```
 
-Cluster counts vs. styles
+A table of cluster counts broken down by style
 ```{r}
 kable(cluster_table_counts)
 ```

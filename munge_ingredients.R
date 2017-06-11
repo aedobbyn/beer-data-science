@@ -207,28 +207,30 @@ last_ingredient_index <- which(colnames(bne_slice)==last_ingredient_name)
 first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
 first_ingredient_index <- which(colnames(bne_slice)==first_ingredient_name)
 
+ingredient_names <- names(bne_slice)[first_ingredient_index:last_ingredient_index]
 
-gather_ingredients <- function(df) {
-  to_select <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed",
-                 first_ingredient_name:last_ingredient_name)
+
+gather_ingredients <- function(df, cols_to_gather) {
+  to_keep_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
+  to_keep_indices <- which(colnames(df) %in% to_keep_names)
   
-  ing_cols <- bne_slice[, first_ingredient_name:last_ingredient_name]
+  selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
   
-  df_gathered <- df %>% 
-    select_(
-      to_select
-    ) %>% 
-    gather(
-      key = hops,
-      value = hops_nme,
-      hops_name_1:hops_name_13
-    ) %>% 
+  new_ing_indices <- which(colnames(selected_df) %in% ingredient_names)    # indices will have changed since we pared down 
+  
+  df_gathered <- selected_df %>%
+    gather_(
+      key_col = "ing_keys",
+      value_col = "ing_names",
+      gather_cols = colnames(selected_df)[new_indices]
+    ) %>%
     mutate(
       count = 1
-    ) 
+    )
   df_gathered
 }
-beer_gathered <- gather_ingredients(bne_slice)
+beer_gathered <- gather_ingredients(bne_slice, ingredient_names)
+
 
 
 # bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
@@ -237,10 +239,10 @@ beer_gathered <- gather_ingredients(bne_slice)
 spread_ingredients <- function(df) {
   df_spread <- df %>% 
     mutate(
-      row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for each row. we'll drop this later
+      row = 1:nrow(df)        # add a unique idenfitier for each row. we'll drop this later
     ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
     spread(
-      key = hops_nme,
+      key = ing_names,
       value = count
     ) 
 }
