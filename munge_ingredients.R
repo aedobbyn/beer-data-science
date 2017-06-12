@@ -301,17 +301,54 @@ max_not_for_summing <- max(not_for_summing)
 #     total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
 #   )
 
-beer_spread_no_na$name <- factor(beer_spread_no_na$name)
-beer_spread_no_na$style <- factor(beer_spread_no_na$style)
-beer_spread_no_na$style_collapsed <- factor(beer_spread_no_na$style_collapsed)
+# beer_spread_no_na$name <- factor(beer_spread_no_na$name)
+# beer_spread_no_na$style <- factor(beer_spread_no_na$style)
+# beer_spread_no_na$style_collapsed <- factor(beer_spread_no_na$style_collapsed)
 
 
+# ----  not  yet there
 d <- beer_spread_no_na[, (max_not_for_summing+1):ncol(beer_spread_no_na)]
-ingredients_per_beer <- ifelse(is.na(d), 0, 1)
+# ingredients_per_beer <- ifelse(is.na(d), 0, 1)
 
-ingredients_per_beer <- cbind(beer_spread_no_na[, not_for_summing], ingredients_per_beer) %>% as_tibble()
+mini_d[is.na(mini_d)] <- 0
 
-# works fine
+mini_d[, ][NA, ] <- 0
+
+mini_d <- d[1:20, 1:20]
+
+zeroize <- function(df) {
+  for (col in names(df)) {
+    print(col)
+    for (cell in df[[col]]) {
+      print(df[[col]][cell])
+      if (is.na(df[[col]][cell])) {
+        print("yes, na")
+        df[[col]][cell] <- 0
+      } else if (df[[col]][cell] == 1) {
+        print("yep, 1")
+        df[[col]][cell] <- 1
+      }
+    }
+  }
+  return(df)
+}
+
+e <- zeroize(mini_d)
+
+
+ingredients_per_beer <- d %>%       # problem is that ifelse only takes the first cell
+  mutate_all(
+    funs(ifelse(is.na(.), 0, 1))
+  ) %>% 
+  mutate(
+    total = rowSums(.[1:ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
+  )
+
+ingredients_per_beer <- cbind(beer_spread_no_na[, not_for_summing], ingredients_per_beer) %>% as_tibble() %>% 
+    mutate(
+      total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
+    )
+
 ingredients_per_style <- ingredients_per_beer %>% 
   group_by(style_collapsed) %>% 
   summarise_if(
