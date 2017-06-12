@@ -301,6 +301,22 @@ max_not_for_summing <- max(not_for_summing)
 #     total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
 #   )
 
+beer_spread_no_na$name <- as.character(beer_spread_no_na$name)
+beer_spread_no_na$style <- as.character(beer_spread_no_na$style)
+beer_spread_no_na$style_collapsed <- as.character(beer_spread_no_na$style_collapsed)
+
+
+
+if (is.na(cell)) {
+  cell <- 0
+} else if (cell == 1) {
+  cell <- 1
+} else {
+  cell <- "unclear"
+}
+
+beer_spread_no_na[1:10, (max_not_for_summing+1):ncol(beer_spread_no_na)] %>% map_df(sum, na.rm = TRUE)
+
 # make sure all grouping columns are characters
 ingredients_per_beer <- beer_spread_no_na %>% 
   group_by(name) %>%
@@ -310,7 +326,8 @@ ingredients_per_beer <- beer_spread_no_na %>%
     # n = count()
   ) %>% 
   mutate(
-    total = rowSums(.[(max_not_for_summing):ncol(.)])
+    # total = rowSums(.[(max_not_for_summing):ncol(.)])
+    new_tot = map(.[, (max_not_for_summing + 1):ncol(.)], sum, na.rm = FALSE)
   )
 
 # works fine
@@ -322,7 +339,7 @@ ingredients_per_style <- ingredients_per_beer %>%
     sum, na.rm = TRUE
   ) %>%
   mutate(
-    total = rowSums(.[max_not_for_summing:ncol(.)])
+    total = rowSums(.[(max_not_for_summing + 1):ncol(.)])
   ) %>% 
   arrange(
     desc(total)
