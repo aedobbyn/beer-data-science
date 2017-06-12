@@ -303,31 +303,29 @@ max_not_for_summing <- max(not_for_summing)
 
 # make sure all grouping columns are characters
 ingredients_per_beer <- beer_spread_no_na %>% 
-  group_by(name, style, style_collapsed) %>%
-  summarise_if(
+  group_by(name) %>%
+  summarise_if(                            # 0 if NA for hop, 1 if there's a 1
     is.numeric,
     sum, na.rm = TRUE
     # n = count()
-  ) 
-
-ingredients_per_beer_w_sums <- ingredients_per_beer %>%
+  ) %>% 
   mutate(
-    total = rowSums(.[, (max_not_for_summing + 1):ncol(.)])
+    total = rowSums(.[(max_not_for_summing):ncol(.)])
   )
 
 # works fine
 ingredients_per_style <- ingredients_per_beer %>% 
   ungroup() %>% 
-  select(-c(name, style)) %>% 
+  # select(-c(name, style)) %>% 
   group_by(style_collapsed) %>% 
   summarise_all(
     sum, na.rm = TRUE
   ) %>%
   mutate(
-    total_hops = rowSums(.[2:ncol(.)])
+    total = rowSums(.[max_not_for_summing:ncol(.)])
   ) %>% 
   arrange(
-    desc(total_hops)
+    desc(total)
   )
 
 
