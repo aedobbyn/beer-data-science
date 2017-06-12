@@ -1,164 +1,168 @@
 source("./get_ingredient_levels.R")
 
-# 
-# length(all_hops_levels)
-# length(all_malt_levels)
-# 
-# 
-# # find the length of the longest ingredient vector
-# ingredient_types_length <- max(length(all_hops_levels), length(all_malt_levels))
-# 
-# # make all ingredient vectors that length. this introduces NAs into the shorter ones.
-# length(all_hops_levels) <- ingredient_types_length
-# length(all_malt_levels) <- ingredient_types_length
-# 
-# # now cbind them into the same df
-# ingredient_types <- as_tibble(bind_cols(list(hops_type = all_hops_levels, malt_type = all_malt_levels)))
-# View(ingredient_types)
-# 
-# 
-# 
-# 
-# 
-# # bne_slice <- beer_necessities_expanded[100:200, ] 
-# 
-# bne_slice <- clustered_beer %>% 
-#   inner_join(beer_necessities)
-# 
-# # bne_slice <- clustered_beer %>%       ### replace bne with whatever we want here
-# #   select(
-# #     -c(id, description, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
-# #   ) %>% 
-# #   as_tibble()
-# 
-# 
-# bne_slice_hops <- bne_slice %>% 
+
+length(all_hops_levels)
+length(all_malt_levels)
+
+
+# find the length of the longest ingredient vector
+ingredient_types_length <- max(length(all_hops_levels), length(all_malt_levels))
+
+# make all ingredient vectors that length. this introduces NAs into the shorter ones.
+length(all_hops_levels) <- ingredient_types_length
+length(all_malt_levels) <- ingredient_types_length
+
+# now cbind them into the same df
+ingredient_types <- as_tibble(bind_cols(list(hops_type = all_hops_levels, malt_type = all_malt_levels)))
+View(ingredient_types)
+
+
+
+
+
+# bne_slice <- beer_necessities_expanded[100:200, ]
+
+bne_slice <- clustered_beer %>%
+  inner_join(beer_necessities)
+
+# bne_slice <- clustered_beer %>%       ### replace bne with whatever we want here
 #   select(
-#     cluster_assignment,
-#     name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
-#   ) %>% 
-#   gather(
-#     key = hops,
-#     value = hops_nme,
-#     hops_name_1:hops_name_13
-#   ) %>% 
-#   mutate(
-#     count = 1
-#   ) 
-# 
-# bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
-# bne_slice_hops$hops_nme <- as.character(bne_slice_hops$hops_nme)
-# 
-# bne_slice_spread_hops <- bne_slice_hops %>% 
-#   mutate(
-#     row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for row. we'll drop this later
-#   ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
-#   spread(
-#     key = hops_nme,
-#     value = count
-#   ) %>% 
-#   select(
-#     name:style_collapsed, Ahtanum:Zythos
-#   )
-# View(bne_slice_spread_hops)
-# 
-# # take out all rows that have no ingredients specified at all
-# ind <- apply(bne_slice_spread_hops[, 4:ncol(bne_slice_spread_hops)], 1, function(x) all(is.na(x)))
-# bne_slice_spread_hops_no_na <- bne_slice_spread_hops[ !ind, ]
-# 
-# bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>% 
-#   group_by(name, style, style_collapsed) %>% 
-#   summarise_all(                            # summarises all non-grouping columns
-#     sum, na.rm = TRUE
-#     # n = count()
-#   ) 
-# View(bne_slice_spread_hops_group)
-# 
-# hops_by_style <- bne_slice_spread_hops_group %>% 
-#   ungroup() %>% 
-#   select(-c(name, style)) %>% 
-#   group_by(style_collapsed) %>% 
-#   summarise_all(
-#     sum, na.rm = TRUE
+#     -c(id, description, glass, hops_id, malt_id, glasswareId, styleId, style.categoryId)
 #   ) %>%
-#   mutate(
-#     total_hops = rowSums(.[2:ncol(.)])
-#   ) %>% 
-#   arrange(
-#     desc(total_hops)
-#   )
-# View(hops_by_style[, c(1, 147:ncol(hops_by_style))])
-# 
-# 
-# # bar chart
-# ggplot(hops_by_style, aes(style_collapsed, total_hops)) +
-#   geom_bar(stat = "identity")
-# 
-# 
-# 
-# 
-# 
-# bne_slice_malt <- bne_slice %>% 
-#   select(
-#     name, style, style_collapsed, malt_name_1:malt_name_10
-#   ) %>% 
-#   gather(
-#     key = malt,
-#     value = malt_nme,
-#     malt_name_1:malt_name_10
-#   ) %>% 
-#   mutate(
-#     count = 1
-#   ) 
-# 
-# bne_slice_spread_malt <- bne_slice_malt %>% 
-#   mutate(
-#     row = 1:nrow(bne_slice_malt)        # add a unique idenfitier for row
-#   ) %>%  
-#   spread(
-#     key = malt_nme,
-#     value = count
-#   ) %>% 
-#   select(
-#     name:style_collapsed, `Aromatic Malt`:`Wheat Malt - White`
-#   )
-# 
-# 
-# # take out all rows that have no ingredients specified at all
-# ind <- apply(bne_slice_spread_malt[, 4:ncol(bne_slice_spread_malt)], 1, function(x) all(is.na(x)))
-# bne_slice_spread_malt_no_na <- bne_slice_spread_malt[ !ind, ]
-# 
-# 
-# bne_slice_spread_malt_group <- bne_slice_spread_malt_no_na %>% 
-#   group_by(name, style, style_collapsed) %>% 
-#   summarise_all(                            
-#     sum, na.rm = TRUE
-#   )
-# 
-# # matrix of total number of ingredient instances per beer style
-# malt_by_style <- bne_slice_spread_malt_group %>% 
-#   ungroup() %>% 
-#   select(-c(name, style)) %>% 
-#   group_by(style_collapsed) %>% 
-#   summarise_all(
-#     sum, na.rm = TRUE
-#   ) %>%  mutate(
-#     total_malt = rowSums(.[2:ncol(.)])
-#   ) %>% 
-#   arrange(
-#     desc(total_malt)
-#   )
-# 
-# 
-# 
-# # ----------- add all hops to all beers
-# hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
-# 
-# 
-# 
-# 
-# 
-# 
+#   as_tibble()
+
+
+bne_slice_hops <- bne_slice %>%
+  select(
+    cluster_assignment,
+    name, abv, ibu, srm, style, style_collapsed, hops_name_1:hops_name_13
+  ) %>%
+  gather(
+    key = hops,
+    value = hops_nme,
+    hops_name_1:hops_name_13
+  ) %>%
+  mutate(
+    count = 1
+  )
+
+bne_slice_hops$hops_nme <- factor(bne_slice_hops$hops_nme) # check out levels
+bne_slice_hops$hops_nme <- as.character(bne_slice_hops$hops_nme)
+
+bne_slice_spread_hops <- bne_slice_hops %>%
+  mutate(
+    row = 1:nrow(bne_slice_hops)        # add a unique idenfitier for row. we'll drop this later
+  ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+  spread(
+    key = hops_nme,
+    value = count
+  ) %>%
+  select(
+    name:style_collapsed, Ahtanum:Zythos
+  )
+View(bne_slice_spread_hops)
+
+# take out all rows that have no ingredients specified at all
+ind <- apply(bne_slice_spread_hops[, 4:ncol(bne_slice_spread_hops)], 1, function(x) all(is.na(x)))
+bne_slice_spread_hops_no_na <- bne_slice_spread_hops[ !ind, ]
+
+bne_slice_spread_hops_group <- bne_slice_spread_hops_no_na %>%
+  group_by(name, style, style_collapsed) %>%
+  summarise_all(                            # summarises all non-grouping columns
+    sum, na.rm = TRUE
+    # n = count()
+  )
+View(bne_slice_spread_hops_group)
+
+hops_by_style <- bne_slice_spread_hops_group %>%
+  ungroup() %>%
+  select(-c(name, style)) %>%
+  group_by(style_collapsed) %>%
+  summarise_all(
+    sum, na.rm = TRUE
+  ) %>%
+  mutate(
+    total_hops = rowSums(.[2:ncol(.)])
+  ) %>%
+  arrange(
+    desc(total_hops)
+  )
+View(hops_by_style[, c(1, 147:ncol(hops_by_style))])
+
+
+# bar chart
+ggplot(hops_by_style, aes(style_collapsed, total_hops)) +
+  geom_bar(stat = "identity")
+
+
+
+
+
+bne_slice_malt <- bne_slice %>%
+  select(
+    name, style, style_collapsed, malt_name_1:malt_name_10
+  ) %>%
+  gather(
+    key = malt,
+    value = malt_nme,
+    malt_name_1:malt_name_10
+  ) %>%
+  mutate(
+    count = 1
+  )
+
+bne_slice_spread_malt <- bne_slice_malt %>%
+  mutate(
+    row = 1:nrow(bne_slice_malt)        # add a unique idenfitier for row
+  ) %>%
+  spread(
+    key = malt_nme,
+    value = count
+  ) %>%
+  select(
+    name:style_collapsed, `Aromatic Malt`:`Wheat Malt - White`
+  )
+
+
+# take out all rows that have no ingredients specified at all
+ind <- apply(bne_slice_spread_malt[, 4:ncol(bne_slice_spread_malt)], 1, function(x) all(is.na(x)))
+bne_slice_spread_malt_no_na <- bne_slice_spread_malt[ !ind, ]
+
+
+bne_slice_spread_malt_group <- bne_slice_spread_malt_no_na %>%
+  group_by(name) %>%
+  summarise_if(
+    is.numeric,
+    sum, na.rm = TRUE
+  ) %>% 
+  mutate(
+    total_malt = rowSums(.[2:ncol(.)])
+  )
+
+# matrix of total number of ingredient instances per beer style
+malt_by_style <- bne_slice_spread_malt_group %>%
+  ungroup() %>%
+  select(-c(name, style)) %>%
+  group_by(style_collapsed) %>%
+  summarise_all(
+    sum, na.rm = TRUE
+  ) %>%  mutate(
+    total_malt = rowSums(.[2:ncol(.)])
+  ) %>%
+  arrange(
+    desc(total_malt)
+  )
+
+
+
+# ----------- add all hops to all beers
+hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
+
+
+
+
+
+
 
 
 
@@ -186,6 +190,8 @@ source("./get_ingredient_levels.R")
 # its corresponding value column, hops_nme specifies the actual hops name (Centennial, Apollo)
 # add a new count column with a 1 for every beer that we'll use as the value when we spread ingredients out in their
 # own columns
+
+source("./cluster.R")
 
 bne_slice <- clustered_beer %>% 
   inner_join(beer_necessities)
@@ -237,7 +243,7 @@ beer_gathered <- gather_ingredients(bne_slice, ingredient_colnames)  # ingredien
 # get a vector of all ingredient levels
 beer_gathered$ing_names <- factor(beer_gathered$ing_names)
 ingredient_levels <- levels(beer_gathered$ing_names) 
-# %>% arrange()
+
 
 # take out the level that's just an empty string
 # first, get all indices in ingredient_levels except for the one that's an empty string
@@ -246,6 +252,7 @@ to_keep_levels <- !(c(1:length(ingredient_levels)) %in% which(ingredient_levels 
 ingredient_levels <- ingredient_levels[to_keep_levels]
 
 
+beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
 
 spread_ingredients <- function(df) {
   df_spread <- df %>% 

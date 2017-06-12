@@ -130,7 +130,7 @@ cluster_9
 # see how styles clustered themselves
 
 # table of counts
-cluster_table_counts <- table(style = clustered_beer$style, cluster = clustered_beer$cluster_assignment)
+cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = clustered_beer$cluster_assignment)
 
 # cb_spread <- clustered_beer %>% select(
 #   cluster_assignment, style
