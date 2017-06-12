@@ -122,7 +122,6 @@ bne_slice_spread_malt <- bne_slice_malt %>%
   select(
     name:style_collapsed, `Aromatic Malt`:`Wheat Malt - White`
   )
-View(bne_slice_spread_malt)
 
 
 # take out all rows that have no ingredients specified at all
@@ -135,7 +134,6 @@ bne_slice_spread_malt_group <- bne_slice_spread_malt_no_na %>%
   summarise_all(                            
     sum, na.rm = TRUE
   )
-View(bne_slice_spread_malt_group)
 
 # matrix of total number of ingredient instances per beer style
 malt_by_style <- bne_slice_spread_malt_group %>% 
@@ -150,7 +148,6 @@ malt_by_style <- bne_slice_spread_malt_group %>%
   arrange(
     desc(total_malt)
   )
-View(malt_by_style)
 
 
 
@@ -190,6 +187,9 @@ hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
 # add a new count column with a 1 for every beer that we'll use as the value when we spread ingredients out in their
 # own columns
 
+bne_slice <- clustered_beer %>% 
+  inner_join(beer_necessities)
+
 ingredient_want <- "hops"
 
 get_last_ing_name_col <- function(df) {
@@ -215,17 +215,17 @@ ingredient_colnames <- names(bne_slice)[first_ingredient_index:last_ingredient_i
 to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
 
 gather_ingredients <- function(df, cols_to_gather) {
-  to_keep_indices <- which(colnames(df) %in% to_keep_names)
+  to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
   
   selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
   
-  new_ing_indices <- which(colnames(selected_df) %in% ingredient_names)    # indices will have changed since we pared down 
+  new_ing_indices <- which(colnames(selected_df) %in% ingredient_colnames)    # indices will have changed since we pared down 
   
   df_gathered <- selected_df %>%
     gather_(
       key_col = "ing_keys",
       value_col = "ing_names",
-      gather_cols = colnames(selected_df)[new_indices]
+      gather_cols = colnames(selected_df)[new_ing_indices]
     ) %>%
     mutate(
       count = 1
@@ -306,48 +306,14 @@ max_not_for_summing <- max(not_for_summing)
 # beer_spread_no_na$style_collapsed <- factor(beer_spread_no_na$style_collapsed)
 
 
-# ----  not  yet there
-d <- beer_spread_no_na[, (max_not_for_summing+1):ncol(beer_spread_no_na)]
-# ingredients_per_beer <- ifelse(is.na(d), 0, 1)
+# d <- beer_spread_no_na[, (max_not_for_summing+1):ncol(beer_spread_no_na)]
 
-mini_d[is.na(mini_d)] <- 0
+# ingredients_per_beer_zeros <- beer_spread_no_na[is.na(beer_spread_no_na)] <- 0   # well now this only returns one cell
 
-mini_d[, ][NA, ] <- 0
-
-mini_d <- d[1:20, 1:20]
-
-zeroize <- function(df) {
-  for (col in names(df)) {
-    print(col)
-    for (cell in df[[col]]) {
-      print(df[[col]][cell])
-      if (is.na(df[[col]][cell])) {
-        print("yes, na")
-        df[[col]][cell] <- 0
-      } else if (df[[col]][cell] == 1) {
-        print("yep, 1")
-        df[[col]][cell] <- 1
-      }
-    }
-  }
-  return(df)
-}
-
-e <- zeroize(mini_d)
-
-
-ingredients_per_beer <- d %>%       # problem is that ifelse only takes the first cell
-  mutate_all(
-    funs(ifelse(is.na(.), 0, 1))
-  ) %>% 
+ingredients_per_beer <- beer_spread_no_na %>% 
   mutate(
-    total = rowSums(.[1:ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
+    total = rowSums(beer_spread_no_na[, (max_not_for_summing + 1):ncol(beer_spread_no_na)], na.rm = TRUE)   
   )
-
-ingredients_per_beer <- cbind(beer_spread_no_na[, not_for_summing], ingredients_per_beer) %>% as_tibble() %>% 
-    mutate(
-      total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
-    )
 
 ingredients_per_style <- ingredients_per_beer %>% 
   group_by(style_collapsed) %>% 
