@@ -301,21 +301,31 @@ max_not_for_summing <- max(not_for_summing)
 #     total = rowSums(.[(max_not_for_summing+1):ncol(.)], na.rm = TRUE)   # or should max_not_for_summing+1 be 2
 #   )
 
-beer_spread_no_na$name <- as.character(beer_spread_no_na$name)
-beer_spread_no_na$style <- as.character(beer_spread_no_na$style)
-beer_spread_no_na$style_collapsed <- as.character(beer_spread_no_na$style_collapsed)
+# beer_spread_no_na$name <- as.character(beer_spread_no_na$name)
+# beer_spread_no_na$style <- as.character(beer_spread_no_na$style)
+# beer_spread_no_na$style_collapsed <- as.character(beer_spread_no_na$style_collapsed)
+# 
+# 
+# 
+# if (is.na(cell)) {
+#   cell <- 0
+# } else if (cell == 1) {
+#   cell <- 1
+# } else {
+#   cell <- "unclear"
+# }
+# 
+# ingredients_per_beer <- beer_spread_no_na %>% 
+# # beer_spread_no_na[, (max_not_for_summing+1):ncol(beer_spread_no_na)] %>%
+#   group_by(name) %>% 
+#   map_df(.[, (max_not_for_summing+1):ncol(beer_spread_no_na)], sum, na.rm = TRUE) %>% 
+#   mutate(
+#     total = rowSums(.[(max_not_for_summing):ncol(.)])
+#     # new_tot = map(.[, (max_not_for_summing + 1):ncol(.)], sum, na.rm = FALSE)
+#   )
 
-
-
-if (is.na(cell)) {
-  cell <- 0
-} else if (cell == 1) {
-  cell <- 1
-} else {
-  cell <- "unclear"
-}
-
-beer_spread_no_na[1:10, (max_not_for_summing+1):ncol(beer_spread_no_na)] %>% map_df(sum, na.rm = TRUE)
+d <- beer_spread_no_na[, (max_not_for_summing+1):ncol(beer_spread_no_na)]
+ingredients_per_beer <- ifelse(is.na(d), 0, 1)
 
 # make sure all grouping columns are characters
 ingredients_per_beer <- beer_spread_no_na %>% 
@@ -326,14 +336,16 @@ ingredients_per_beer <- beer_spread_no_na %>%
     # n = count()
   ) %>% 
   mutate(
-    # total = rowSums(.[(max_not_for_summing):ncol(.)])
-    new_tot = map(.[, (max_not_for_summing + 1):ncol(.)], sum, na.rm = FALSE)
+    total = rowSums(.[(max_not_for_summing):ncol(.)])
+    # new_tot = map(.[, (max_not_for_summing + 1):ncol(.)], sum, na.rm = FALSE)
   )
+
+ingredients_per_beer <- cbind(ingredients_per_beer, beer_spread_no_na[, not_for_summing]) %>% as_tibble()
 
 # works fine
 ingredients_per_style <- ingredients_per_beer %>% 
   ungroup() %>% 
-  # select(-c(name, style)) %>% 
+  select(-c(name, style)) %>%
   group_by(style_collapsed) %>% 
   summarise_all(
     sum, na.rm = TRUE
