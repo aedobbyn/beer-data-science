@@ -171,7 +171,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 
 
 
-Head of the data
+Head of the clustering data
 
 name                                                      style                                                styleId   style_collapsed          abv    ibu   srm
 --------------------------------------------------------  ---------------------------------------------------  --------  ----------------------  ----  -----  ----
@@ -243,11 +243,8 @@ style_centers <- popular_beer_dat %>%
 ```
 
 
-## Unsupervised Clustering 
-* Pare down to beers that have ABV, IBU, and SRM
-* K-means cluster beers based on these predictors
-
 Compare popular styles      
+
 
 style_collapsed              mean_abv   mean_ibu    mean_srm      n
 -------------------------  ----------  ---------  ----------  -----
@@ -283,12 +280,17 @@ Fruit Cider                  6.205786   25.60000   12.000000    370
 German-Style Märzen          5.746102   25.63796   14.322581    370
 
 
+## Unsupervised Clustering 
+* Pare down to beers that have ABV, IBU, and SRM
+* K-means cluster beers based on these predictors
+
+
 **Do Clustering**
 
 * Use only the top beer styles
 * Split off the predictors, ABV, IBU, and SRM
 * Take out NAs, and scale the data
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it...
+    * NB: There are not not very many beers have SRM so we may not want to omit based on it
 * Take out some outliers
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
@@ -296,7 +298,7 @@ German-Style Märzen          5.746102   25.63796   14.322581    370
 ```r
 beer_for_clustering <- popular_beer_dat %>% 
   select(name, style, styleId, style_collapsed,
-         abv, ibu, srm) %>%       # 
+         abv, ibu, srm) %>%       
   na.omit() %>% 
   filter(
     abv < 20 & abv > 3
@@ -330,70 +332,203 @@ clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_bee
 
 A table of cluster counts broken down by style
 
-                                                       1     2    3    4     5    6     7    8    9   10
----------------------------------------------------  ---  ----  ---  ---  ----  ---  ----  ---  ---  ---
-American-Style Amber/Red Ale                           2    33    8   87     9   18     2    0    1    4
-American-Style Barley Wine Ale                         7     0    0    0     2    0    19   15    2    0
-American-Style Black Ale                               0     0    4    1     0    0     0    0    2   36
-American-Style Brown Ale                               1     1   20   68     2    7     1    1    6    3
-American-Style Cream Ale or Lager                      3     4    0    1     0   43     0    0    0    0
-American-Style Imperial Stout                          2     0    3    0     0    0     0   23   10    9
-American-Style India Pale Ale                          2    64    1    6   395    1    27    0    0   26
-American-Style Lager                                   1     9    1    7     4   29     0    0    0    0
-American-Style Pale Ale                                5   211    1   25    29   32     0    0    1    3
-American-Style Pilsener                                1    15    0    0     2   28     1    0    0    1
-American-Style Premium Lager                           0     0    1    4     0   14     0    0    0    0
-American-Style Sour Ale                                1     4    1    2     1   17     0    0    2    0
-American-Style Stout                                   0     3   24    1     0    1     0    0    3    9
-Belgian-Style Blonde Ale                              16     6    1    0     0   21     0    0    0    0
-Belgian-Style Dark Strong Ale                         10     0    1    1     0    0     0    1   21    0
-Belgian-Style Dubbel                                   8     0    1   14     1    0     0    0   16    1
-Belgian-Style Pale Ale                                 6    10    0    5     3   18     0    0    0    0
-Belgian-Style Tripel                                  59     1    0    0     0    0     2    0    2    1
-Belgian-Style White (or Wit) / Belgian-Style Wheat     4     1    0    3     0   71     0    0    0    0
-Berliner-Style Weisse (Wheat)                          0     0    0    0     0   26     0    0    0    0
-Brown Porter                                           0     0   51   24     0    0     0    0    3    0
-Extra Special Bitter                                   0    26    0   18     2    5     0    0    0    1
-French & Belgian-Style Saison                         35    44    2    6     2   48     0    0    2    0
-Fruit Beer                                             5     2    2    6     4   36     0    1    0    0
-Fruit Cider                                            0     0    0    0     0    1     0    0    0    0
-German-Style Doppelbock                                7     0    1    4     0    0     0    0   16    1
-German-Style Kölsch / Köln-Style Kölsch                0     3    0    1     1   67     0    0    0    0
-German-Style Märzen                                    0     2    1   15     0   12     0    0    0    0
-German-Style Pilsener                                  0    24    0    1     1   18     0    0    0    0
-Golden or Blonde Ale                                   5    12    0    3     1   94     0    0    1    0
-Herb and Spice Beer                                    5     4    8   11     6   13     0    1    6    1
-Imperial or Double India Pale Ale                      5     0    0    0    38    0   174    6    0    9
-Irish-Style Red Ale                                    0     3    6   40     1   11     1    0    0    2
-Light American Wheat Ale or Lager with Yeast           1    12    0    3     3   47     0    0    0    0
-Oatmeal Stout                                          0     0   32    0     0    0     0    0    2    1
-Ordinary Bitter                                        1     2    0    7     0    8     0    0    0    0
-Other Belgian-Style Ales                               6     5    4    7     8    3     1    0    4    1
-Pumpkin Beer                                           9     3    5   18     0    7     0    0    4    0
-Robust Porter                                          0     1   51    5     0    0     0    0    8    3
-Rye Ale or Lager with or without Yeast                 1     8    1    5    16    4     2    0    0    4
-Scotch Ale                                             7     1    4    9     0    0     0    0   12    0
-Session India Pale Ale                                 0    29    0    0     2    5     0    0    0    0
-South German-Style Hefeweizen / Hefeweissbier          4     1    0    0     1   84     0    0    0    0
-Specialty Beer                                        11     5    8   13     5   15     1    0    6    1
-Strong Ale                                            11     0    1    1     0    0     4    3    1    2
-Sweet or Cream Stout                                   0     0   32    1     0    0     0    1    7    0
-Wood- and Barrel-Aged Beer                             5     3    2    4     1    2     1    1    4    0
+                             1     2     3     4     5     6     7    8    9   10
+-------------------------  ---  ----  ----  ----  ----  ----  ----  ---  ---  ---
+Barley Wine                  7     0     0     0     2     0    19   15    2    0
+Barrel-Aged                  5     3     2     4     1     2     1    1    4    0
+Bitter                       1    28     0    25     2    13     0    0    0    1
+Black                        0     0     4     1     0     0     0    0    2   36
+Blonde                      21    18     1     3     1   115     0    0    1    0
+Brown                        1     1    20    68     2     7     1    1    6    3
+Double India Pale Ale        5     0     0     0    38     0   174    6    0    9
+Dubbel                       8     0     1    14     1     0     0    0   16    1
+Fruit Beer                   5     2     2     6     4    36     0    1    0    0
+Fruit Cider                  0     0     0     0     0     1     0    0    0    0
+German-Style Doppelbock      7     0     1     4     0     0     0    0   16    1
+German-Style Märzen          0     2     1    15     0    12     0    0    0    0
+Herb and Spice Beer          5     4     8    11     6    13     0    1    6    1
+India Pale Ale               2    93     1     6   397     6    27    0    0   26
+Kölsch                       0     3     0     1     1    67     0    0    0    0
+Lager                        5    21     3    17    20    90     2    0    0    4
+Other Belgian-Style Ales     6     5     4     7     8     3     1    0    4    1
+Pale Ale                    11   221     1    30    32    50     0    0    1    3
+Pilsener                     1    39     0     1     3    46     1    0    0    1
+Porter                       0     1   102    29     0     0     0    0   11    3
+Pumpkin Beer                 9     3     5    18     0     7     0    0    4    0
+Red                          2    36    14   127    10    29     3    0    1    6
+Saison                      35    44     2     6     2    48     0    0    2    0
+Scotch Ale                   7     1     4     9     0     0     0    0   12    0
+Sour                         1     4     1     2     1    17     0    0    2    0
+Specialty Beer              11     5     8    13     5    15     1    0    6    1
+Stout                        2     3    91     2     0     1     0   24   22   19
+Strong Ale                  21     0     2     2     0     0     4    4   22    2
+Tripel                      59     1     0     0     0     0     2    0    2    1
+Wheat                        9    14     0     6     4   228     0    0    0    0
 
 
-Just the clusters
-![](compile_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+A couple plot of the same thing
+
+![](compile_files/figure-html/unnamed-chunk-11-1.png)<!-- -->![](compile_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 
 
-### Plot clusters related to style centers
+### Now add in the style centers (means) for collapsed styles
 
 ![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 
 
 ### Ingredients
+* We set `ingredient_want` at the outset
+
+
+```r
+clustered_beer_necessities <- clustered_beer %>% 
+  inner_join(beer_necessities)
+```
+
+```
+## Joining, by = c("name", "style", "styleId", "style_collapsed", "abv", "ibu", "srm")
+```
+
+```r
+ingredient_want <- "hops"
+
+first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
+first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
+
+# What's the 
+get_last_ing_name_col <- function(df) {
+  for (col in names(df)) {
+    if (grepl(paste(ingredient_want, "_name_", sep = ""), col) == TRUE) {
+      name_last_ing_col <- col
+    }
+  }
+  return(name_last_ing_col)
+}
+
+last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
+last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
+
+
+# vector of all ingredient names
+ingredient_colnames <- names(clustered_beer_necessities)[first_ingredient_index:last_ingredient_index]
+
+
+to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
+
+
+gather_ingredients <- function(df, cols_to_gather) {
+  to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
+  
+  selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
+  
+  new_ing_indices <- which(colnames(selected_df) %in% ingredient_colnames)    # indices will have changed since we pared down 
+  
+  df_gathered <- selected_df %>%
+    gather_(
+      key_col = "ing_keys",
+      value_col = "ing_names",
+      gather_cols = colnames(selected_df)[new_ing_indices]
+    ) %>%
+    mutate(
+      count = 1
+    )
+  df_gathered
+}
+beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
+
+# get a vector of all ingredient levels
+beer_gathered$ing_names <- factor(beer_gathered$ing_names)
+ingredient_levels <- levels(beer_gathered$ing_names) 
+
+
+# take out the level that's just an empty string
+# first, get all indices in ingredient_levels except for the one that's an empty string
+to_keep_levels <- !(c(1:length(ingredient_levels)) %in% which(ingredient_levels == ""))
+# then pare down ingredient_levels to only those indices
+ingredient_levels <- ingredient_levels[to_keep_levels]
+
+
+beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
+
+spread_ingredients <- function(df) {
+  df_spread <- df %>% 
+    mutate(
+      row = 1:nrow(df)        # add a unique idenfitier for each row. we'll drop this later
+    ) %>%                     # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+    spread(
+      key = ing_names,
+      value = count
+    ) 
+  return(df_spread)
+}
+
+beer_spread <- spread_ingredients(beer_gathered)
+
+
+
+select_spread_cols <- function(df) {
+  to_keep_col_indices <- which(colnames(df) %in% to_keep_col_names)
+  to_keep_ingredient_indices <- which(colnames(df) %in% ingredient_levels)
+  
+  to_keep_inds_all <- c(to_keep_col_indices, to_keep_ingredient_indices)
+
+  new_df <- df %>% 
+    select_(
+      .dots = to_keep_inds_all
+      )
+  return(new_df)
+}
+beer_spread_selected <- select_spread_cols(beer_spread)
+
+
+
+# take out all rows that have no ingredients specified at all
+inds_to_remove <- apply(beer_spread_selected[, first_ingredient_index:last_ingredient_index], 
+             1, function(x) all(is.na(x)))
+beer_spread_no_na <- beer_spread_selected[ !inds_to_remove, ]
+
+
+# Can specify multiple groupers
+get_ingredients_per_grouper <- function(df, grouper) {
+  df_grouped <- df %>%
+    ungroup() %>% 
+    group_by_(grouper)
+    
+  not_for_summing <- which(colnames(df_grouped) %in% to_keep_col_names)
+  max_not_for_summing <- max(not_for_summing)   # find the first ingredient column we want to sum over
+  
+  per_grouper <- df_grouped %>% 
+    select(-c(abv, ibu, srm)) %>% 
+    summarise_if(
+      is.numeric,
+      sum, na.rm = TRUE
+    ) %>%
+    mutate(
+      total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)    
+    )
+  
+  return(per_grouper)
+}
+ingredients_per_beer <- get_ingredients_per_grouper(beer_spread_selected, c("name", "style_collapsed"))
+
+ingredients_per_style_collapsed <- get_ingredients_per_grouper(beer_spread_selected, "style_collapsed")
+```
+
+
+
+name                                                      Aged / Debittered Hops (Lambic)   Ahtanum   Alchemy   Amarillo   Apollo   Aramis   Azacca   Bravo   Brewer's Gold   Calypso   Cascade   Celeia   Centennial   Challenger   Chinook   Citra   Cluster   Columbus   Comet   Crystal   CTZ   East Kent Golding   El Dorado   Falconer's Flight   Fuggle (American)   Fuggle (English)   Fuggles   Galaxy   Galena   German Magnum   German Mandarina Bavaria   German Perle   German Polaris   German Tradition   Glacier   Golding (American)   Green Bullet   Hallertau Hallertauer Tradition   Hallertau Northern Brewer   Hallertauer (American)   Hallertauer Hersbrucker   Hops   Horizon   Jarrylo   Kent Goldings   Lemon Drop   Liberty   Magnum   Marynka   Mosaic   Motueka   Mount Hood   Nelson Sauvin   New Zealand Motueka   Northdown   Northern Brewer (American)   Nugget   Orbit   Pacific Jade   Pacifica   Palisades   Perle (American)   Phoenix   Saaz (American)   Saaz (Czech)   Saphir (German Organic)   Simcoe   Sorachi Ace   Southern Cross   Spalt   Spalt Select   Spalt Spalter   Sterling   Strisselspalt   Styrian Goldings   Summit   Target   Tettnang Tettnanger   Tettnanger (American)   Topaz   Tradition   Ultra   Warrior   Willamette   Zeus   Zythos   total
+-------------------------------------------------------  --------------------------------  --------  --------  ---------  -------  -------  -------  ------  --------------  --------  --------  -------  -----------  -----------  --------  ------  --------  ---------  ------  --------  ----  ------------------  ----------  ------------------  ------------------  -----------------  --------  -------  -------  --------------  -------------------------  -------------  ---------------  -----------------  --------  -------------------  -------------  --------------------------------  --------------------------  -----------------------  ------------------------  -----  --------  --------  --------------  -----------  --------  -------  --------  -------  --------  -----------  --------------  --------------------  ----------  ---------------------------  -------  ------  -------------  ---------  ----------  -----------------  --------  ----------------  -------------  ------------------------  -------  ------------  ---------------  ------  -------------  --------------  ---------  --------------  -----------------  -------  -------  --------------------  ----------------------  ------  ----------  ------  --------  -----------  -----  -------  ------
+¡Ándale! Pale Ale                                                                       0         0         0          0        0        0        0       0               0         0         0        0            0            0         0       0         0          0       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       0
+'Inappropriate' Cream Ale                                                               0         0         0          0        0        0        0       0               0         0         0        0            0            0         0       0         0          0       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       0
+'tis the Saison                                                                         0         0         0          0        0        0        0       0               0         0         0        0            0            0         0       0         0          0       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       0
+‘39 Red IPA                                                                             0         0         0          0        0        0        0       1               0         0         1        0            0            0         0       0         0          1       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       3
+"Ah Me Joy" Porter                                                                      0         0         0          0        0        0        0       0               0         0         0        0            0            0         0       0         0          0       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       0
+"Bison Eye Rye" Pale Ale | 2 of 4 Part Pale Ale Series                                  0         0         0          0        0        0        0       0               0         0         0        0            0            0         0       0         0          0       0         0     0                   0           0                   0                   0                  0         0        0        0               0                          0              0                0                  0         0                    0              0                                 0                           0                        0                         0      0         0         0               0            0         0        0         0        0         0            0               0                     0           0                            0        0       0              0          0           0                  0         0                 0              0                         0        0             0                0       0              0               0          0               0                  0        0        0                     0                       0       0           0       0         0            0      0        0       0
+
 
 All hops types
+
 
 -----------------------------------
                                    

@@ -199,7 +199,7 @@ hops_join <- inner_join(bne_slice_spread_hops, beer_necessities)
 
 source("./cluster.R")
 
-bne_slice <- clustered_beer %>% 
+clustered_beer_necessities <- clustered_beer %>% 
   inner_join(beer_necessities)
 
 ingredient_want <- "hops"
@@ -213,15 +213,15 @@ get_last_ing_name_col <- function(df) {
   return(name_last_ing_col)
 }
 
-last_ingredient_name <- get_last_ing_name_col(bne_slice)
-last_ingredient_index <- which(colnames(bne_slice)==last_ingredient_name)
+last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
+last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
 
 
 first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
-first_ingredient_index <- which(colnames(bne_slice)==first_ingredient_name)
+first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
 
 # vector of all ingredient names
-ingredient_colnames <- names(bne_slice)[first_ingredient_index:last_ingredient_index]
+ingredient_colnames <- names(clustered_beer_necessities)[first_ingredient_index:last_ingredient_index]
 
 
 to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
@@ -244,7 +244,7 @@ gather_ingredients <- function(df, cols_to_gather) {
     )
   df_gathered
 }
-beer_gathered <- gather_ingredients(bne_slice, ingredient_colnames)  # ingredient colnames defined above function
+beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
 
 # get a vector of all ingredient levels
 beer_gathered$ing_names <- factor(beer_gathered$ing_names)
@@ -295,8 +295,8 @@ inds_to_remove <- apply(beer_spread_selected[, first_ingredient_index:last_ingre
              1, function(x) all(is.na(x)))
 beer_spread_no_na <- beer_spread_selected[ !inds_to_remove, ]
 
-not_for_summing <- which(colnames(beer_spread_no_na) %in% to_keep_col_names)
-max_not_for_summing <- max(not_for_summing)
+# not_for_summing <- which(colnames(beer_spread_no_na) %in% to_keep_col_names)
+# max_not_for_summing <- max(not_for_summing)
 
 
 
@@ -334,37 +334,40 @@ get_ingredients_per_grouper <- function(df, grouper) {
   not_for_summing <- which(colnames(df_grouped) %in% to_keep_col_names)
   max_not_for_summing <- max(not_for_summing)
   
-  per_beer <- df_grouped %>% 
+  per_grouper <- df_grouped %>% 
+    select(-c(abv, ibu, srm)) %>%    # taking out temporarily
     summarise_if(
-      is.numeric,
+      is.numeric,              # need to make sure not summing abv, ibu, and srm with something like ! (names(.) %in% c("abv","ibu","srm")) or check that index > max_not_for_summing
       sum, na.rm = TRUE
+      # -c(abv, ibu, srm)
     ) %>%
     mutate(
       total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)    
     )
-  per_beer
+  
+  return(per_grouper)
 }
-ingredients_per_beer <- get_ingredients_per_grouper(beer_spread_selected, "name")
+ingredients_per_beer <- get_ingredients_per_grouper(beer_spread_selected, c("name", "style_collapsed"))
 
 # can't pass this into ingredients per style because we've lost the style columns in the process of grouping
 
-ingredients_per_style <- get_ingredients_per_grouper(beer_spread_selected, "style_collapsed")
+ingredients_per_style_collapsed <- get_ingredients_per_grouper(beer_spread_selected, "style_collapsed")
 
 
 
-ingredients_per_style <- beer_spread_selected %>% 
-  ungroup() %>% 
-  group_by(style_collapsed) %>% 
-  summarise_if(
-    is.numeric,
-    sum, na.rm = TRUE
-  ) %>%
-  mutate(
-    total = rowSums(.[, (max_not_for_summing + 1):ncol(.)])
-  ) %>% 
-  arrange(
-    desc(total)
-  )
+# ingredients_per_style <- beer_spread_selected %>% 
+#   ungroup() %>% 
+#   group_by(style_collapsed) %>% 
+#   summarise_if(
+#     is.numeric,
+#     sum, na.rm = TRUE
+#   ) %>%
+#   mutate(
+#     total = rowSums(.[, (max_not_for_summing + 1):ncol(.)])
+#   ) %>% 
+#   arrange(
+#     desc(total)
+#   )
 
 
 beer_ingredients_join <- inner_join(ingredients_per_beer, beer_necessities)
