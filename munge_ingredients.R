@@ -231,7 +231,7 @@ gather_ingredients <- function(df, cols_to_gather) {
   
   selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
   
-  new_ing_indices <- which(colnames(selected_df) %in% ingredient_colnames)    # indices will have changed since we pared down 
+  new_ing_indices <- which(colnames(selected_df) %in% cols_to_gather)    # indices will have changed since we pared down 
   
   df_gathered <- selected_df %>%
     gather_(

@@ -12,12 +12,12 @@ output:
     toc: true
 ---
 
-![](./taps.jpg)
 
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
-# source("./read_from_db.R")
+options(knitr.table.format = 'markdown')
+
 source("./cluster.R")
 source("./plot.R")
 source("./get_ingredient_levels.R")
@@ -28,7 +28,9 @@ library(knitr)
     * Are there natural clusters in beer that are defined by styles? Or are style boundaries more or less arbitrary?
       * Unsupervised (k-means) clustering based on 
         * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
-      * Style centers defined by mean of ABV, IBU, and SRM
+        * Style centers defined by mean of ABV, IBU, and SRM
+      * Neural net 
+        * Can we predict a beer's style based on a number of attributes we 
       
 * Answer
     * Looks more or less fluid: there aren't really pockets centered around a style
@@ -48,29 +50,11 @@ library(knitr)
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
     * Special thanks to [Kris Kroksi](https://kro.ski/) for data ideation and beer
 
+![](./taps.jpg)
+
 
 **Getting Beer**
 
-* Function for unnesting JSON used inside `paginated_request()` below
-    + Takes the column named `name` nested within a column in the data portion of the response
-        + If the `name` column doesn't exist, it takes the first nested column
-* We use something similar to unnest ingredient like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`
-
-```{r, eval=FALSE, echo=TRUE}
-unnest_it <- function(df) {
-  unnested <- df
-  for(col in seq_along(df[["data"]])) {
-    if(! is.null(ncol(df[["data"]][[col]]))) {
-      if(! is.null(df[["data"]][[col]][["name"]])) {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
-      } else {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
-      }
-    }
-  }
-  unnested
-}
-```
 
 
 * The BreweryDB API returns a certain number of results per page; if we want 
@@ -103,6 +87,29 @@ paginated_request <- function(ep, addition) {
 } 
 
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
+```
+
+
+
+* Function for unnesting JSON used inside `paginated_request()` below
+    + Takes the column named `name` nested within a column in the data portion of the response
+        + If the `name` column doesn't exist, it takes the first nested column
+* We use something similar to unnest ingredient like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`
+
+```{r, eval=FALSE, echo=TRUE}
+unnest_it <- function(df) {
+  unnested <- df
+  for(col in seq_along(df[["data"]])) {
+    if(! is.null(ncol(df[["data"]][[col]]))) {
+      if(! is.null(df[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+      } else {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+      }
+    }
+  }
+  unnested
+}
 ```
 
 
@@ -318,18 +325,10 @@ abv_ibu_clusters_vs_style_centers
 
 
 ### Ingredients
-* We set `ingredient_want` at the outset
+
+
 
 ```{r, echo=TRUE, messages=FALSE, warning=FALSE}
-clustered_beer_necessities <- clustered_beer %>% 
-  inner_join(beer_necessities)
-
-ingredient_want <- "hops"
-
-first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
-first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
-
-# What's the 
 get_last_ing_name_col <- function(df) {
   for (col in names(df)) {
     if (grepl(paste(ingredient_want, "_name_", sep = ""), col) == TRUE) {
@@ -339,23 +338,59 @@ get_last_ing_name_col <- function(df) {
   return(name_last_ing_col)
 }
 
+```
+
+
+**Gather some global variables**
+
+* We set `ingredient_want` at the outset: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
+* Once ingredients have been split out from the concatenated string into columns like `malt_name_1`, `malt_name_2`, etc., we need to find the range of these columns; there will be a different number of malt columns than hops columns, for instance
+    * The first one will be `<ingredient>_name_1` 
+        * From this we can find the index of this column 
+    * We get the name of last one with the `get_last_ing_name_col` function
+* Then we save a vector of all the ingredient column names in `ingredient_colnames`
+    * We make this a global variable because it will stay constant even if the indices change
+    
+* `to_keep_col_names` is a vector of all non-ingredient column names
+
+```{r, echo=TRUE, eval=FALSE}
+# Data
+clustered_beer_necessities <- clustered_beer %>% 
+  inner_join(beer_necessities)
+
+# Ingredient we want to spread out
+ingredient_want <- "hops"
+
+# First ingredient
+first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
+first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
+
+# Last ingredient
 last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
 last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
 
-
-# vector of all ingredient names
+# Vector of all the ingredient column names
 ingredient_colnames <- names(clustered_beer_necessities)[first_ingredient_index:last_ingredient_index]
 
-
+# Non-ingredient column names we want to keep
 to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
 
+```
 
+**Gather**
+* Inside `gather_ingredients` we
+    * Take out superflous column names that are not in `to_keep_col_names` or one of the ingredient columns
+    * Find what the new ingredient column indices are, since they'll have changed after we pared down
+    * Actually do the gathering: lump all of the ingredient columns (e.g., `hops_name_1`) into one long column, `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`
+    
+
+```{r, echo=TRUE, eval=FALSE, messages=FALSE, warning=FALSE}
 gather_ingredients <- function(df, cols_to_gather) {
   to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
   
   selected_df <- df[, c(to_keep_indices, first_ingredient_index:last_ingredient_index)]
   
-  new_ing_indices <- which(colnames(selected_df) %in% ingredient_colnames)    # indices will have changed since we pared down 
+  new_ing_indices <- which(colnames(selected_df) %in% cols_to_gather)    
   
   df_gathered <- selected_df %>%
     gather_(
@@ -368,27 +403,34 @@ gather_ingredients <- function(df, cols_to_gather) {
     )
   df_gathered
 }
-beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
+beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  
+```
 
-# get a vector of all ingredient levels
+* Get a vector of all ingredient levels and take out the one that's an empty string
+* We'll use this vector of ingredient levels in `select_spread_cols()` below
+```{r, eval=FALSE, echo=TRUE}
 beer_gathered$ing_names <- factor(beer_gathered$ing_names)
-ingredient_levels <- levels(beer_gathered$ing_names) 
+ingredient_levels <- levels(beer_gathered$ing_names)
 
-
-# take out the level that's just an empty string
-# first, get all indices in ingredient_levels except for the one that's an empty string
 to_keep_levels <- !(c(1:length(ingredient_levels)) %in% which(ingredient_levels == ""))
-# then pare down ingredient_levels to only those indices
 ingredient_levels <- ingredient_levels[to_keep_levels]
 
-
 beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
+```
 
+
+**Spread**
+* We take what was previously the `value` in our gathered dataframe, the actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names
+    * The new `value` is `value` is count; it'll populate the row cells
+        * If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise
+* We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr))
+
+```{r, echo=TRUE, eval=FALSE, warning=FALSE}
 spread_ingredients <- function(df) {
   df_spread <- df %>% 
     mutate(
-      row = 1:nrow(df)        # add a unique idenfitier for each row. we'll drop this later
-    ) %>%                     # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+      row = 1:nrow(df)        
+    ) %>%                   
     spread(
       key = ing_names,
       value = count
@@ -450,19 +492,25 @@ ingredients_per_style_collapsed <- get_ingredients_per_grouper(beer_spread_selec
 ```
 
 
+Now we're left with something of a sparse matrix of all the ingredients compared to all the beers
 ```{r}
 kable(head(ingredients_per_beer))
 ```
 
-
-All hops types
-
+Per `style_collapsed`
 ```{r}
-kable(all_hops_levels)
+kable(ingredients_per_style_collapsed[1:20, ])
 ```
 
-All malt types
-```{r}
-kable(all_malt_levels)
-```
+
+<!-- All hops types -->
+
+<!-- ```{r} -->
+<!-- kable(all_hops_levels) -->
+<!-- ``` -->
+
+<!-- All malt types -->
+<!-- ```{r} -->
+<!-- kable(all_malt_levels) -->
+<!-- ``` -->
 
