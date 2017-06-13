@@ -115,6 +115,7 @@ unnest_it <- function(df) {
 
 
 **Collapse Styles**
+
 * Save the most popular styles in `keywords`
 * Loop through each keyword
     * For each beer, `grep` through its style column to see if it contains any one of these keywords
@@ -202,6 +203,7 @@ kable(beer_for_clustering[1:20, ])
 
 
 **Find the Most Popualar Styles**
+
 ```{r, eval=FALSE, echo=TRUE}
 # Pare down to only cases where style is not NA
 beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
@@ -308,10 +310,21 @@ kable(cluster_table_counts)
 ```
 
 
-A couple plot of the same thing
+A couple plots of the same thing
 
 ```{r}
+clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment")
 clustered_beer_plot_abv_ibu
+
+clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "SRM") +
+  labs(colour = "Cluster Assignment")
 clustered_beer_plot_abv_srm
 ```
 
@@ -322,6 +335,60 @@ clustered_beer_plot_abv_srm
 abv_ibu_clusters_vs_style_centers
 ```
 
+
+
+
+# Neural Net
+
+* Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
+
+```{r}
+
+library(neuralnet)
+library(nnet)
+library(caret)
+
+# split into training and test sets
+beer_train <- sample_n(popular_beer_dat, 3000)
+beer_test <- popular_beer_dat %>% filter(! (id %in% beer_train$id))
+
+
+beer_necessities_train <- sample_n(beer_necessities, 21102)
+beer_necessities_test <- beer_necessities %>% filter(! (id %in% beer_necessities_train$id))
+
+
+
+# build multinomail neural net
+nn_mod <- multinom(style ~ abv + srm + ibu, 
+                   data = beer_train, maxit=500, trace=T)
+nn_mod
+
+# same model on style_collapsed
+nn_collapsed <- multinom(style_collapsed ~ abv + srm + ibu, 
+                   data = beer_necessities_train, maxit=500, trace=T)
+nn_collapsed
+
+
+# which variables are the most important in the neural net?
+most_important_vars <- varImp(nn_mod)
+most_important_vars
+
+# which variables are the most important in the neural net?
+most_important_vars_collapsed <- varImp(nn_collapsed)
+most_important_vars_collapsed
+
+
+# how accurate is the model?
+# preds
+nn_preds <- predict(nn_mod, type="class", newdata = beer_test)
+nn_preds_collapsed <- predict(nn_collapsed, type="class", newdata = beer_necessities_test)
+
+
+# accuracy
+postResample(beer_test$style, nn_preds)
+postResample(beer_necessities$style_collapsed, nn_preds_collapsed)
+
+```
 
 
 ### Ingredients
@@ -353,7 +420,7 @@ get_last_ing_name_col <- function(df) {
     
 * `to_keep_col_names` is a vector of all non-ingredient column names
 
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=TRUE}
 # Data
 clustered_beer_necessities <- clustered_beer %>% 
   inner_join(beer_necessities)
@@ -378,13 +445,14 @@ to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style
 ```
 
 **Gather**
-* Inside `gather_ingredients` we
+
+* Inside `gather_ingredients` we:
     * Take out superflous column names that are not in `to_keep_col_names` or one of the ingredient columns
     * Find what the new ingredient column indices are, since they'll have changed after we pared down
     * Actually do the gathering: lump all of the ingredient columns (e.g., `hops_name_1`) into one long column, `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`
     
 
-```{r, echo=TRUE, eval=FALSE, messages=FALSE, warning=FALSE}
+```{r, echo=TRUE, eval=TRUE, messages=FALSE, warning=FALSE}
 gather_ingredients <- function(df, cols_to_gather) {
   to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
   
@@ -408,7 +476,7 @@ beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colna
 
 * Get a vector of all ingredient levels and take out the one that's an empty string
 * We'll use this vector of ingredient levels in `select_spread_cols()` below
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=TRUE, echo=TRUE}
 beer_gathered$ing_names <- factor(beer_gathered$ing_names)
 ingredient_levels <- levels(beer_gathered$ing_names)
 
@@ -425,7 +493,7 @@ beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
         * If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise
 * We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr))
 
-```{r, echo=TRUE, eval=FALSE, warning=FALSE}
+```{r, echo=TRUE, eval=TRUE, warning=FALSE}
 spread_ingredients <- function(df) {
   df_spread <- df %>% 
     mutate(
@@ -513,4 +581,12 @@ kable(ingredients_per_style_collapsed[1:20, ])
 <!-- ```{r} -->
 <!-- kable(all_malt_levels) -->
 <!-- ``` -->
+
+
+
+
+
+### Updated neural net with ingredients
+
+
 
