@@ -16,6 +16,7 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
 source("./cluster.R")
@@ -34,7 +35,8 @@ library(knitr)
       
 * Answer
     * Looks more or less fluid: there aren't really pockets centered around a style
-  
+
+![](./taps.jpg)
 
 ### General Workflow
 
@@ -50,7 +52,7 @@ library(knitr)
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
     * Special thanks to [Kris Kroksi](https://kro.ski/) for data ideation and beer
 
-![](./taps.jpg)
+
 
 
 **Getting Beer**
@@ -312,7 +314,7 @@ kable(cluster_table_counts)
 
 A couple plots of the same thing
 
-```{r}
+```{r, echo=TRUE}
 clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
   ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
@@ -331,7 +333,21 @@ clustered_beer_plot_abv_srm
 
 ### Now add in the style centers (means) for collapsed styles
 
-```{r}
+```{r, echo=TRUE}
+library(ggrepel)
+abv_ibu_clusters_vs_style_centers <- ggplot() +   
+  geom_point(data = clustered_beer, 
+             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+  geom_point(data = style_centers,
+             aes(mean_abv, mean_ibu), colour = "black") +
+  geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment") +
+  theme_bw()
 abv_ibu_clusters_vs_style_centers
 ```
 
@@ -342,7 +358,7 @@ abv_ibu_clusters_vs_style_centers
 
 * Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
 
-```{r}
+```{r, warning=FALSE}
 
 library(neuralnet)
 library(nnet)
@@ -371,12 +387,17 @@ nn_collapsed
 
 # which variables are the most important in the neural net?
 most_important_vars <- varImp(nn_mod)
-most_important_vars
+# most_important_vars
 
 # which variables are the most important in the neural net?
 most_important_vars_collapsed <- varImp(nn_collapsed)
-most_important_vars_collapsed
+# most_important_vars_collapsed
 
+```
+
+
+Accuracy 
+```{r}
 
 # how accurate is the model?
 # preds
