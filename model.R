@@ -70,7 +70,9 @@ most_important_vars
 most_important_vars_collapsed <- varImp(nn_collapsed)
 most_important_vars_collapsed
 
-varImp(nn_ingredients)
+
+most_important_vars_ingredients <- varImp(nn_ingredients)
+most_important_vars_ingredients
 
 # how accurate is the model?
 # preds

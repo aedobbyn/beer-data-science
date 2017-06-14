@@ -31,10 +31,11 @@ library(knitr)
         * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
         * Style centers defined by mean of ABV, IBU, and SRM
       * Neural net 
-        * Can we predict a beer's style based on a number of attributes we 
+        * Can we predict a beer's style based on certain characteristics of the beer?
       
 * Answer
-    * Looks more or less fluid: there aren't really pockets centered around a style
+    * Looks more or less fluid: beer attributes aren't great predictors of style
+    * The glass a beer is served in is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
 
 ![](./taps.jpg)
 
@@ -441,7 +442,7 @@ get_last_ing_name_col <- function(df) {
     
 * `to_keep_col_names` is a vector of all non-ingredient column names
 
-```{r, echo=TRUE, eval=TRUE}
+```{r, echo=TRUE, eval=TRUE, warning=FALSE}
 # Data
 clustered_beer_necessities <- clustered_beer %>% 
   inner_join(beer_necessities)
@@ -509,6 +510,7 @@ beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
 
 
 **Spread**
+
 * We take what was previously the `value` in our gathered dataframe, the actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names
     * The new `value` is `value` is count; it'll populate the row cells
         * If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise
@@ -608,6 +610,9 @@ kable(ingredients_per_style_collapsed[1:20, ])
 
 
 ### Updated neural net with ingredients
+
+
+![](./brews.jpg)
 
 
 
