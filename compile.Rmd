@@ -358,7 +358,7 @@ abv_ibu_clusters_vs_style_centers
 
 * Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
 
-```{r, warning=FALSE}
+```{r, warning=FALSE, echo=TRUE, eval=FALSE}
 
 library(neuralnet)
 library(nnet)
@@ -397,7 +397,7 @@ most_important_vars_collapsed <- varImp(nn_collapsed)
 
 
 Accuracy 
-```{r}
+```{r, echo=TRUE, eval=FALSE}
 
 # how accurate is the model?
 # preds
