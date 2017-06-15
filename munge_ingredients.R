@@ -215,8 +215,7 @@ get_last_ing_name_col <- function(df) {
 
 
 pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
-  ingredient_want <- ingredient_want
-  
+
   last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
   last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
   
