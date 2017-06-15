@@ -13,7 +13,7 @@ base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
 # canonical get all beers api call
-# http://api.brewerydb.com/v2/beers/?key=29db4ead6450247d3e56108b2559071a
+# http://api.brewerydb.com/v2/beers/?key=[yourkeyhere]
 
 endpoints <- c("beers", "breweries", "categories", "events",
                     "featured", "features", "fluidsizes", "glassware",
