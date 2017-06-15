@@ -15,7 +15,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
@@ -51,7 +51,7 @@ library(knitr)
     * Individual ingredients as columns, beers as rows; cell gets a 1 if ingredient is present and 0 otherwise 
 
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
-    * Special thanks to [Kris Kroksi](https://kro.ski/) for data ideation and beer
+    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
 
 
 
@@ -422,9 +422,9 @@ clustered_beer_necessities <- clustered_beer %>%
 ```
 
 
-
-* `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
-* `grouper`: can be a vector of one or more things to group by 
+* Parameters set at the outset
+    * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
+    * `grouper`: can be a vector of one or more things to group by 
 
 * Once ingredients have been split out from the concatenated string into columns like `malt_name_1`, `malt_name_2`, etc., we need to find the range of these columns; there will be a different number of malt columns than hops columns, for instance
     * The first one will be `<ingredient>_name_1` 
@@ -442,21 +442,28 @@ clustered_beer_necessities <- clustered_beer %>%
     * Actually do the gathering: lump all of the ingredient columns (e.g., `hops_name_1`) into one long column, `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`
 
 
-* Get a vector of all ingredient levels and take out the one that's an empty string
+* Next we get a vector of all ingredient levels and take out the one that's an empty string
 * We'll use this vector of ingredient levels in `select_spread_cols()` below
     
-* Then we spread
+* Then we spread the ingredient names 
 * We take what was previously the `value` in our gathered dataframe, the actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names
     * The new `value` is `value` is count; it'll populate the row cells
         * If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise
 * We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr))
 
+* Then we do the final step and group by the groupers
+
 
 ```{r, eval=TRUE, echo=TRUE}
 
 pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
-  ingredient_want <- ingredient_want
+  # ingredient_want <- ingredient_want
   
+  # First ingredient
+  first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
+  first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
+  
+  # Get the last ingredient
   get_last_ing_name_col <- function(df) {
     for (col in names(df)) {
       if (grepl(paste(ingredient_want, "_name_", sep = ""), col) == TRUE) {
@@ -465,10 +472,6 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
     }
     return(name_last_ing_col)
   }
-  
-  # First ingredient
-  first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
-  first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
   
   # Last ingredient
   last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
@@ -480,6 +483,8 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   # Non-ingredient column names we want to keep
   to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
 
+  
+  # ---- Gather columns ----
   gather_ingredients <- function(df, cols_to_gather) {
     to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
     
@@ -500,32 +505,31 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   }
   beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
   
-  # get a vector of all ingredient levels
+  # Get a vector of all ingredient levels
   beer_gathered$ing_names <- factor(beer_gathered$ing_names)
   ingredient_levels <- levels(beer_gathered$ing_names) 
   
-  # take out the level that's just an empty string
-  # first, get all indices in ingredient_levels except for the one that's an empty string
+  # Take out the level that's just an empty string
   to_keep_levels <- !(c(1:length(ingredient_levels)) %in% which(ingredient_levels == ""))
-  # then pare down ingredient_levels to only those indices
   ingredient_levels <- ingredient_levels[to_keep_levels]
   
   beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
   
+  # ------ Spread columns -------
   spread_ingredients <- function(df) {
     df_spread <- df %>% 
       mutate(
-        row = 1:nrow(df)        # add a unique idenfitier for each row. we'll drop this later
-      ) %>%                                 # see hadley's comment on https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr
+        row = 1:nrow(df)        # Add a unique idenfitier for each row which we'll need in order to spread; we'll drop this later
+      ) %>%                                 
       spread(
         key = ing_names,
         value = count
       ) 
     return(df_spread)
   }
-  
   beer_spread <- spread_ingredients(beer_gathered)
   
+  # ------ Select only certain columns -------
   select_spread_cols <- function(df) {
     to_keep_col_indices <- which(colnames(df) %in% to_keep_col_names)
     to_keep_ingredient_indices <- which(colnames(df) %in% ingredient_levels)
@@ -541,13 +545,14 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   beer_spread_selected <- select_spread_cols(beer_spread)
   
   
-  # take out all rows that have no ingredients specified at all
+  # Take out all rows that have no ingredients specified at all
   inds_to_remove <- apply(beer_spread_selected[, first_ingredient_index:last_ingredient_index], 
                           1, function(x) all(is.na(x)))
   beer_spread_no_na <- beer_spread_selected[ !inds_to_remove, ]
   
   
-  get_ingredients_per_grouper <- function(df, grouper = "name") {
+  # Group ingredients by the grouper specified 
+  get_ingredients_per_grouper <- function(df, grouper = grouper) {
     df_grouped <- df %>%
       ungroup() %>% 
       group_by_(grouper)
@@ -558,7 +563,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
     per_grouper <- df_grouped %>% 
       select(-c(abv, ibu, srm)) %>%    # taking out temporarily
       summarise_if(
-        is.numeric,              # need to make sure not summing abv, ibu, and srm with something like ! (names(.) %in% c("abv","ibu","srm")) or check that index > max_not_for_summing
+        is.numeric,              
         sum, na.rm = TRUE
         # -c(abv, ibu, srm)
       ) %>%
@@ -566,20 +571,20 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
         total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)    
       )
     
-    # send total to the second position
+    # Send total to the second position
     per_grouper <- per_grouper %>% 
       select(
         name, total, everything()
       )
     
-    # replace total column with more descriptive name
+    # Replace total column with more descriptive name: total_<ingredient>
     names(per_grouper)[which(names(per_grouper) == "total")] <- paste0("total_", ingredient_want)
     
     return(per_grouper)
   }
   
   ingredients_per_grouper <- get_ingredients_per_grouper(beer_spread_selected, grouper)
-  
+  return(ingredients_per_grouper)
 }
 ```
 
@@ -588,35 +593,35 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 * Then join the resulting dataframes and remove/reorder some columns
 
 ```{r, echo=TRUE, eval=TRUE}
-# hops
+# Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
                                                       clustered_beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
-# malts
+# Same for malt
 ingredients_per_beer_malt <- pick_ingredient_get_beer(ingredient_want = "malt", 
                                                       clustered_beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
-# join em
+# Join those on our original dataframe by name
 beer_ingredients_join_first_ingredient <- left_join(clustered_beer_necessities, ingredients_per_beer_hops,
                                                     by = "name")
 beer_ingredients_join <- left_join(beer_ingredients_join_first_ingredient, ingredients_per_beer_malt,
                                    by = "name")
 
 
-# take out some unnecessary columns
+# Take out some unnecessary columns
 unnecessary_cols <- c("styleId", "abv_scaled", "ibu_scaled", "srm_scaled", 
                       "hops_id", "malt_id", "glasswareId", "style.categoryId")
 beer_ingredients_join <- beer_ingredients_join[, (! names(beer_ingredients_join) %in% unnecessary_cols)]
 
-# if we also want to take out any of the malt_name_1, malt_name_2, etc. columns
+
+# If we also want to take out any of the malt_name_1, malt_name_2, etc. columns we can do this with a grep
 more_unnecessary <- c("hops_name_|malt_name_")
 beer_ingredients_join <- 
   beer_ingredients_join[, (! grepl(more_unnecessary, names(beer_ingredients_join)) == TRUE)]
 
-
-# reorder columns a bit
+# Reorder columns a bit
 beer_ingredients_join <- beer_ingredients_join %>% 
   select(
     id, name, total_hops, total_malt, everything(), -description
