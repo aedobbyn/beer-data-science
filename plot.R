@@ -108,7 +108,7 @@ style_centers_certain_styles <- style_centers %>%
 sparser_cluster_plot <- ggplot() +   
   geom_point(data = clustered_beer_certain_styles, 
              aes(x = abv, y = ibu,
-                 shape = cluster_assignment,
+                 # shape = cluster_assignment,
                  colour = style_collapsed), alpha = 0.5) +
   geom_point(data = style_centers_certain_styles,
              aes(mean_abv, mean_ibu), colour = "black") +
@@ -122,6 +122,19 @@ sparser_cluster_plot <- ggplot() +
   labs(colour = "Style") +
   theme_bw()
 sparser_cluster_plot
+
+
+
+by_style_plot <- ggplot() +   
+  geom_point(data = clustered_beer_certain_styles, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
 
 
 

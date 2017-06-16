@@ -332,6 +332,22 @@ clustered_beer_plot_abv_srm
 ```
 
 
+### Certain selected styles
+
+```{r, echo=TRUE}
+by_style_plot <- ggplot() +   
+  geom_point(data = clustered_beer_certain_styles, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+
 ### Now add in the style centers (means) for collapsed styles
 
 ```{r, echo=TRUE}
