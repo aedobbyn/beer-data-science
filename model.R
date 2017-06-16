@@ -138,82 +138,59 @@ boost <- xgboost(style_collapsed ~ .,
 # --------------- neural net function
 
 
-
-outcome <- "style_collapsed"
-
-
-
-run_neural_net <- function(df, outcome) {
+run_neural_net <- function(df, outcome, predictor_vars) {
   out <- list(outcome = outcome)
   
-  df[["outcome"]] <- "foo"
-  df[["non_outcome"]] <- "bar"
-  
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
   if (outcome == "style_collapsed") {
-      df[["non_outcome"]] <- df[["style"]]
-      df[["outcome"]] <- df[["style_collapsed"]]
-    } else {
-      df[["non_outcome"]] <- df[["style_collapsed"]]
-      df[["outcome"]] <- df[["style"]]
-    }
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
   
   df$outcome <- factor(df$outcome)
-  df$non_outcome <- factor(df$non_outcome)
   
-  cols_to_keep <- c("outcome", "style", "total_hops", "total_malt", "abv", "ibu", "srm", "glass")
-
-  nrow_df <- nrow(df)
-
-    df <- df %>%
+  cols_to_keep <- c("outcome", predictor_vars)
+  
+  df <- df %>%
     select_(cols_to_keep) %>%
     droplevels() %>%
-    mutate(row = 1:nrow_df)
-
+    mutate(row = 1:nrow(df))
+  
   # Select 80% of the data for training
-  df_train <- sample_n(df, nrow_df*(0.8))
-    # select(-non_outcome)
-  # The t
+  df_train <- sample_n(df, nrow(df)*(0.8))
+  
+  # The rest is for testing
   df_test <- df %>%
     filter(! (row %in% df_train$row)) %>%
     select(-row)
-    # select(-non_outcome)
-
+  
   df_train <- df_train %>%
     select(-row)
-
-
-
-  # build multinomail neural net
+  
+  # Build multinomail neural net
   nn <- multinom(outcome ~ .,
                  data = df_train, maxit=500, trace=T)
-
-  # which variables are the most important in the neural net?
+  
+  # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
-
-
-  # how accurate is the model?
-  # preds
+  
+  # How accurate is the model? Compare predictions to outcomes from test data
   nn_preds <- predict(nn, type="class", newdata = df_test)
-  # accuracy
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
-
-  out <- c(out, nn = nn, most_important_vars = most_important_vars,
+  
+  out <- list(out, nn = nn, most_important_vars = most_important_vars,
            nn_accuracy = nn_accuracy)
-
+  
   return(out)
 }
 
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+                         predictor_vars = p_vars)
 
-nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed")
+# How accurate was it?
+nn_out$nn_accuracy.Accuracy
 
-
-
-# run_neural_net(df = beer_ingredients_join)
-
-
-outcome <- "style_collapsed"
-non_outcome <- ifelse(outcome == "style_collapsed", "style", "style_collapsed")
-
-assign("outcome", outcome)
 
 

@@ -422,6 +422,8 @@ by_style_plot <- ggplot() +
              aes(x = abv, y = ibu,
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
   ggtitle("Selected Styles Cluster Assignment") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster") +
@@ -457,61 +459,6 @@ abv_ibu_clusters_vs_style_centers
 
 
 
-
-# Neural Net
-
-* Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
-
-
-```r
-library(neuralnet)
-library(nnet)
-library(caret)
-
-# split into training and test sets
-beer_train <- sample_n(popular_beer_dat, 3000)
-beer_test <- popular_beer_dat %>% filter(! (id %in% beer_train$id))
-
-
-beer_necessities_train <- sample_n(beer_necessities, 21102)
-beer_necessities_test <- beer_necessities %>% filter(! (id %in% beer_necessities_train$id))
-
-
-
-# build multinomail neural net
-nn_mod <- multinom(style ~ abv + srm + ibu, 
-                   data = beer_train, maxit=500, trace=T)
-nn_mod
-
-# same model on style_collapsed
-nn_collapsed <- multinom(style_collapsed ~ abv + srm + ibu, 
-                   data = beer_necessities_train, maxit=500, trace=T)
-nn_collapsed
-
-
-# which variables are the most important in the neural net?
-most_important_vars <- varImp(nn_mod)
-# most_important_vars
-
-# which variables are the most important in the neural net?
-most_important_vars_collapsed <- varImp(nn_collapsed)
-# most_important_vars_collapsed
-```
-
-
-Accuracy 
-
-```r
-# how accurate is the model?
-# preds
-nn_preds <- predict(nn_mod, type="class", newdata = beer_test)
-nn_preds_collapsed <- predict(nn_collapsed, type="class", newdata = beer_necessities_test)
-
-
-# accuracy
-postResample(beer_test$style, nn_preds)
-postResample(beer_necessities$style_collapsed, nn_preds_collapsed)
-```
 
 
 ### Ingredients
@@ -769,6 +716,122 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 
 
 
+
+# Neural Net
+
+* Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
+* In the function, specify the dataframe and the outcome, either `style` or `style_collapsed`; the one not specified as `outcome` will be dropped
+* The predictor columns will be everything not specified in 
+
+
+```r
+library(nnet)
+library(caret)
+```
+
+```
+## Loading required package: lattice
+```
+
+```
+## 
+## Attaching package: 'caret'
+```
+
+```
+## The following object is masked from 'package:purrr':
+## 
+##     lift
+```
+
+```r
+run_neural_net <- function(df, outcome, predictor_vars) {
+  out <- list(outcome = outcome)
+  
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  if (outcome == "style_collapsed") {
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
+  
+  df$outcome <- factor(df$outcome)
+  
+  cols_to_keep <- c("outcome", predictor_vars)
+  
+  df <- df %>%
+    select_(cols_to_keep) %>%
+    droplevels() %>%
+    mutate(row = 1:nrow(df))
+  
+  # Select 80% of the data for training
+  df_train <- sample_n(df, nrow(df)*(0.8))
+  
+  # The rest is for testing
+  df_test <- df %>%
+    filter(! (row %in% df_train$row)) %>%
+    select(-row)
+  
+  df_train <- df_train %>%
+    select(-row)
+  
+  # Build multinomail neural net
+  nn <- multinom(outcome ~ .,
+                 data = df_train, maxit=500, trace=T)
+  
+  # Which variables are the most important in the neural net?
+  most_important_vars <- varImp(nn)
+  
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_accuracy <- postResample(df_test$outcome, nn_preds)
+  
+  out <- c(out, nn = nn, most_important_vars = most_important_vars,
+           nn_accuracy = nn_accuracy)
+  
+  return(out)
+}
+```
+
+* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+
+
+```r
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+                         predictor_vars = p_vars)
+```
+
+```
+## # weights:  60 (29 variable)
+## initial  value 9302.274839 
+## iter  10 value 8343.761460
+## iter  20 value 8223.436452
+## iter  30 value 8214.248988
+## final  value 8212.883232 
+## converged
+```
+
+```r
+# How accurate was it?
+nn_out$nn_accuracy.Accuracy
+```
+
+```
+## [1] 0.1900585
+```
+
+* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+<!-- ```{r, echo=TRUE} -->
+<!-- p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass") -->
+
+<!-- nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed",  -->
+<!--                          predictor_vars = p_vars) -->
+
+<!-- # How accurate was it? -->
+<!-- nn_out$nn_accuracy.Accuracy -->
+
+<!-- ``` -->
 
 
 
