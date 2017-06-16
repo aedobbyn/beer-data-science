@@ -335,11 +335,24 @@ clustered_beer_plot_abv_srm
 ### Certain selected styles
 
 ```{r, echo=TRUE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+clustered_beer_certain_styles <- clustered_beer %>% 
+  filter(
+   style_collapsed %in% styles_to_keep 
+  )
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(
+    style_collapsed %in% styles_to_keep 
+  )
+
 by_style_plot <- ggplot() +   
   geom_point(data = clustered_beer_certain_styles, 
              aes(x = abv, y = ibu,
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
   ggtitle("Selected Styles Cluster Assignment") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster") +
@@ -414,7 +427,7 @@ most_important_vars_collapsed <- varImp(nn_collapsed)
 
 
 Accuracy 
-```{r, echo=TRUE, eval=FALSE}
+```{r, echo=TRUE, eval=TRUE}
 
 # how accurate is the model?
 # preds

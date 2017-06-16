@@ -124,12 +124,14 @@ sparser_cluster_plot <- ggplot() +
 sparser_cluster_plot
 
 
-
+# faceted plot of certain styles broken down by cluster
 by_style_plot <- ggplot() +   
   geom_point(data = clustered_beer_certain_styles, 
              aes(x = abv, y = ibu,
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+             aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
   ggtitle("Selected Styles Cluster Assignment") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster") +

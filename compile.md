@@ -402,6 +402,36 @@ clustered_beer_plot_abv_srm
 ![](compile_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 
 
+### Certain selected styles
+
+
+```r
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+clustered_beer_certain_styles <- clustered_beer %>% 
+  filter(
+   style_collapsed %in% styles_to_keep 
+  )
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(
+    style_collapsed %in% styles_to_keep 
+  )
+
+by_style_plot <- ggplot() +   
+  geom_point(data = clustered_beer_certain_styles, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+
+
 ### Now add in the style centers (means) for collapsed styles
 
 
@@ -423,7 +453,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 
 
