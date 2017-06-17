@@ -95,7 +95,6 @@ postResample(beer_ingredients_join_test$style_collapsed, nn_preds_ingredients)
 
 
 
-
 # ------------------------ xgboost -------------------
 
 library(xgboost)
@@ -186,11 +185,15 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 }
 
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
-nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 
 # How accurate was it?
-nn_out$nn_accuracy.Accuracy
+nn_collapsed_out$nn_accuracy
 
 
+nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
+                                      predictor_vars = p_vars)
 
+
+varImp(nn_notcollapsed_out$nn)

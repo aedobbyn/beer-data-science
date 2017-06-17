@@ -33,22 +33,31 @@ library(knitr)
       * Neural net 
         * Can we predict a beer's style based on certain characteristics of the beer?
       
-* Answer
-    * Looks more or less fluid: beer attributes aren't great predictors of style
-    * The glass a beer is served in is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
+* Answer thus far
+    * Beer-intrinsic attributes aren't great predictors of style
+    * Style-defined attributes are the best predictors
+        * For instance, the glass a beer is served in (which is defined by its style) is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
 
 ![](./taps.jpg)
 
-### General Workflow
+### Workflow Overview
 
-* Hit the BreweryDB API to iteratively pull in all beers and their ingredients
-    * Dump them into a MySQL database along with other things we'd want like breweries and glassware
-* Unnest the JSON response including all the ingredients columns
-* Create a `style_collapsed` column
-    * Look for main style strings like `Pale Ale` and chop out everything else
+* Hit the BreweryDB API to iteratively pull in all beers and their ingredients along with other things we might want like breweries and glassware
+* Unnest the JSON responses, including all the ingredients columns, and 
+* Dump this all into a MySQL database 
+
+* Create a `style_collapsed` column to reduce the number of levels of our outcome variable
+    * `grep` through each beer's style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style
+    * If it does, it gets that keyword in a `style_collapsed` column 
     * Further collpase styles that are similar like Hefeweizen and Wit into Wheat
+    
 * Unnest the ingredients `hops` and `malts` into a sparse matrix
     * Individual ingredients as columns, beers as rows; cell gets a 1 if ingredient is present and 0 otherwise 
+    
+* Cluster: unsupervised k-means clsutering based on ABV, IBU, and SRM
+
+* Run a neural net
+    * Predict either `style` or `style_collapsed` from all the predictors including the total number of hops and malts per beer
 
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
     * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
@@ -57,8 +66,6 @@ library(knitr)
 
 
 **Getting Beer**
-
-
 
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
@@ -313,7 +320,7 @@ kable(cluster_table_counts)
 ```
 
 
-A couple plots of the same thing
+Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
 
 ```{r, echo=TRUE}
 clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
@@ -679,19 +686,33 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 * Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
 
 ```{r, echo=TRUE, eval=TRUE}
-
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
-nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+
+nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 
+
 # How accurate was it?
-nn_out$nn_accuracy.Accuracy
+nn_collapsed_out$nn_accuracy
 
 # What were the most important variables?
-nn_out$most_important_vars.Overall
+nn_collapsed_out$most_important_vars
 
 ```
 
+* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+
+```{r, echo=TRUE}
+
+nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
+                         predictor_vars = p_vars)
+
+nn_notcollapsed_out$nn_accuracy
+
+nn_notcollapsed_out$most_important_vars
+
+
+```
 
 
 ### Updated neural net with ingredients -- xgboost?
