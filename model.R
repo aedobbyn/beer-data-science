@@ -205,10 +205,43 @@ nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "sty
 
 nn_notcollapsed_out$nn_accuracy
 
-varImp(nn_notcollapsed_out$nn)
 
 
 
 
-nn_foo <- multinom(style_collapsed ~ total_hops + total_malt + abv + ibu + srm + glass,
-               data = beer_ingredients_join, maxit=500, trace=T)
+library(ranger)
+library(stringr)
+
+
+
+bi <- beer_ingredients_join %>% 
+  select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
+            description, glass)) %>% 
+  mutate(row = 1:nrow(.)) 
+
+bi$style_collapsed <- factor(bi$style_collapsed)
+
+
+# rf complains about special characters and spaces in ingredient column names. take them out and replace with ""
+names(bi) <- tolower(names(bi))
+names(bi) <- str_replace_all(names(bi), " ", "")
+names(bi) <- str_replace_all(names(bi), "([\\(\\)-\\/')]+)", "")
+
+
+bi_train <- sample_n(bi, nrow(bi)*(0.8))
+
+# The rest is for testing
+bi_test <- bi %>%
+  filter(! (row %in% bi_train$row)) %>%
+  dplyr::select(-row)
+
+bi_train <- bi_train %>%
+  dplyr::select(-row)
+
+
+bi_rf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test)
+
+
+     
+     
+     

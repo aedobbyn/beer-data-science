@@ -645,19 +645,21 @@ run_neural_net <- function(df, outcome, predictor_vars) {
     df[["outcome"]] <- df[["style"]]
   }
   
+  # Make outcome a factor and drop its unused levels
   df$outcome <- factor(df$outcome)
+  df$outcome <- droplevels(df$outcome)
   
+  # Select only outcome and the predictor variables we set as a function param
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
-    select_(cols_to_keep) %>%
-    droplevels() %>%
+    select_(.dots = cols_to_keep) %>%
     mutate(row = 1:nrow(df))
-  
+
   # Select 80% of the data for training
   df_train <- sample_n(df, nrow(df)*(0.8))
   
-  # The rest is for testing. Drop the row identifier from both training and test data.
+  # The rest is for testing
   df_test <- df %>%
     filter(! (row %in% df_train$row)) %>%
     select(-row)
@@ -668,17 +670,18 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
                  data = df_train, maxit=500, trace=T)
-  
+
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
-  
+  print(most_important_vars)
+
   # How accurate is the model? Compare predictions to outcomes from test data
   nn_preds <- predict(nn, type="class", newdata = df_test)
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
-  
-  out <- c(out, nn = nn, most_important_vars = most_important_vars,
+
+  out <- list(out, nn = nn, most_important_vars = most_important_vars,
            nn_accuracy = nn_accuracy)
-  
+
   return(out)
 }
 ```
@@ -700,7 +703,7 @@ nn_collapsed_out$most_important_vars
 
 ```
 
-* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+* What about predicing `style`?
 
 ```{r, echo=TRUE}
 
