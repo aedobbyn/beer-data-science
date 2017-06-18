@@ -13,22 +13,31 @@
       * Neural net 
         * Can we predict a beer's style based on certain characteristics of the beer?
       
-* Answer
-    * Looks more or less fluid: beer attributes aren't great predictors of style
-    * The glass a beer is served in is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
+* Answer thus far
+    * Beer-intrinsic attributes aren't great predictors of style
+    * Style-defined attributes are the best predictors
+        * For instance, the glass a beer is served in (which is defined by its style) is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
 
 ![](./taps.jpg)
 
-### General Workflow
+### Workflow Overview
 
-* Hit the BreweryDB API to iteratively pull in all beers and their ingredients
-    * Dump them into a MySQL database along with other things we'd want like breweries and glassware
-* Unnest the JSON response including all the ingredients columns
-* Create a `style_collapsed` column
-    * Look for main style strings like `Pale Ale` and chop out everything else
+* Hit the BreweryDB API to iteratively pull in all beers and their ingredients along with other things we might want like breweries and glassware
+* Unnest the JSON responses, including all the ingredients columns, and 
+* Dump this all into a MySQL database 
+
+* Create a `style_collapsed` column to reduce the number of levels of our outcome variable
+    * `grep` through each beer's style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style
+    * If it does, it gets that keyword in a `style_collapsed` column 
     * Further collpase styles that are similar like Hefeweizen and Wit into Wheat
+    
 * Unnest the ingredients `hops` and `malts` into a sparse matrix
     * Individual ingredients as columns, beers as rows; cell gets a 1 if ingredient is present and 0 otherwise 
+    
+* Cluster: unsupervised k-means clsutering based on ABV, IBU, and SRM
+
+* Run a neural net
+    * Predict either `style` or `style_collapsed` from all the predictors including the total number of hops and malts per beer
 
 * Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
     * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
@@ -37,8 +46,6 @@
 
 
 **Getting Beer**
-
-
 
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
@@ -376,7 +383,7 @@ A table of cluster counts broken down by style
 |Wheat                    |  9|  14|   0|   6|   4| 228|   0|  0|  0|  0|
 
 
-A couple plots of the same thing
+Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
 
 
 ```r
@@ -727,24 +734,7 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 ```r
 library(nnet)
 library(caret)
-```
 
-```
-## Loading required package: lattice
-```
-
-```
-## 
-## Attaching package: 'caret'
-```
-
-```
-## The following object is masked from 'package:purrr':
-## 
-##     lift
-```
-
-```r
 run_neural_net <- function(df, outcome, predictor_vars) {
   out <- list(outcome = outcome)
   
@@ -754,16 +744,16 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  
+  # browser()
   df$outcome <- factor(df$outcome)
   
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
-    select_(cols_to_keep) %>%
-    droplevels() %>%
-    mutate(row = 1:nrow(df))
-  
+    select_(.dots = cols_to_keep) %>%
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
+
   # Select 80% of the data for training
   df_train <- sample_n(df, nrow(df)*(0.8))
   
@@ -775,20 +765,27 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   df_train <- df_train %>%
     select(-row)
   
+  # # Drop NAs for only outcome variable, not any other ones
+  # df_train$outcome <- droplevels(df_train$outcome)
+  # df_test$outcome <- droplevels(df_test$outcome)
+  
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
                  data = df_train, maxit=500, trace=T)
-  
+
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
-  
+  print(most_important_vars)
+
   # How accurate is the model? Compare predictions to outcomes from test data
   nn_preds <- predict(nn, type="class", newdata = df_test)
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
-  
-  out <- c(out, nn = nn, most_important_vars = most_important_vars,
+
+  out <- list(out, nn = nn, most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
            nn_accuracy = nn_accuracy)
-  
+
   return(out)
 }
 ```
@@ -798,44 +795,271 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 ```r
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
-nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+
+nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 ```
 
 ```
-## # weights:  60 (29 variable)
-## initial  value 9302.274839 
-## iter  10 value 8343.761460
-## iter  20 value 8223.436452
-## iter  30 value 8214.248988
-## final  value 8212.883232 
+## # weights:  522 (476 variable)
+## initial  value 5286.654453 
+## iter  10 value 4173.826077
+## iter  20 value 3873.274885
+## iter  30 value 3775.566990
+## iter  40 value 3627.695855
+## iter  50 value 3342.689388
+## iter  60 value 3193.823856
+## iter  70 value 3018.589837
+## iter  80 value 2786.883065
+## iter  90 value 2691.594604
+## iter 100 value 2609.040597
+## iter 110 value 2565.517972
+## iter 120 value 2543.208533
+## iter 130 value 2525.190347
+## iter 140 value 2513.418421
+## iter 150 value 2507.322540
+## iter 160 value 2505.829225
+## iter 170 value 2505.424524
+## iter 180 value 2505.214867
+## iter 190 value 2505.057369
+## iter 200 value 2504.921574
+## iter 210 value 2504.749854
+## iter 220 value 2504.676258
+## iter 230 value 2504.654166
+## iter 240 value 2504.648259
+## iter 250 value 2504.639769
+## iter 260 value 2504.631627
+## iter 270 value 2504.628817
+## iter 280 value 2504.627495
+## iter 290 value 2504.625422
+## iter 300 value 2504.624947
+## final  value 2504.624865 
 ## converged
+##                              Overall
+## total_hops                 54.667710
+## total_malt                 54.440629
+## abv                        37.319481
+## ibu                         4.217497
+## srm                         4.983142
+## glassGoblet               356.833263
+## glassMug                  321.495989
+## glassOversized Wine Glass 141.130691
+## glassPilsner              585.530578
+## glassPint                 265.535109
+## glassSnifter              320.053330
+## glassStange               168.615480
+## glassThistle              437.826113
+## glassTulip                260.077073
+## glassWeizen               156.934352
+## glassWilli                234.239558
 ```
 
 ```r
 # How accurate was it?
-nn_out$nn_accuracy.Accuracy
+nn_collapsed_out$nn_accuracy
 ```
 
 ```
-## [1] 0.1900585
+##  Accuracy     Kappa 
+## 0.4801061 0.4305531
 ```
 
-* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
-<!-- ```{r, echo=TRUE} -->
-<!-- p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass") -->
+```r
+# What were the most important variables?
+nn_collapsed_out$most_important_vars
+```
 
-<!-- nn_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed",  -->
-<!--                          predictor_vars = p_vars) -->
+```
+##                              Overall
+## total_hops                 54.667710
+## total_malt                 54.440629
+## abv                        37.319481
+## ibu                         4.217497
+## srm                         4.983142
+## glassGoblet               356.833263
+## glassMug                  321.495989
+## glassOversized Wine Glass 141.130691
+## glassPilsner              585.530578
+## glassPint                 265.535109
+## glassSnifter              320.053330
+## glassStange               168.615480
+## glassThistle              437.826113
+## glassTulip                260.077073
+## glassWeizen               156.934352
+## glassWilli                234.239558
+```
 
-<!-- # How accurate was it? -->
-<!-- nn_out$nn_accuracy.Accuracy -->
-
-<!-- ``` -->
+* What about predicing `style`?
 
 
+```r
+nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
+                         predictor_vars = p_vars)
+```
 
-### Updated neural net with ingredients
+```
+## # weights:  828 (765 variable)
+## initial  value 5972.680579 
+## iter  10 value 4849.639474
+## iter  20 value 4546.217871
+## iter  30 value 4401.880901
+## iter  40 value 4290.597695
+## iter  50 value 4164.919104
+## iter  60 value 3955.690671
+## iter  70 value 3847.282402
+## iter  80 value 3728.455528
+## iter  90 value 3599.092537
+## iter 100 value 3443.638108
+## iter 110 value 3229.289371
+## iter 120 value 3072.820049
+## iter 130 value 2971.656137
+## iter 140 value 2875.904237
+## iter 150 value 2845.291959
+## iter 160 value 2824.312776
+## iter 170 value 2814.439867
+## iter 180 value 2806.766269
+## iter 190 value 2800.627718
+## iter 200 value 2795.899223
+## iter 210 value 2793.011271
+## iter 220 value 2791.238156
+## iter 230 value 2790.138768
+## iter 240 value 2788.939340
+## iter 250 value 2788.307983
+## iter 260 value 2787.972412
+## iter 270 value 2787.750582
+## iter 280 value 2787.682522
+## iter 290 value 2787.663433
+## iter 300 value 2787.657861
+## iter 310 value 2787.649855
+## iter 320 value 2787.640640
+## iter 330 value 2787.636912
+## iter 340 value 2787.633957
+## iter 350 value 2787.630620
+## iter 360 value 2787.623893
+## iter 370 value 2787.620914
+## iter 380 value 2787.620095
+## iter 380 value 2787.620069
+## iter 380 value 2787.620069
+## final  value 2787.620069 
+## converged
+##                              Overall
+## total_hops                197.520033
+## total_malt                 95.366107
+## abv                        39.730450
+## ibu                         4.635736
+## srm                         8.578252
+## glassGoblet               531.328426
+## glassMug                  458.072478
+## glassOversized Wine Glass 136.526962
+## glassPilsner              462.525660
+## glassPint                 265.032153
+## glassSnifter              345.599612
+## glassStange               144.970902
+## glassThistle               50.962191
+## glassTulip                315.708087
+## glassWeizen               223.001823
+## glassWilli                396.450821
+```
+
+```r
+nn_notcollapsed_out$nn_accuracy
+```
+
+```
+##  Accuracy     Kappa 
+## 0.4160207 0.3779684
+```
+
+```r
+nn_notcollapsed_out$most_important_vars
+```
+
+```
+##                              Overall
+## total_hops                197.520033
+## total_malt                 95.366107
+## abv                        39.730450
+## ibu                         4.635736
+## srm                         8.578252
+## glassGoblet               531.328426
+## glassMug                  458.072478
+## glassOversized Wine Glass 136.526962
+## glassPilsner              462.525660
+## glassPint                 265.032153
+## glassSnifter              345.599612
+## glassStange               144.970902
+## glassThistle               50.962191
+## glassTulip                315.708087
+## glassWeizen               223.001823
+## glassWilli                396.450821
+```
+
+
+### Random forest with all ingredients
+
+
+```r
+library(ranger)
+library(stringr)
+
+bi <- beer_ingredients_join %>% 
+  select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
+            glass)) %>% 
+  mutate(row = 1:nrow(.)) 
+
+bi$style_collapsed <- factor(bi$style_collapsed)
+
+
+# csrf complains about special characters and spaces in ingredient column names. take them out and replace with ""
+names(bi) <- tolower(names(bi))
+names(bi) <- str_replace_all(names(bi), " ", "")
+names(bi) <- str_replace_all(names(bi), "([\\(\\)-\\/')]+)", "")
+
+# Keep 80% for training
+bi_train <- sample_n(bi, nrow(bi)*(0.8))
+
+# The rest is for testing
+bi_test <- bi %>%
+  filter(! (row %in% bi_train$row)) %>%
+  dplyr::select(-row)
+
+bi_train <- bi_train %>%
+  dplyr::select(-row)
+
+
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train)
+bi_rf
+```
+
+```
+## Ranger result
+## 
+## Call:
+##  ranger(style_collapsed ~ ., data = bi_train) 
+## 
+## Type:                             Classification 
+## Number of trees:                  500 
+## Sample size:                      2735 
+## Number of independent variables:  201 
+## Mtry:                             14 
+## Target node size:                 1 
+## Variable importance mode:         none 
+## OOB prediction error:             56.27 %
+```
+
+```r
+bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
+                params1 = list(num.trees = 5, mtry = 4),
+                params2 = list(num.trees = 2))
+
+
+# bi_rf <- ranger(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
+#               params1 = list(num.trees = 5, mtry = 4),
+#               params2 = list(num.trees = 2))
+# 
+# rf_acc <- postResample(bi_rf, bi_test$style_collapsed)
+# rf_acc
+```
 
 
 ![](./pour.jpg)

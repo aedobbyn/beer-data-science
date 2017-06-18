@@ -153,10 +153,8 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   
   df <- df %>%
     select_(.dots = cols_to_keep) %>%
-    mutate(row = 1:nrow(df))
-
-  # Drop NAs for only outcome variable, not any other ones
-  df$outcome <- droplevels(df$outcome)
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
 
   # Select 80% of the data for training
   df_train <- sample_n(df, nrow(df)*(0.8))
@@ -168,6 +166,10 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   
   df_train <- df_train %>%
     select(-row)
+  
+  # # Drop NAs for only outcome variable, not any other ones
+  # df_train$outcome <- droplevels(df_train$outcome)
+  # df_test$outcome <- droplevels(df_train$outcome)
   
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
@@ -182,6 +184,8 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
 
   out <- list(out, nn = nn, most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
            nn_accuracy = nn_accuracy)
 
   return(out)
@@ -212,8 +216,6 @@ nn_notcollapsed_out$nn_accuracy
 library(ranger)
 library(stringr)
 
-
-
 bi <- beer_ingredients_join %>% 
   select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
             description, glass)) %>% 
@@ -222,12 +224,12 @@ bi <- beer_ingredients_join %>%
 bi$style_collapsed <- factor(bi$style_collapsed)
 
 
-# rf complains about special characters and spaces in ingredient column names. take them out and replace with ""
+# csrf complains about special characters and spaces in ingredient column names. take them out and replace with ""
 names(bi) <- tolower(names(bi))
 names(bi) <- str_replace_all(names(bi), " ", "")
 names(bi) <- str_replace_all(names(bi), "([\\(\\)-\\/')]+)", "")
 
-
+# Keep 80% for training
 bi_train <- sample_n(bi, nrow(bi)*(0.8))
 
 # The rest is for testing
@@ -239,9 +241,29 @@ bi_train <- bi_train %>%
   dplyr::select(-row)
 
 
-bi_rf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test)
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train)
+bi_rf
+
+rf_acc <- postResample(bi_rf, bi_test$style_collapsed)
+
+
+
+
+
+bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
+                params1 = list(num.trees = 5, mtry = 4),
+                params2 = list(num.trees = 2))
+
+csrf_acc <- postResample(bi_csrf, bi_test$style_collapsed)
+
+csrf_preds <- predict(bi_csrf, type="terminalNodes", newdata = bi_test$style_collapsed) 
+
+     
+
+rf_preds <- predict(bi_rf, bi_test)     
+rf_preds <- predict(bi_rf, type="terminalNodes", newdata = bi_test$style_collapsed)
 
 
      
-     
-     
+importance(bi_rf)
+

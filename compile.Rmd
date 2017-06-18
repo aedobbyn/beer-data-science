@@ -644,17 +644,15 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  
-  # Make outcome a factor and drop its unused levels
+  # browser()
   df$outcome <- factor(df$outcome)
-  df$outcome <- droplevels(df$outcome)
   
-  # Select only outcome and the predictor variables we set as a function param
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
     select_(.dots = cols_to_keep) %>%
-    mutate(row = 1:nrow(df))
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
 
   # Select 80% of the data for training
   df_train <- sample_n(df, nrow(df)*(0.8))
@@ -673,17 +671,19 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
-  print(most_important_vars)
 
   # How accurate is the model? Compare predictions to outcomes from test data
   nn_preds <- predict(nn, type="class", newdata = df_test)
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
 
   out <- list(out, nn = nn, most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
            nn_accuracy = nn_accuracy)
 
   return(out)
 }
+
 ```
 
 * Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
@@ -718,7 +718,53 @@ nn_notcollapsed_out$most_important_vars
 ```
 
 
-### Updated neural net with ingredients -- xgboost?
+### Random forest with all ingredients
+
+```{r, echo=TRUE}
+
+library(ranger)
+library(stringr)
+
+bi <- beer_ingredients_join %>% 
+  select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
+            glass)) %>% 
+  mutate(row = 1:nrow(.)) 
+
+bi$style_collapsed <- factor(bi$style_collapsed)
+
+
+# csrf complains about special characters and spaces in ingredient column names. take them out and replace with ""
+names(bi) <- tolower(names(bi))
+names(bi) <- str_replace_all(names(bi), " ", "")
+names(bi) <- str_replace_all(names(bi), "([\\(\\)-\\/')]+)", "")
+
+# Keep 80% for training
+bi_train <- sample_n(bi, nrow(bi)*(0.8))
+
+# The rest is for testing
+bi_test <- bi %>%
+  filter(! (row %in% bi_train$row)) %>%
+  dplyr::select(-row)
+
+bi_train <- bi_train %>%
+  dplyr::select(-row)
+
+
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train)
+bi_rf
+
+bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
+                params1 = list(num.trees = 5, mtry = 4),
+                params2 = list(num.trees = 2))
+
+
+# bi_rf <- ranger(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
+#               params1 = list(num.trees = 5, mtry = 4),
+#               params2 = list(num.trees = 2))
+# 
+# rf_acc <- postResample(bi_rf, bi_test$style_collapsed)
+# rf_acc
+```
 
 
 ![](./pour.jpg)
