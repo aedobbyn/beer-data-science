@@ -1,16 +1,15 @@
+- add a readme
+
 - tsne
 - adversarial networks
 	- name generator
 	
 - get other ingredients (yeast, spices)
 
-
 - which hops are used most often in which styles?
   - are they predictive?
-
-- for each beer, plot ibu vs. number of hops; should see linear trend
-  - which hops contribute most to bitterness?
-- and abv vs ibu, fill = hops
+  
+- plot abv vs ibu, fill = hops
   
   
   

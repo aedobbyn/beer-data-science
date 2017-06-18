@@ -241,12 +241,10 @@ bi_train <- bi_train %>%
   dplyr::select(-row)
 
 
-bi_rf <- ranger(style_collapsed ~ ., data = bi_train)
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity")
 bi_rf
 
-rf_acc <- postResample(bi_rf, bi_test$style_collapsed)
-
-
+importance(bi_rf)
 
 
 
@@ -256,14 +254,9 @@ bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_te
 
 csrf_acc <- postResample(bi_csrf, bi_test$style_collapsed)
 
-csrf_preds <- predict(bi_csrf, type="terminalNodes", newdata = bi_test$style_collapsed) 
-
      
 
-rf_preds <- predict(bi_rf, bi_test)     
-rf_preds <- predict(bi_rf, type="terminalNodes", newdata = bi_test$style_collapsed)
+# rf_preds <- predict(bi_rf, type="terminalNodes", newdata = bi_test$style_collapsed)
 
 
      
-importance(bi_rf)
-

@@ -20,7 +20,7 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 
 source("./cluster.R")
-source("./plot.R")
+# source("./plot.R")
 source("./get_ingredient_levels.R")
 library(knitr)
 ```
@@ -623,6 +623,30 @@ kable(beer_ingredients_join[1:20, ])
 
 
 
+## Random aside -- do more hops always mean more bitterness?
+
+* It would appear so, from this graph and this regression (beta = 2.394418)
+```{r, echo=TRUE}
+
+ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
+  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
+  geom_smooth(method = lm, se = FALSE, colour = "black") + 
+  theme_minimal()
+
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
+summary(hops_ibu_lm)
+```
+
+* However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
+```{r, echo=TRUE}
+ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
+                                          & beer_ingredients_join$total_hops < 8), ], aes(total_hops, ibu)) +
+  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
+  geom_smooth(method = lm, se = FALSE, colour = "black") +
+  theme_minimal()
+```
+
+
 
 # Neural Net
 
@@ -720,6 +744,7 @@ nn_notcollapsed_out$most_important_vars
 
 ### Random forest with all ingredients
 
+* `glass` not included
 ```{r, echo=TRUE}
 
 library(ranger)
@@ -750,20 +775,27 @@ bi_train <- bi_train %>%
   dplyr::select(-row)
 
 
-bi_rf <- ranger(style_collapsed ~ ., data = bi_train)
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity")
 bi_rf
+```
+
+* Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
+```{r, echo=TRUE}
+
+importance(bi_rf)
+```
+
+
+
+```{r, echo=TRUE}
 
 bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
                 params1 = list(num.trees = 5, mtry = 4),
                 params2 = list(num.trees = 2))
 
+csrf_acc <- postResample(bi_csrf, bi_test$style_collapsed)
 
-# bi_rf <- ranger(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
-#               params1 = list(num.trees = 5, mtry = 4),
-#               params2 = list(num.trees = 2))
-# 
-# rf_acc <- postResample(bi_rf, bi_test$style_collapsed)
-# rf_acc
+csrf_acc
 ```
 
 

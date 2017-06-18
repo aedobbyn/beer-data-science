@@ -178,3 +178,18 @@ three_d
 
 
 
+# ----------- more hops -> higher ibu?? -----------
+
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
+
+ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
+  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
+  geom_smooth(method = lm, se = FALSE, colour = "black") +
+  theme_minimal()
+
+
+
+ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 2
+                                          & beer_ingredients_join$total_hops < 8), ], aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed)) +
+  geom_smooth(method = lm, se = FALSE, colour = "black") + theme_minimal()
