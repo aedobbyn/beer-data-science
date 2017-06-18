@@ -25,13 +25,23 @@ source("./get_ingredient_levels.R")
 library(knitr)
 ```
 
-* Main question
-    * Are there natural clusters in beer that are defined by styles? Or are style boundaries more or less arbitrary?
-      * Unsupervised (k-means) clustering based on 
-        * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
-        * Style centers defined by mean of ABV, IBU, and SRM
-      * Neural net 
-        * Can we predict a beer's style based on certain characteristics of the beer?
+* This is a first pass exploration of different aspects of beer 
+    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
+        * Outputs of a beer that define it well
+    * Ingredients in a beer such as hops and malts
+    * Glass type
+        * This is defined by style 
+* The main question on the table:
+    * Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary?
+      * Two approaches: clustering and prediction 
+      * Clustering: are there natural clusters across the spectum of beers that align well with the styles they're grouped into? 
+          * Unsupervised (k-means) clustering based on 
+              * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
+              * How well do these match up with various "style centers," defined by mean of ABV, IBU, and SRM per beer style
+      * Prediction: can we predict a beer's style based on certain characteristics of the beer?
+          * Neural net 
+            
+          * Random forest
       
 * Answer thus far
     * Beer-intrinsic attributes aren't great predictors of style
@@ -66,6 +76,7 @@ library(knitr)
 
 
 **Getting Beer**
+The age-old dilemma
 
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
@@ -802,4 +813,16 @@ csrf_acc
 ![](./pour.jpg)
 
 
+
+### Final Thoughts
+
+
+*Style first, forgiveness later?*
+* One reason  seems that beers are generally brewed with style in mind first ("let's make a pale ale") 
+    * Even if the beer turns out more like a sour, and in a blind taste test might be classified as a sour more often than a pale ale, it still gets the label pale ale
+    * This makes the style definitions broader and harder to predict
+* The characteristics and idiosyncrasies 
+
+*Future Work*
+* Incorporating flavor profile
 

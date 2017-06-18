@@ -1,5 +1,8 @@
 - add a readme
 
+- cluster with the same number of clusters as style_collapsed and compare
+  - cluster on just selected styles
+
 - tsne
 - adversarial networks
 	- name generator
