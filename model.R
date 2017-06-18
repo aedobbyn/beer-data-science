@@ -146,16 +146,18 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  
+  # browser()
   df$outcome <- factor(df$outcome)
   
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
-    select_(cols_to_keep) %>%
-    droplevels() %>%
+    select_(.dots = cols_to_keep) %>%
     mutate(row = 1:nrow(df))
-  
+
+  # Drop NAs for only outcome variable, not any other ones
+  df$outcome <- droplevels(df$outcome)
+
   # Select 80% of the data for training
   df_train <- sample_n(df, nrow(df)*(0.8))
   
@@ -170,30 +172,43 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
                  data = df_train, maxit=500, trace=T)
-  
+
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
-  
+  print(most_important_vars)
+
   # How accurate is the model? Compare predictions to outcomes from test data
   nn_preds <- predict(nn, type="class", newdata = df_test)
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
-  
+
   out <- list(out, nn = nn, most_important_vars = most_important_vars,
            nn_accuracy = nn_accuracy)
-  
+
   return(out)
 }
 
-p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 
 # How accurate was it?
 nn_collapsed_out$nn_accuracy
 
+# Most important variables
+nn_collapsed_out$most_important_vars
+
+
+
 
 nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
                                       predictor_vars = p_vars)
 
+nn_notcollapsed_out$nn_accuracy
 
 varImp(nn_notcollapsed_out$nn)
+
+
+
+
+nn_foo <- multinom(style_collapsed ~ total_hops + total_malt + abv + ibu + srm + glass,
+               data = beer_ingredients_join, maxit=500, trace=T)
