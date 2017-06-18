@@ -198,7 +198,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 2
 
 # --------- abv vs ibu, hops as fill ---------
 
-# Gather up all the hops columns into one
+# Gather up all the hops columns into one called `hop_name`
 beer_necessities_hops_gathered <- beer_necessities %>%
   gather(
     hop_key, hop_name, hops_name_1:hops_name_13
@@ -208,18 +208,10 @@ beer_necessities_hops_gathered <- beer_necessities %>%
 beer_necessities_w_hops <- beer_necessities_hops_gathered %>% 
   filter(!is.na(hop_name))
 
-# Get a 
-hop_counts <- beer_necessities_w_hops %>% 
-  group_by(hop_name) %>% 
-  count()
+beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 
-# Keep just the hops used in at least 50 beers
-beer_necessities_w_popular_hops <- beer_necessities_w_hops %>% 
-  filter(hop_name %in% hop_counts[hop_counts$n > 50, ]$hop_name) %>% 
-  droplevels() 
-
-# For these most popular hops, find the number of beers they're in as well as those beers' mean IBU and ABV
-pop_hops_num_beers <- beer_necessities_w_popular_hops %>% 
+# For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
+hops_beer_stats <- beer_necessities_w_hops %>% 
   ungroup() %>% 
   group_by(hop_name) %>% 
   summarise(
@@ -228,18 +220,26 @@ pop_hops_num_beers <- beer_necessities_w_popular_hops %>%
     n = n()
   )
 
-# 
+# Pare to hops that are used in at least 50 beers
+pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ]
+kable(pop_hops_beer_stats)
+
+# Keep just beers that contain these most popular hops
+beer_necessities_w_popular_hops <- beer_necessities_w_hops %>% 
+  filter(hop_name %in% pop_hops_beer_stats$hop_name) %>% 
+  droplevels() 
+
 ggplot(data = beer_necessities_w_popular_hops) + 
   geom_point(aes(abv, ibu, colour = hop_name)) +
   ggtitle("Beers Containing most Popular Hops") +
   labs(x = "ABV", y = "IBU") +
   theme_minimal()
 
-ggplot(data = pop_hops_num_beers) + 
+ggplot(data = pop_hops_beer_stats) + 
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
+  labs(x = "ABV", y = "IBU") +
   theme_minimal()
-
 
 
 

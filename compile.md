@@ -56,6 +56,7 @@
 
 
 **Getting Beer**
+The age-old dilemma
 
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
@@ -733,7 +734,9 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 
 
 
-## Random aside -- do more hops always mean more bitterness?
+## Random asides into hops
+
+**Do more hops always mean more bitterness?**
 
 * It would appear so, from this graph and this regression (beta = 2.394418)
 
@@ -784,6 +787,89 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
 
 ![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
+
+**Most popular hops**
+
+
+```r
+# Gather up all the hops columns into one called `hops_name`
+beer_necessities_hops_gathered <- beer_necessities %>%
+  gather(
+    hop_key, hop_name, hops_name_1:hops_name_13
+  ) %>% as_tibble()
+
+# Filter to just those beers that have at least one hop
+beer_necessities_w_hops <- beer_necessities_hops_gathered %>% 
+  filter(!is.na(hop_name))
+
+beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
+
+# For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
+hops_beer_stats <- beer_necessities_w_hops %>% 
+  ungroup() %>% 
+  group_by(hop_name) %>% 
+  summarise(
+    mean_ibu = mean(ibu, na.rm = TRUE), 
+    mean_abv = mean(abv, na.rm = TRUE),
+    n = n()
+  )
+
+# Pare to hops that are used in at least 50 beers
+pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ]
+kable(pop_hops_beer_stats)
+```
+
+
+
+|hop_name                   | mean_ibu| mean_abv|   n|
+|:--------------------------|--------:|--------:|---:|
+|                           | 42.41220| 6.472903|  70|
+|Amarillo                   | 61.36053| 6.959264| 163|
+|Cascade                    | 51.92405| 6.510729| 445|
+|Centennial                 | 63.96526| 7.081883| 243|
+|Chinook                    | 60.86871| 7.043439| 194|
+|Citra                      | 59.60000| 6.733290| 157|
+|Columbus                   | 63.74483| 6.953846| 183|
+|East Kent Golding          | 38.51875| 6.347386|  89|
+|Fuggles                    | 40.75581| 6.772143|  59|
+|Hallertauer (American)     | 23.92388| 5.658537|  83|
+|Magnum                     | 48.71596| 6.926852| 109|
+|Mosaic                     | 56.81818| 6.977465|  71|
+|Mount Hood                 | 37.83500| 6.550000|  68|
+|Northern Brewer (American) | 39.48475| 6.473944|  71|
+|Nugget                     | 52.23810| 6.383119| 114|
+|Perle (American)           | 32.03947| 6.251744|  88|
+|Saaz (American)            | 30.69778| 6.248333|  60|
+|Simcoe                     | 64.07211| 6.877394| 191|
+|Sterling                   | 35.41860| 6.024259|  55|
+|Tettnanger (American)      | 30.27551| 6.016780|  59|
+|Warrior                    | 59.13043| 6.983115|  62|
+|Willamette                 | 39.61078| 7.014657| 133|
+
+```r
+# Keep just beers that contain these most popular hops
+beer_necessities_w_popular_hops <- beer_necessities_w_hops %>% 
+  filter(hop_name %in% pop_hops_beer_stats$hop_name) %>% 
+  droplevels() 
+
+ggplot(data = beer_necessities_w_popular_hops) + 
+  geom_point(aes(abv, ibu, colour = hop_name)) +
+  ggtitle("Beers Containing most Popular Hops") +
+  labs(x = "ABV", y = "IBU") +
+  theme_minimal()
+```
+
+![](compile_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+
+```r
+ggplot(data = pop_hops_beer_stats) + 
+  geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
+  ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
+  labs(x = "ABV", y = "IBU") +
+  theme_minimal()
+```
+
+![](compile_files/figure-html/unnamed-chunk-20-2.png)<!-- -->
 
 
 # Neural Net
@@ -1308,7 +1394,7 @@ csrf_acc
 ### Final Thoughts
 
 
-*Style first, forgiveness later*
+*Style first, forgiveness later?*
 * One reason  seems that beers are generally brewed with style in mind first ("let's make a pale ale") 
     * Even if the beer turns out more like a sour, and in a blind taste test might be classified as a sour more often than a pale ale, it still gets the label pale ale
     * This makes the style definitions broader and harder to predict
@@ -1316,3 +1402,4 @@ csrf_acc
 
 *Future Work*
 * Incorporating flavor profile
+

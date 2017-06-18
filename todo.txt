@@ -1,5 +1,6 @@
 - add a readme
 
+- turn clustering into a function that accepts a df and vector of columns to cluster on
 - cluster with the same number of clusters as style_collapsed and compare
   - cluster on just selected styles
 
@@ -11,8 +12,6 @@
 
 - which hops are used most often in which styles?
   - are they predictive?
-  
-- plot abv vs ibu, fill = hops
   
   
   
