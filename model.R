@@ -1,5 +1,5 @@
 
-source("./munge.r")
+source(".run_it/munge.r")
 source("./most_popular_styles.R")
 
 

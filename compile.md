@@ -1,5 +1,5 @@
 # Data Science Musings on Beer
-`r format(Sys.time(), '%B %d, %Y')`  
+`r format(Sys.time(), "%B %d, %Y")`  
 
 
 
@@ -9,8 +9,9 @@
     * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
         * Outputs of a beer that define it well
     * Ingredients in a beer such as hops and malts
+        * Inputs to a beer that have some effect on its flavor profile
     * Glass type
-        * This is defined by style 
+        * This is defined entirely by style and is very predictive of it
 * The main question on the table:
     * Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary?
       * Two approaches: clustering and prediction 
@@ -56,7 +57,7 @@
 
 
 **Getting Beer**
-The age-old dilemma
+~ The age-old dilemma ~
 
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
@@ -792,7 +793,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
 
 
 ```r
-# Gather up all the hops columns into one called `hops_name`
+# Gather up all the hops columns into one called `hop_name`
 beer_necessities_hops_gathered <- beer_necessities %>%
   gather(
     hop_key, hop_name, hops_name_1:hops_name_13
@@ -1395,11 +1396,16 @@ csrf_acc
 
 
 *Style first, forgiveness later?*
-* One reason  seems that beers are generally brewed with style in mind first ("let's make a pale ale") 
+
+* One reason  seems that beers are generally brewed with style in mind first ("let's make a pale ale") rather than deciding the beer's style after determining its characteristics and idiosyncrasies 
     * Even if the beer turns out more like a sour, and in a blind taste test might be classified as a sour more often than a pale ale, it still gets the label pale ale
     * This makes the style definitions broader and harder to predict
-* The characteristics and idiosyncrasies 
 
-*Future Work*
-* Incorporating flavor profile
+
+
+*Future Directions*
+
+* Incorporate flavor profiles for beers sourced/scraped from somewhere
+* Implement a GAN to come up with beer names
+* More on the hops deep dive: which hops are used most often in which styles?
 

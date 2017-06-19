@@ -161,3 +161,79 @@ cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = 
 # tsne_beer = tsne(cb[,4:6], epoch_callback = ecb, perplexity=20)
 # 
 # 
+
+
+
+
+
+# ---------- functionize --------
+
+
+# only using top beer styles
+# select only predictor and outcome columns, take out NAs, and scale the data
+
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>% 
+    select_(.dots = c(response_vars, cluster_on)) %>%       
+    na.omit() %>% 
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
+  # browser()
+  
+  df_all_preds <- df_for_clustering %>% 
+    select_(.dots = preds)
+  
+  df_preds_scale <- df_all_preds %>% 
+    select_(.dots = to_scale) %>% 
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>% 
+    scale() %>% 
+    as_tibble()
+  
+  # df_preds <- bind_cols(df_preds_scale, df_all_preds)
+  
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)]) %>% 
+    na.omit() 
+    # droplevels() %>% 
+    # filter(!(hops_name_1 == "")) %>% 
+    # filter(!(malt_name_1 == ""))
+  browser()
+  
+  df_outcome <- df_for_clustering %>% 
+    select_(.dots = resp) %>% 
+    na.omit()
+  
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+  
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster), 
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+  
+  
+}
+
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bn_certain_styles <- beer_ingredients_join %>% 
+  filter(
+    style_collapsed %in% styles_to_keep 
+  )
+
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "style_collapsed")
+
+dis_clustered_beer <- cluster_it(df = bn_certain_styles, 
+                                 preds = cluster_on, 
+                                 to_scale = to_scale,
+                                 resp = response_vars,
+                                 n_centers = 5)
+
