@@ -22,7 +22,8 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
-source("./cluster.R")
+source("./most_popular_styles.R")
+# source("./cluster.R")
 # source("./plot.R")
 source("./get_ingredient_levels.R")
 ```
@@ -219,10 +220,75 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
+**Cluster**
+```{r, echo=TRUE}
+
+library(NbClust)
+
+# only using top beer styles
+# select only predictor and outcome columns, take out NAs, and scale the data
+
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>%
+    select_(.dots = c(response_vars, cluster_on)) %>%
+    na.omit() %>%
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
+
+  df_all_preds <- df_for_clustering %>%
+    select_(.dots = preds)
+
+  df_preds_scale <- df_all_preds %>%
+    select_(.dots = to_scale) %>%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>%
+    scale() %>%
+    as_tibble()
+
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
+
+  df_outcome <- df_for_clustering %>%
+    select_(.dots = resp) %>%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+
+
+# ----------- main clustering into 10 clusters -------
+
+cluster_on <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "styleId", "style_collapsed")
+
+
+clustered_beer <- cluster_it(df = popular_beer_dat,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+
+```
+
 
 Head of the clustering data
 ```{r}
-kable(beer_for_clustering[1:20, ])
+kable(clustered_beer[1:20, ])
 ```
 
 
@@ -293,43 +359,50 @@ kable(style_centers)
 * Take out some outliers
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
-```{r, eval=FALSE, echo=TRUE}
-beer_for_clustering <- popular_beer_dat %>% 
-  select(name, style, styleId, style_collapsed,
-         abv, ibu, srm) %>%       
-  na.omit() %>% 
-  filter(
-    abv < 20 & abv > 3
-  ) %>%
-  filter(
-    ibu < 200
-  )
+  
+  
+  
 
-beer_for_clustering_predictors <- beer_for_clustering %>% 
-  select(abv, ibu, srm) %>%
-  rename(
-    abv_scaled = abv,
-    ibu_scaled = ibu,
-    srm_scaled = srm
-    ) %>% scale() %>% 
-  as_tibble()
-```
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- beer_for_clustering <- popular_beer_dat %>%  -->
+<!--   select(name, style, styleId, style_collapsed, -->
+<!--          abv, ibu, srm) %>%        -->
+<!--   na.omit() %>%  -->
+<!--   filter( -->
+<!--     abv < 20 & abv > 3 -->
+<!--   ) %>% -->
+<!--   filter( -->
+<!--     ibu < 200 -->
+<!--   ) -->
 
-And do the clustering
+<!-- beer_for_clustering_predictors <- beer_for_clustering %>%  -->
+<!--   select(abv, ibu, srm) %>% -->
+<!--   rename( -->
+<!--     abv_scaled = abv, -->
+<!--     ibu_scaled = ibu, -->
+<!--     srm_scaled = srm -->
+<!--     ) %>% scale() %>%  -->
+<!--   as_tibble() -->
+<!-- ``` -->
 
-```{r, eval=FALSE, echo=TRUE}
-set.seed(9)
-clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE)
+<!-- And do the clustering -->
 
-clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster), 
-                            beer_for_clustering_outcome, beer_for_clustering_predictors,
-                            beer_for_clustering %>% select(abv, ibu, srm)))
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- set.seed(9) -->
+<!-- clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE) -->
 
-```
+<!-- clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster),  -->
+<!--                             beer_for_clustering_outcome, beer_for_clustering_predictors, -->
+<!--                             beer_for_clustering %>% select(abv, ibu, srm))) -->
+
+<!-- ``` -->
+
 
 
 A table of cluster counts broken down by style
 ```{r}
+cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = clustered_beer$cluster_assignment)
+
 kable(cluster_table_counts)
 ```
 

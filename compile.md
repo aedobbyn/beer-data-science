@@ -198,31 +198,147 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
+**Cluster**
+
+```r
+library(NbClust)
+
+# only using top beer styles
+# select only predictor and outcome columns, take out NAs, and scale the data
+
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>%
+    select_(.dots = c(response_vars, cluster_on)) %>%
+    na.omit() %>%
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
+
+  df_all_preds <- df_for_clustering %>%
+    select_(.dots = preds)
+
+  df_preds_scale <- df_all_preds %>%
+    select_(.dots = to_scale) %>%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>%
+    scale() %>%
+    as_tibble()
+
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
+
+  df_outcome <- df_for_clustering %>%
+    select_(.dots = resp) %>%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+
+
+# ----------- main clustering into 10 clusters -------
+
+cluster_on <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "styleId", "style_collapsed")
+
+
+clustered_beer <- cluster_it(df = popular_beer_dat,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+```
+
+```
+## KMNS(*, k=10): iter=  1, indx=14
+##  QTRAN(): istep=3399, icoun=5
+##  QTRAN(): istep=6798, icoun=24
+##  QTRAN(): istep=10197, icoun=41
+##  QTRAN(): istep=13596, icoun=25
+##  QTRAN(): istep=16995, icoun=115
+##  QTRAN(): istep=20394, icoun=13
+##  QTRAN(): istep=23793, icoun=115
+##  QTRAN(): istep=27192, icoun=557
+##  QTRAN(): istep=30591, icoun=372
+##  QTRAN(): istep=33990, icoun=1417
+##  QTRAN(): istep=37389, icoun=2075
+##  QTRAN(): istep=40788, icoun=1810
+##  QTRAN(): istep=44187, icoun=300
+## KMNS(*, k=10): iter=  2, indx=0
+##  QTRAN(): istep=3399, icoun=14
+##  QTRAN(): istep=6798, icoun=18
+##  QTRAN(): istep=10197, icoun=297
+##  QTRAN(): istep=13596, icoun=307
+##  QTRAN(): istep=16995, icoun=647
+##  QTRAN(): istep=20394, icoun=195
+##  QTRAN(): istep=23793, icoun=634
+##  QTRAN(): istep=27192, icoun=520
+##  QTRAN(): istep=30591, icoun=2482
+## KMNS(*, k=10): iter=  3, indx=118
+##  QTRAN(): istep=3399, icoun=1
+##  QTRAN(): istep=6798, icoun=1
+##  QTRAN(): istep=10197, icoun=18
+##  QTRAN(): istep=13596, icoun=252
+##  QTRAN(): istep=16995, icoun=270
+##  QTRAN(): istep=20394, icoun=161
+##  QTRAN(): istep=23793, icoun=232
+##  QTRAN(): istep=27192, icoun=39
+##  QTRAN(): istep=30591, icoun=489
+##  QTRAN(): istep=33990, icoun=217
+##  QTRAN(): istep=37389, icoun=52
+##  QTRAN(): istep=40788, icoun=596
+##  QTRAN(): istep=44187, icoun=597
+##  QTRAN(): istep=47586, icoun=1130
+##  QTRAN(): istep=50985, icoun=1832
+## KMNS(*, k=10): iter=  4, indx=17
+##  QTRAN(): istep=3399, icoun=9
+##  QTRAN(): istep=6798, icoun=388
+##  QTRAN(): istep=10197, icoun=2244
+## KMNS(*, k=10): iter=  5, indx=374
+##  QTRAN(): istep=3399, icoun=2244
+##  QTRAN(): istep=6798, icoun=583
+##  QTRAN(): istep=10197, icoun=1833
+## KMNS(*, k=10): iter=  6, indx=3399
+```
+
 
 Head of the clustering data
 
-|name                                                         |style                                              |styleId |style_collapsed       | abv|  ibu| srm|
-|:------------------------------------------------------------|:--------------------------------------------------|:-------|:---------------------|---:|----:|---:|
-|"Ah Me Joy" Porter                                           |Robust Porter                                      |19      |Porter                | 5.4| 51.0|  40|
-|"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |25      |Pale Ale              | 5.8| 51.0|   8|
-|"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |25      |Pale Ale              | 5.4| 54.0|  11|
-|"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | 5.6| 28.2|   5|
-|"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |36      |Blonde                | 4.9| 20.0|   5|
-|#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |48      |Wheat                 | 5.1| 11.0|   4|
-|#9                                                           |American-Style Pale Ale                            |25      |Pale Ale              | 5.1| 20.0|   9|
-|#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | 4.8| 27.0|   3|
-|'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |109     |Lager                 | 5.3| 18.0|   5|
-|'tis the Saison                                              |French & Belgian-Style Saison                      |72      |Saison                | 7.0| 30.0|   7|
-|(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |65      |Wheat                 | 5.0| 20.0|   9|
-|(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |37      |Brown                 | 7.6| 30.0|  21|
-|(512) FOUR                                                   |Strong Ale                                         |14      |Strong Ale            | 7.5| 35.0|   8|
-|(512) IPA                                                    |American-Style India Pale Ale                      |30      |India Pale Ale        | 7.0| 65.0|   8|
-|(512) Pale                                                   |American-Style Pale Ale                            |25      |Pale Ale              | 6.0| 30.0|   7|
-|(512) SIX                                                    |Belgian-Style Dubbel                               |58      |Dubbel                | 7.5| 25.0|  28|
-|(512) THREE                                                  |Belgian-Style Tripel                               |59      |Tripel                | 9.5| 22.0|  10|
-|(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |59      |Tripel                | 9.5| 22.0|  40|
-|(512) TWO                                                    |Imperial or Double India Pale Ale                  |31      |Double India Pale Ale | 9.0| 99.0|   9|
-|(512) White IPA                                              |American-Style India Pale Ale                      |30      |India Pale Ale        | 5.3| 55.0|   4|
+|cluster_assignment |name                                                         |style                                              |styleId |style_collapsed       | abv_scaled| ibu_scaled| srm_scaled| abv|  ibu| srm|
+|:------------------|:------------------------------------------------------------|:--------------------------------------------------|:-------|:---------------------|----------:|----------:|----------:|---:|----:|---:|
+|3                  |"Ah Me Joy" Porter                                           |Robust Porter                                      |19      |Porter                | -0.6113116|  0.3483405|  2.5598503| 5.4| 51.0|  40|
+|2                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |25      |Pale Ale              | -0.3851131|  0.3483405| -0.5138012| 5.8| 51.0|   8|
+|2                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |25      |Pale Ale              | -0.6113116|  0.4631499| -0.2256464| 5.4| 54.0|  11|
+|6                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | -0.4982124| -0.5242109| -0.8019561| 5.6| 28.2|   5|
+|6                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |36      |Blonde                | -0.8940598| -0.8380232| -0.8019561| 4.9| 20.0|   5|
+|6                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |48      |Wheat                 | -0.7809605| -1.1824514| -0.8980077| 5.1| 11.0|   4|
+|6                  |#9                                                           |American-Style Pale Ale                            |25      |Pale Ale              | -0.7809605| -0.8380232| -0.4177496| 5.1| 20.0|   9|
+|6                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | -0.9506094| -0.5701346| -0.9940593| 4.8| 27.0|   3|
+|6                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |109     |Lager                 | -0.6678613| -0.9145628| -0.8019561| 5.3| 18.0|   5|
+|2                  |'tis the Saison                                              |French & Belgian-Style Saison                      |72      |Saison                |  0.2934824| -0.4553252| -0.6098528| 7.0| 30.0|   7|
+|6                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |65      |Wheat                 | -0.8375102| -0.8380232| -0.4177496| 5.0| 20.0|   9|
+|4                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |37      |Brown                 |  0.6327802| -0.4553252|  0.7348697| 7.6| 30.0|  21|
+|1                  |(512) FOUR                                                   |Strong Ale                                         |14      |Strong Ale            |  0.5762306| -0.2639763| -0.5138012| 7.5| 35.0|   8|
+|5                  |(512) IPA                                                    |American-Style India Pale Ale                      |30      |India Pale Ale        |  0.2934824|  0.8841177| -0.5138012| 7.0| 65.0|   8|
+|2                  |(512) Pale                                                   |American-Style Pale Ale                            |25      |Pale Ale              | -0.2720139| -0.4553252| -0.6098528| 6.0| 30.0|   7|
+|9                  |(512) SIX                                                    |Belgian-Style Dubbel                               |58      |Dubbel                |  0.5762306| -0.6466742|  1.4072310| 7.5| 25.0|  28|
+|1                  |(512) THREE                                                  |Belgian-Style Tripel                               |59      |Tripel                |  1.7072231| -0.7614836| -0.3216980| 9.5| 22.0|  10|
+|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |59      |Tripel                |  1.7072231| -0.7614836|  2.5598503| 9.5| 22.0|  40|
+|7                  |(512) TWO                                                    |Imperial or Double India Pale Ale                  |31      |Double India Pale Ale |  1.4244750|  2.1852908| -0.4177496| 9.0| 99.0|   9|
+|2                  |(512) White IPA                                              |American-Style India Pale Ale                      |30      |India Pale Ale        | -0.6678613|  0.5014197| -0.8980077| 5.3| 55.0|   4|
 
 
 **Find the Most Popualar Styles**
@@ -323,40 +439,44 @@ Compare popular styles
 * Take out some outliers
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
+  
+  
+  
 
-```r
-beer_for_clustering <- popular_beer_dat %>% 
-  select(name, style, styleId, style_collapsed,
-         abv, ibu, srm) %>%       
-  na.omit() %>% 
-  filter(
-    abv < 20 & abv > 3
-  ) %>%
-  filter(
-    ibu < 200
-  )
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- beer_for_clustering <- popular_beer_dat %>%  -->
+<!--   select(name, style, styleId, style_collapsed, -->
+<!--          abv, ibu, srm) %>%        -->
+<!--   na.omit() %>%  -->
+<!--   filter( -->
+<!--     abv < 20 & abv > 3 -->
+<!--   ) %>% -->
+<!--   filter( -->
+<!--     ibu < 200 -->
+<!--   ) -->
 
-beer_for_clustering_predictors <- beer_for_clustering %>% 
-  select(abv, ibu, srm) %>%
-  rename(
-    abv_scaled = abv,
-    ibu_scaled = ibu,
-    srm_scaled = srm
-    ) %>% scale() %>% 
-  as_tibble()
-```
+<!-- beer_for_clustering_predictors <- beer_for_clustering %>%  -->
+<!--   select(abv, ibu, srm) %>% -->
+<!--   rename( -->
+<!--     abv_scaled = abv, -->
+<!--     ibu_scaled = ibu, -->
+<!--     srm_scaled = srm -->
+<!--     ) %>% scale() %>%  -->
+<!--   as_tibble() -->
+<!-- ``` -->
 
-And do the clustering
+<!-- And do the clustering -->
 
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- set.seed(9) -->
+<!-- clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE) -->
 
-```r
-set.seed(9)
-clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE)
+<!-- clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster),  -->
+<!--                             beer_for_clustering_outcome, beer_for_clustering_predictors, -->
+<!--                             beer_for_clustering %>% select(abv, ibu, srm))) -->
 
-clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster), 
-                            beer_for_clustering_outcome, beer_for_clustering_predictors,
-                            beer_for_clustering %>% select(abv, ibu, srm)))
-```
+<!-- ``` -->
+
 
 
 A table of cluster counts broken down by style
@@ -407,7 +527,7 @@ clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ib
 clustered_beer_plot_abv_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-10-1.png)<!-- -->
 
 ```r
 clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
@@ -418,7 +538,7 @@ clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = sr
 clustered_beer_plot_abv_srm
 ```
 
-![](compile_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-10-2.png)<!-- -->
 
 
 ### Certain selected styles
@@ -450,7 +570,7 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
 
 
 ### Now add in the style centers (means) for collapsed styles
@@ -474,7 +594,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 
 
@@ -750,7 +870,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
 
 ```r
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
@@ -790,7 +910,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
 
 
 **Most popular hops**
@@ -864,7 +984,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
 ```r
 ggplot(data = pop_hops_beer_stats) + 
@@ -875,7 +995,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-20-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-19-2.png)<!-- -->
 
 
 # Neural Net

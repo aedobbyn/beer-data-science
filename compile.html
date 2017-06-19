@@ -331,23 +331,140 @@ all_beer_raw &lt;- paginated_request(&quot;beers&quot;, &quot;&amp;withIngredien
   }
   return(df)
 }</code></pre>
+<p><strong>Cluster</strong></p>
+<pre class="r"><code>library(NbClust)
+
+# only using top beer styles
+# select only predictor and outcome columns, take out NAs, and scale the data
+
+cluster_it &lt;- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering &lt;- df %&gt;%
+    select_(.dots = c(response_vars, cluster_on)) %&gt;%
+    na.omit() %&gt;%
+    filter(
+      abv &lt; 20 &amp; abv &gt; 3
+    ) %&gt;%
+    filter(
+      ibu &lt; 200
+    )
+
+  df_all_preds &lt;- df_for_clustering %&gt;%
+    select_(.dots = preds)
+
+  df_preds_scale &lt;- df_all_preds %&gt;%
+    select_(.dots = to_scale) %&gt;%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %&gt;%
+    scale() %&gt;%
+    as_tibble()
+
+  df_preds &lt;- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
+
+  df_outcome &lt;- df_for_clustering %&gt;%
+    select_(.dots = resp) %&gt;%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out &lt;- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df &lt;- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %&gt;% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+
+
+# ----------- main clustering into 10 clusters -------
+
+cluster_on &lt;- c(&quot;abv&quot;, &quot;ibu&quot;, &quot;srm&quot;)
+to_scale &lt;- c(&quot;abv&quot;, &quot;ibu&quot;, &quot;srm&quot;)
+response_vars &lt;- c(&quot;name&quot;, &quot;style&quot;, &quot;styleId&quot;, &quot;style_collapsed&quot;)
+
+
+clustered_beer &lt;- cluster_it(df = popular_beer_dat,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)</code></pre>
+<pre><code>## KMNS(*, k=10): iter=  1, indx=14
+##  QTRAN(): istep=3399, icoun=5
+##  QTRAN(): istep=6798, icoun=24
+##  QTRAN(): istep=10197, icoun=41
+##  QTRAN(): istep=13596, icoun=25
+##  QTRAN(): istep=16995, icoun=115
+##  QTRAN(): istep=20394, icoun=13
+##  QTRAN(): istep=23793, icoun=115
+##  QTRAN(): istep=27192, icoun=557
+##  QTRAN(): istep=30591, icoun=372
+##  QTRAN(): istep=33990, icoun=1417
+##  QTRAN(): istep=37389, icoun=2075
+##  QTRAN(): istep=40788, icoun=1810
+##  QTRAN(): istep=44187, icoun=300
+## KMNS(*, k=10): iter=  2, indx=0
+##  QTRAN(): istep=3399, icoun=14
+##  QTRAN(): istep=6798, icoun=18
+##  QTRAN(): istep=10197, icoun=297
+##  QTRAN(): istep=13596, icoun=307
+##  QTRAN(): istep=16995, icoun=647
+##  QTRAN(): istep=20394, icoun=195
+##  QTRAN(): istep=23793, icoun=634
+##  QTRAN(): istep=27192, icoun=520
+##  QTRAN(): istep=30591, icoun=2482
+## KMNS(*, k=10): iter=  3, indx=118
+##  QTRAN(): istep=3399, icoun=1
+##  QTRAN(): istep=6798, icoun=1
+##  QTRAN(): istep=10197, icoun=18
+##  QTRAN(): istep=13596, icoun=252
+##  QTRAN(): istep=16995, icoun=270
+##  QTRAN(): istep=20394, icoun=161
+##  QTRAN(): istep=23793, icoun=232
+##  QTRAN(): istep=27192, icoun=39
+##  QTRAN(): istep=30591, icoun=489
+##  QTRAN(): istep=33990, icoun=217
+##  QTRAN(): istep=37389, icoun=52
+##  QTRAN(): istep=40788, icoun=596
+##  QTRAN(): istep=44187, icoun=597
+##  QTRAN(): istep=47586, icoun=1130
+##  QTRAN(): istep=50985, icoun=1832
+## KMNS(*, k=10): iter=  4, indx=17
+##  QTRAN(): istep=3399, icoun=9
+##  QTRAN(): istep=6798, icoun=388
+##  QTRAN(): istep=10197, icoun=2244
+## KMNS(*, k=10): iter=  5, indx=374
+##  QTRAN(): istep=3399, icoun=2244
+##  QTRAN(): istep=6798, icoun=583
+##  QTRAN(): istep=10197, icoun=1833
+## KMNS(*, k=10): iter=  6, indx=3399</code></pre>
 <p>Head of the clustering data</p>
-<table style="width:100%;">
+<table>
 <colgroup>
-<col width="38%"></col>
-<col width="32%"></col>
+<col width="9%"></col>
+<col width="28%"></col>
+<col width="23%"></col>
+<col width="4%"></col>
+<col width="10%"></col>
 <col width="5%"></col>
-<col width="14%"></col>
-<col width="3%"></col>
-<col width="3%"></col>
-<col width="3%"></col>
+<col width="5%"></col>
+<col width="5%"></col>
+<col width="2%"></col>
+<col width="2%"></col>
+<col width="2%"></col>
 </colgroup>
 <thead>
 <tr class="header">
+<th align="left">cluster_assignment</th>
 <th align="left">name</th>
 <th align="left">style</th>
 <th align="left">styleId</th>
 <th align="left">style_collapsed</th>
+<th align="right">abv_scaled</th>
+<th align="right">ibu_scaled</th>
+<th align="right">srm_scaled</th>
 <th align="right">abv</th>
 <th align="right">ibu</th>
 <th align="right">srm</th>
@@ -355,181 +472,261 @@ all_beer_raw &lt;- paginated_request(&quot;beers&quot;, &quot;&amp;withIngredien
 </thead>
 <tbody>
 <tr class="odd">
+<td align="left">3</td>
 <td align="left">“Ah Me Joy” Porter</td>
 <td align="left">Robust Porter</td>
 <td align="left">19</td>
 <td align="left">Porter</td>
+<td align="right">-0.6113116</td>
+<td align="right">0.3483405</td>
+<td align="right">2.5598503</td>
 <td align="right">5.4</td>
 <td align="right">51.0</td>
 <td align="right">40</td>
 </tr>
 <tr class="even">
+<td align="left">2</td>
 <td align="left">“Bison Eye Rye” Pale Ale | 2 of 4 Part Pale Ale Series</td>
 <td align="left">American-Style Pale Ale</td>
 <td align="left">25</td>
 <td align="left">Pale Ale</td>
+<td align="right">-0.3851131</td>
+<td align="right">0.3483405</td>
+<td align="right">-0.5138012</td>
 <td align="right">5.8</td>
 <td align="right">51.0</td>
 <td align="right">8</td>
 </tr>
 <tr class="odd">
+<td align="left">2</td>
 <td align="left">“Dust Up” Cloudy Pale Ale | 1 of 4 Part Pale Ale Series</td>
 <td align="left">American-Style Pale Ale</td>
 <td align="left">25</td>
 <td align="left">Pale Ale</td>
+<td align="right">-0.6113116</td>
+<td align="right">0.4631499</td>
+<td align="right">-0.2256464</td>
 <td align="right">5.4</td>
 <td align="right">54.0</td>
 <td align="right">11</td>
 </tr>
 <tr class="even">
+<td align="left">6</td>
 <td align="left">“God Country” Kolsch</td>
 <td align="left">German-Style Kölsch / Köln-Style Kölsch</td>
 <td align="left">45</td>
 <td align="left">Kölsch</td>
+<td align="right">-0.4982124</td>
+<td align="right">-0.5242109</td>
+<td align="right">-0.8019561</td>
 <td align="right">5.6</td>
 <td align="right">28.2</td>
 <td align="right">5</td>
 </tr>
 <tr class="odd">
+<td align="left">6</td>
 <td align="left">“Jemez Field Notes” Golden Lager</td>
 <td align="left">Golden or Blonde Ale</td>
 <td align="left">36</td>
 <td align="left">Blonde</td>
+<td align="right">-0.8940598</td>
+<td align="right">-0.8380232</td>
+<td align="right">-0.8019561</td>
 <td align="right">4.9</td>
 <td align="right">20.0</td>
 <td align="right">5</td>
 </tr>
 <tr class="even">
+<td align="left">6</td>
 <td align="left">#10 Hefewiezen</td>
 <td align="left">South German-Style Hefeweizen / Hefeweissbier</td>
 <td align="left">48</td>
 <td align="left">Wheat</td>
+<td align="right">-0.7809605</td>
+<td align="right">-1.1824514</td>
+<td align="right">-0.8980077</td>
 <td align="right">5.1</td>
 <td align="right">11.0</td>
 <td align="right">4</td>
 </tr>
 <tr class="odd">
+<td align="left">6</td>
 <td align="left">#9</td>
 <td align="left">American-Style Pale Ale</td>
 <td align="left">25</td>
 <td align="left">Pale Ale</td>
+<td align="right">-0.7809605</td>
+<td align="right">-0.8380232</td>
+<td align="right">-0.4177496</td>
 <td align="right">5.1</td>
 <td align="right">20.0</td>
 <td align="right">9</td>
 </tr>
 <tr class="even">
+<td align="left">6</td>
 <td align="left">#KoLSCH</td>
 <td align="left">German-Style Kölsch / Köln-Style Kölsch</td>
 <td align="left">45</td>
 <td align="left">Kölsch</td>
+<td align="right">-0.9506094</td>
+<td align="right">-0.5701346</td>
+<td align="right">-0.9940593</td>
 <td align="right">4.8</td>
 <td align="right">27.0</td>
 <td align="right">3</td>
 </tr>
 <tr class="odd">
+<td align="left">6</td>
 <td align="left">‘Inappropriate’ Cream Ale</td>
 <td align="left">American-Style Cream Ale or Lager</td>
 <td align="left">109</td>
 <td align="left">Lager</td>
+<td align="right">-0.6678613</td>
+<td align="right">-0.9145628</td>
+<td align="right">-0.8019561</td>
 <td align="right">5.3</td>
 <td align="right">18.0</td>
 <td align="right">5</td>
 </tr>
 <tr class="even">
+<td align="left">2</td>
 <td align="left">’tis the Saison</td>
 <td align="left">French &amp; Belgian-Style Saison</td>
 <td align="left">72</td>
 <td align="left">Saison</td>
+<td align="right">0.2934824</td>
+<td align="right">-0.4553252</td>
+<td align="right">-0.6098528</td>
 <td align="right">7.0</td>
 <td align="right">30.0</td>
 <td align="right">7</td>
 </tr>
 <tr class="odd">
+<td align="left">6</td>
 <td align="left">(306) URBAN WHEAT BEER</td>
 <td align="left">Belgian-Style White (or Wit) / Belgian-Style Wheat</td>
 <td align="left">65</td>
 <td align="left">Wheat</td>
+<td align="right">-0.8375102</td>
+<td align="right">-0.8380232</td>
+<td align="right">-0.4177496</td>
 <td align="right">5.0</td>
 <td align="right">20.0</td>
 <td align="right">9</td>
 </tr>
 <tr class="even">
+<td align="left">4</td>
 <td align="left">(512) Bruin (A.K.A. Brown Bear)</td>
 <td align="left">American-Style Brown Ale</td>
 <td align="left">37</td>
 <td align="left">Brown</td>
+<td align="right">0.6327802</td>
+<td align="right">-0.4553252</td>
+<td align="right">0.7348697</td>
 <td align="right">7.6</td>
 <td align="right">30.0</td>
 <td align="right">21</td>
 </tr>
 <tr class="odd">
+<td align="left">1</td>
 <td align="left">(512) FOUR</td>
 <td align="left">Strong Ale</td>
 <td align="left">14</td>
 <td align="left">Strong Ale</td>
+<td align="right">0.5762306</td>
+<td align="right">-0.2639763</td>
+<td align="right">-0.5138012</td>
 <td align="right">7.5</td>
 <td align="right">35.0</td>
 <td align="right">8</td>
 </tr>
 <tr class="even">
+<td align="left">5</td>
 <td align="left">(512) IPA</td>
 <td align="left">American-Style India Pale Ale</td>
 <td align="left">30</td>
 <td align="left">India Pale Ale</td>
+<td align="right">0.2934824</td>
+<td align="right">0.8841177</td>
+<td align="right">-0.5138012</td>
 <td align="right">7.0</td>
 <td align="right">65.0</td>
 <td align="right">8</td>
 </tr>
 <tr class="odd">
+<td align="left">2</td>
 <td align="left">(512) Pale</td>
 <td align="left">American-Style Pale Ale</td>
 <td align="left">25</td>
 <td align="left">Pale Ale</td>
+<td align="right">-0.2720139</td>
+<td align="right">-0.4553252</td>
+<td align="right">-0.6098528</td>
 <td align="right">6.0</td>
 <td align="right">30.0</td>
 <td align="right">7</td>
 </tr>
 <tr class="even">
+<td align="left">9</td>
 <td align="left">(512) SIX</td>
 <td align="left">Belgian-Style Dubbel</td>
 <td align="left">58</td>
 <td align="left">Dubbel</td>
+<td align="right">0.5762306</td>
+<td align="right">-0.6466742</td>
+<td align="right">1.4072310</td>
 <td align="right">7.5</td>
 <td align="right">25.0</td>
 <td align="right">28</td>
 </tr>
 <tr class="odd">
+<td align="left">1</td>
 <td align="left">(512) THREE</td>
 <td align="left">Belgian-Style Tripel</td>
 <td align="left">59</td>
 <td align="left">Tripel</td>
+<td align="right">1.7072231</td>
+<td align="right">-0.7614836</td>
+<td align="right">-0.3216980</td>
 <td align="right">9.5</td>
 <td align="right">22.0</td>
 <td align="right">10</td>
 </tr>
 <tr class="even">
+<td align="left">9</td>
 <td align="left">(512) THREE (Cabernet Barrel Aged)</td>
 <td align="left">Belgian-Style Tripel</td>
 <td align="left">59</td>
 <td align="left">Tripel</td>
+<td align="right">1.7072231</td>
+<td align="right">-0.7614836</td>
+<td align="right">2.5598503</td>
 <td align="right">9.5</td>
 <td align="right">22.0</td>
 <td align="right">40</td>
 </tr>
 <tr class="odd">
+<td align="left">7</td>
 <td align="left">(512) TWO</td>
 <td align="left">Imperial or Double India Pale Ale</td>
 <td align="left">31</td>
 <td align="left">Double India Pale Ale</td>
+<td align="right">1.4244750</td>
+<td align="right">2.1852908</td>
+<td align="right">-0.4177496</td>
 <td align="right">9.0</td>
 <td align="right">99.0</td>
 <td align="right">9</td>
 </tr>
 <tr class="even">
+<td align="left">2</td>
 <td align="left">(512) White IPA</td>
 <td align="left">American-Style India Pale Ale</td>
 <td align="left">30</td>
 <td align="left">India Pale Ale</td>
+<td align="right">-0.6678613</td>
+<td align="right">0.5014197</td>
+<td align="right">-0.8980077</td>
 <td align="right">5.3</td>
 <td align="right">55.0</td>
 <td align="right">4</td>
@@ -819,32 +1016,34 @@ style_centers &lt;- popular_beer_dat %&gt;%
 <li>Take out some outliers</li>
 <li>Beers have to have an ABV between 3 and 20 and an IBU less than 200</li>
 </ul>
-<pre class="r"><code>beer_for_clustering &lt;- popular_beer_dat %&gt;% 
-  select(name, style, styleId, style_collapsed,
-         abv, ibu, srm) %&gt;%       
-  na.omit() %&gt;% 
-  filter(
-    abv &lt; 20 &amp; abv &gt; 3
-  ) %&gt;%
-  filter(
-    ibu &lt; 200
-  )
-
-beer_for_clustering_predictors &lt;- beer_for_clustering %&gt;% 
-  select(abv, ibu, srm) %&gt;%
-  rename(
-    abv_scaled = abv,
-    ibu_scaled = ibu,
-    srm_scaled = srm
-    ) %&gt;% scale() %&gt;% 
-  as_tibble()</code></pre>
-<p>And do the clustering</p>
-<pre class="r"><code>set.seed(9)
-clustered_beer_out &lt;- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE)
-
-clustered_beer &lt;- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster), 
-                            beer_for_clustering_outcome, beer_for_clustering_predictors,
-                            beer_for_clustering %&gt;% select(abv, ibu, srm)))</code></pre>
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- beer_for_clustering <- popular_beer_dat %>%  -->
+<!--   select(name, style, styleId, style_collapsed, -->
+<!--          abv, ibu, srm) %>%        -->
+<!--   na.omit() %>%  -->
+<!--   filter( -->
+<!--     abv < 20 & abv > 3 -->
+<!--   ) %>% -->
+<!--   filter( -->
+<!--     ibu < 200 -->
+<!--   ) -->
+<!-- beer_for_clustering_predictors <- beer_for_clustering %>%  -->
+<!--   select(abv, ibu, srm) %>% -->
+<!--   rename( -->
+<!--     abv_scaled = abv, -->
+<!--     ibu_scaled = ibu, -->
+<!--     srm_scaled = srm -->
+<!--     ) %>% scale() %>%  -->
+<!--   as_tibble() -->
+<!-- ``` -->
+<!-- And do the clustering -->
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- set.seed(9) -->
+<!-- clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE) -->
+<!-- clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster),  -->
+<!--                             beer_for_clustering_outcome, beer_for_clustering_predictors, -->
+<!--                             beer_for_clustering %>% select(abv, ibu, srm))) -->
+<!-- ``` -->
 <p>A table of cluster counts broken down by style</p>
 <table>
 <thead>
