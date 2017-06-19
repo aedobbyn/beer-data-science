@@ -745,6 +745,8 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") + 
+  ggtitle("Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
 
@@ -783,6 +785,8 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
                                           & beer_ingredients_join$total_hops < 8), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") +
+  ggtitle("3+ Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
 
@@ -856,7 +860,7 @@ beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
 ggplot(data = beer_necessities_w_popular_hops) + 
   geom_point(aes(abv, ibu, colour = hop_name)) +
   ggtitle("Beers Containing most Popular Hops") +
-  labs(x = "ABV", y = "IBU") +
+  labs(x = "ABV", y = "IBU", colour = "Hop Name") +
   theme_minimal()
 ```
 
@@ -866,7 +870,8 @@ ggplot(data = beer_necessities_w_popular_hops) +
 ggplot(data = pop_hops_beer_stats) + 
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
-  labs(x = "ABV", y = "IBU") +
+  labs(x = "ABV", y = "IBU", colour = "Hop Name", 
+       size = "Number of Beers") +
   theme_minimal()
 ```
 
@@ -1121,7 +1126,7 @@ bi <- beer_ingredients_join %>%
 bi$style_collapsed <- factor(bi$style_collapsed)
 
 
-# csrf complains about special characters and spaces in ingredient column names. take them out and replace with ""
+# ranger complains about special characters and spaces in ingredient column names. Take them out and replace with empty string.
 names(bi) <- tolower(names(bi))
 names(bi) <- str_replace_all(names(bi), " ", "")
 names(bi) <- str_replace_all(names(bi), "([\\(\\)-\\/')]+)", "")
@@ -1161,212 +1166,18 @@ bi_rf
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
 
 ```r
-importance(bi_rf)
+importance(bi_rf)[1:10]
 ```
 
 ```
-##                     total_hops                     total_malt 
-##                    10.21262964                     8.77339250 
-##                            abv                            ibu 
-##                   111.09209982                   169.93783668 
-##                            srm       ageddebitteredhopslambic 
-##                   100.33771744                     0.31591389 
-##                        ahtanum                        alchemy 
-##                     0.42708226                     2.05101182 
-##                       amarillo                         apollo 
-##                     2.62613862                     0.85241820 
-##                         aramis                         azacca 
-##                     0.10107776                     0.20622676 
-##                          bravo                    brewersgold 
-##                     0.62542529                     0.14611191 
-##                        calypso                        cascade 
-##                     0.06525449                     6.73377820 
-##                         celeia                     centennial 
-##                     0.17864549                     4.24408318 
-##                     challenger                        chinook 
-##                     0.63164378                     2.85431810 
-##                          citra                        cluster 
-##                     2.11262712                     0.21667162 
-##                       columbus                          comet 
-##                     3.02338142                     0.00000000 
-##                        crystal                            ctz 
-##                     0.49749080                     0.08961241 
-##                eastkentgolding                       eldorado 
-##                     1.33099930                     0.16612855 
-##                falconersflight                 fuggleamerican 
-##                     0.33259038                     0.35910080 
-##                  fuggleenglish                        fuggles 
-##                     0.14960843                     0.41189633 
-##                         galaxy                         galena 
-##                     0.36023988                     0.70534778 
-##                   germanmagnum         germanmandarinabavaria 
-##                     0.26488231                     0.00000000 
-##                    germanperle                  germanpolaris 
-##                     0.30243114                     0.05874809 
-##                germantradition                        glacier 
-##                     0.08820222                     0.38718780 
-##                goldingamerican                    greenbullet 
-##                     0.64295027                     0.17885204 
-##  hallertauhallertauertradition        hallertaunorthernbrewer 
-##                     0.10904365                     0.22673358 
-##            hallertaueramerican         hallertauerhersbrucker 
-##                     1.12241800                     0.44623521 
-##                           hops                        horizon 
-##                     0.66599892                     0.08596619 
-##                        jarrylo                   kentgoldings 
-##                     0.10730497                     0.25051568 
-##                      lemondrop                        liberty 
-##                     0.00000000                     1.01579287 
-##                         magnum                        marynka 
-##                     2.92834421                     0.00000000 
-##                         mosaic                        motueka 
-##                     0.80840007                     0.33806977 
-##                      mounthood                   nelsonsauvin 
-##                     2.39322748                     0.49399140 
-##              newzealandmotueka                      northdown 
-##                     0.07397432                     0.31619737 
-##         northernbreweramerican                         nugget 
-##                     1.31150263                     1.25548594 
-##                          orbit                    pacificjade 
-##                     0.14949240                     0.46128424 
-##                       pacifica                      palisades 
-##                     0.13418193                     1.49847972 
-##                  perleamerican                        phoenix 
-##                     0.64205619                     0.43066771 
-##                   saazamerican                      saazczech 
-##                     1.18697597                     1.08846222 
-##            saphirgermanorganic                         simcoe 
-##                     0.33366781                     2.82439449 
-##                     sorachiace                  southerncross 
-##                     0.32866317                     0.02610808 
-##                          spalt                    spaltselect 
-##                     0.20116804                     0.16128053 
-##                   spaltspalter                       sterling 
-##                     0.89819942                     1.22223641 
-##                  strisselspalt                styriangoldings 
-##                     0.34581820                     2.60400420 
-##                         summit                         target 
-##                     0.51288878                     0.29855188 
-##             tettnangtettnanger             tettnangeramerican 
-##                     0.43099137                     0.27273896 
-##                          topaz                      tradition 
-##                     0.29801592                     0.45989612 
-##                          ultra                        warrior 
-##                     0.17322342                     1.35056502 
-##                     willamette                           zeus 
-##                     2.24251588                     0.00000000 
-##                         zythos                      abbeymalt 
-##                     0.28107490                     0.19824972 
-##                 acidulatedmalt                      ambermalt 
-##                     0.43101336                     0.14311406 
-##                   aromaticmalt              asheburnemildmalt 
-##                     0.98641070                     0.11760817 
-##                   barleyflaked                   barleymalted 
-##                     0.36323398                     0.34949728 
-##                  barleyroasted                    biscuitmalt 
-##                     0.74156301                     1.22093201 
-##                      blackmalt            blackmaltdebittered 
-##                     1.67184957                     0.13305642 
-##                    blackpatent                      bonlander 
-##                     0.05994176                     0.04369974 
-##                      brownmalt                     brownsugar 
-##                     0.36199730                     0.00000000 
-##                      canesugar                      caraamber 
-##                     0.15632748                     0.14959745 
-##                        carafai                       carafaii 
-##                     0.12074847                     0.34099774 
-##                      carafaiii                       carafoam 
-##                     0.12509286                     0.24451230 
-##                       carahell             caramelcrystalmalt 
-##                     0.57625853                     2.79922802 
-##         caramelcrystalmaltdark     caramelcrystalmaltheritage 
-##                     0.29213761                     0.00000000 
-##        caramelcrystalmaltlight       caramelcrystalmaltmedium 
-##                     0.01635534                     0.01866371 
-##      caramelcrystalmaltorganic          caramelcrystalmalt10l 
-##                     0.16220700                     0.15453719 
-##         caramelcrystalmalt120l         caramelcrystalmalt150l 
-##                     1.89553832                     0.12486856 
-##          caramelcrystalmalt15l          caramelcrystalmalt20l 
-##                     0.01897550                     0.36335721 
-##         caramelcrystalmalt300l          caramelcrystalmalt30l 
-##                     0.09681559                     0.15635501 
-##          caramelcrystalmalt40l          caramelcrystalmalt45l 
-##                     1.44161443                     3.20453397 
-##          caramelcrystalmalt50l          caramelcrystalmalt55l 
-##                     2.03504993                     0.22109427 
-##          caramelcrystalmalt60l          caramelcrystalmalt75l 
-##                     0.37997856                     0.27851752 
-##          caramelcrystalmalt80l                     caramunich 
-##                     0.97814471                     0.54299600 
-##                   caramunichii                  caramunichiii 
-##                     0.17358451                     0.11784940 
-##            carapilsdextrinmalt                        carared 
-##                     1.92128583                     1.09136521 
-##                       carastan                 caraviennemalt 
-##                     0.00000000                     0.17363432 
-##                carolinaryemalt            cherrywoodsmokemalt 
-##                     0.00000000                     0.19481335 
-##                  chocolatemalt                     cornflaked 
-##                     2.78912950                     0.13913245 
-##                      corngrits                        crisp77 
-##                     0.15876501                     0.19693521 
-##                      crystal77               extraspecialmalt 
-##                     0.20702585                     0.13525616 
-##                  gladfieldpale                  goldenpromise 
-##                     0.03292936                     0.26691210 
-##         harrington2rowbasemalt                          honey 
-##                     2.91900217                     0.00000000 
-##                      honeymalt                      maltedrye 
-##                     0.37070733                     0.13470087 
-##                     marisotter                 melanoidinmalt 
-##                     0.88055041                     0.23131078 
-##                  midnightwheat                       mildmalt 
-##                     0.28012786                     0.14942903 
-##                     munichmalt              munichmaltorganic 
-##                     4.81712466                     0.15265263 
-##                munichmalttypei               munichmalttypeii 
-##                     0.16744266                     0.11958644 
-##                  munichmalt20l                  munichmalt40l 
-##                     0.38451555                     0.12448025 
-##                    munichwheat                     oatsflaked 
-##                     0.02719273                     0.45218236 
-##                     oatsmalted                     oatsrolled 
-##                     0.38509260                     0.07678695 
-##        oatssteelcutpinheadoats              palechocolatemalt 
-##                     0.00000000                     0.29375894 
-##                       palemalt                palemaltorganic 
-##                     1.86791678                     0.32758810 
-##                          palev                    pilsnermalt 
-##                     0.02616663                     2.63121675 
-##                   rahr2rowmalt                rahrspecialpale 
-##                     0.13833167                     0.21376470 
-##                      ricehulls                      roastmalt 
-##                     0.00000000                     0.31006957 
-##                      ryeflaked                        ryemalt 
-##                     0.18258550                     1.55177701 
-## samueladamstworowpalemaltblend                 sixrowpalemalt 
-##                     0.14894447                     0.22952871 
-##                     smokedmalt                   specialbmalt 
-##                     0.16811453                     0.48777430 
-##                   specialroast                    sugaralbion 
-##                     0.35765384                     0.00000000 
-##               tworowbarleymalt                 tworowpalemalt 
-##                     1.52422187                     3.39430570 
-##          tworowpalemaltorganic          tworowpalemalttoasted 
-##                     0.38325729                     0.17756112 
-##              tworowpilsnermalt                    victorymalt 
-##                     2.06801819                     0.81193297 
-##                     viennamalt                    wheatflaked 
-##                     1.71804002                     0.15031939 
-##                       wheatraw                       wheatred 
-##                     0.91079719                     0.12675509 
-##                 wheattorrified                      wheatmalt 
-##                     0.03794394                     2.89902386 
-##                 wheatmaltwhite                     whitewheat 
-##                     0.63181900                     0.12870589 
-##                 wyermannvienna 
-##                     0.19111733
+##               total_hops               total_malt                      abv 
+##               10.2126296                8.7733925              111.0920998 
+##                      ibu                      srm ageddebitteredhopslambic 
+##              169.9378367              100.3377174                0.3159139 
+##                  ahtanum                  alchemy                 amarillo 
+##                0.4270823                2.0510118                2.6261386 
+##                   apollo 
+##                0.8524182
 ```
 
 

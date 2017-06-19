@@ -166,74 +166,86 @@ cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = 
 
 
 
-# ---------- functionize --------
-
-
-# only using top beer styles
-# select only predictor and outcome columns, take out NAs, and scale the data
-
-cluster_it <- function(df, preds, to_scale, resp, n_centers) {
-  df_for_clustering <- df %>% 
-    select_(.dots = c(response_vars, cluster_on)) %>%       
-    na.omit() %>% 
-    filter(
-      abv < 20 & abv > 3
-    ) %>%
-    filter(
-      ibu < 200
-    )
-  # browser()
-  
-  df_all_preds <- df_for_clustering %>% 
-    select_(.dots = preds)
-  
-  df_preds_scale <- df_all_preds %>% 
-    select_(.dots = to_scale) %>% 
-    rename(
-      abv_scaled = abv,
-      ibu_scaled = ibu,
-      srm_scaled = srm
-    ) %>% 
-    scale() %>% 
-    as_tibble()
-  
-  # df_preds <- bind_cols(df_preds_scale, df_all_preds)
-  
-  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)]) %>% 
-    na.omit() 
-    # droplevels() %>% 
-    # filter(!(hops_name_1 == "")) %>% 
-    # filter(!(malt_name_1 == ""))
-  browser()
-  
-  df_outcome <- df_for_clustering %>% 
-    select_(.dots = resp) %>% 
-    na.omit()
-  
-  set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
-  
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster), 
-    df_outcome, df_preds,
-    df_for_clustering %>% select(abv, ibu, srm)))
-  
-  
-}
-
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bn_certain_styles <- beer_ingredients_join %>% 
-  filter(
-    style_collapsed %in% styles_to_keep 
-  )
-
-cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "style_collapsed")
-
-dis_clustered_beer <- cluster_it(df = bn_certain_styles, 
-                                 preds = cluster_on, 
-                                 to_scale = to_scale,
-                                 resp = response_vars,
-                                 n_centers = 5)
-
+# # ---------- functionize --------
+# 
+# 
+# # only using top beer styles
+# # select only predictor and outcome columns, take out NAs, and scale the data
+# 
+# cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+#   df_for_clustering <- df %>% 
+#     select_(.dots = c(response_vars, cluster_on)) %>%       
+#     na.omit() %>% 
+#     filter(
+#       abv < 20 & abv > 3
+#     ) %>%
+#     filter(
+#       ibu < 200
+#     )
+# 
+#   df_all_preds <- df_for_clustering %>% 
+#     select_(.dots = preds)
+#   
+#   df_preds_scale <- df_all_preds %>% 
+#     select_(.dots = to_scale) %>% 
+#     rename(
+#       abv_scaled = abv,
+#       ibu_scaled = ibu,
+#       srm_scaled = srm
+#     ) %>% 
+#     scale() %>% 
+#     as_tibble()
+#   
+#   df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)]) 
+# 
+#   df_outcome <- df_for_clustering %>% 
+#     select_(.dots = resp) %>% 
+#     na.omit()
+#   
+#   set.seed(9)
+#   clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+#   
+#   clustered_df <- as_tibble(data.frame(
+#     cluster_assignment = factor(clustered_df_out$cluster), 
+#     df_outcome, df_preds,
+#     df_for_clustering %>% select(abv, ibu, srm)))
+#   
+#   return(clustered_df)
+# }
+# 
+# styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+# bn_certain_styles <- beer_ingredients_join %>% 
+#   filter(
+#     style_collapsed %in% styles_to_keep 
+#   )
+# 
+# cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+# to_scale <- c("abv", "ibu", "srm")
+# response_vars <- c("name", "style", "style_collapsed")
+# 
+# certain_styles_clustered <- cluster_it(df = bn_certain_styles, 
+#                                  preds = cluster_on, 
+#                                  to_scale = to_scale,
+#                                  resp = response_vars,
+#                                  n_centers = 5)
+# 
+# 
+# table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment)
+# 
+# ggplot() +   
+#   geom_point(data = certain_styles_clustered, 
+#              aes(x = abv, y = ibu,
+#                  shape = cluster_assignment,
+#                  colour = style_collapsed), alpha = 0.5) +
+#   geom_point(data = style_centers_certain_styles,
+#              aes(mean_abv, mean_ibu), colour = "black") +
+#   geom_text_repel(data = style_centers_certain_styles,
+#                   aes(mean_abv, mean_ibu, label = style_collapsed), 
+#                   box.padding = unit(0.45, "lines"),
+#                   family = "Calibri",
+#                   label.size = 0.3) +
+#   ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") +
+#   labs(x = "ABV", y = "IBU") +
+#   labs(colour = "Style") +
+#   theme_bw()
+# 

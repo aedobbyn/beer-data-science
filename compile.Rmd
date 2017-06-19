@@ -850,7 +850,7 @@ bi_rf
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
 ```{r, echo=TRUE}
 
-kable(importance(bi_rf)[1:10])
+importance(bi_rf)[1:10]
 ```
 
 
