@@ -206,7 +206,8 @@ beer_necessities_hops_gathered <- beer_necessities %>%
 
 # Filter to just those beers that have at least one hop
 beer_necessities_w_hops <- beer_necessities_hops_gathered %>% 
-  filter(!is.na(hop_name))
+  filter(!is.na(hop_name)) %>% 
+  filter(!hop_name == "")
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 

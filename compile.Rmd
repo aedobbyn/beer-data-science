@@ -220,77 +220,6 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
-**Cluster**
-```{r, echo=TRUE}
-
-library(NbClust)
-
-# only using top beer styles
-# select only predictor and outcome columns, take out NAs, and scale the data
-
-cluster_it <- function(df, preds, to_scale, resp, n_centers) {
-  df_for_clustering <- df %>%
-    select_(.dots = c(response_vars, cluster_on)) %>%
-    na.omit() %>%
-    filter(
-      abv < 20 & abv > 3
-    ) %>%
-    filter(
-      ibu < 200
-    )
-
-  df_all_preds <- df_for_clustering %>%
-    select_(.dots = preds)
-
-  df_preds_scale <- df_all_preds %>%
-    select_(.dots = to_scale) %>%
-    rename(
-      abv_scaled = abv,
-      ibu_scaled = ibu,
-      srm_scaled = srm
-    ) %>%
-    scale() %>%
-    as_tibble()
-
-  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
-
-  df_outcome <- df_for_clustering %>%
-    select_(.dots = resp) %>%
-    na.omit()
-
-  set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
-
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster),
-    df_outcome, df_preds,
-    df_for_clustering %>% select(abv, ibu, srm)))
-
-  return(clustered_df)
-}
-
-
-# ----------- main clustering into 10 clusters -------
-
-cluster_on <- c("abv", "ibu", "srm")
-to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "styleId", "style_collapsed")
-
-
-clustered_beer <- cluster_it(df = popular_beer_dat,
-                             preds = cluster_on,
-                             to_scale = to_scale,
-                             resp = response_vars,
-                             n_centers = 10)
-
-```
-
-
-Head of the clustering data
-```{r}
-kable(clustered_beer[1:20, ])
-```
-
 
 **Find the Most Popualar Styles**
 
@@ -360,42 +289,73 @@ kable(style_centers)
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
   
-  
-  
+**Cluster**
+```{r, echo=TRUE}
 
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- beer_for_clustering <- popular_beer_dat %>%  -->
-<!--   select(name, style, styleId, style_collapsed, -->
-<!--          abv, ibu, srm) %>%        -->
-<!--   na.omit() %>%  -->
-<!--   filter( -->
-<!--     abv < 20 & abv > 3 -->
-<!--   ) %>% -->
-<!--   filter( -->
-<!--     ibu < 200 -->
-<!--   ) -->
+library(NbClust)
 
-<!-- beer_for_clustering_predictors <- beer_for_clustering %>%  -->
-<!--   select(abv, ibu, srm) %>% -->
-<!--   rename( -->
-<!--     abv_scaled = abv, -->
-<!--     ibu_scaled = ibu, -->
-<!--     srm_scaled = srm -->
-<!--     ) %>% scale() %>%  -->
-<!--   as_tibble() -->
-<!-- ``` -->
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>%
+    select_(.dots = c(response_vars, cluster_on)) %>%
+    na.omit() %>%
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
 
-<!-- And do the clustering -->
+  df_all_preds <- df_for_clustering %>%
+    select_(.dots = preds)
 
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- set.seed(9) -->
-<!-- clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE) -->
+  df_preds_scale <- df_all_preds %>%
+    select_(.dots = to_scale) %>%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>%
+    scale() %>%
+    as_tibble()
 
-<!-- clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster),  -->
-<!--                             beer_for_clustering_outcome, beer_for_clustering_predictors, -->
-<!--                             beer_for_clustering %>% select(abv, ibu, srm))) -->
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
 
-<!-- ``` -->
+  df_outcome <- df_for_clustering %>%
+    select_(.dots = resp) %>%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+
+
+# ----------- main clustering into 10 clusters -------
+
+cluster_on <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "styleId", "style_collapsed")
+
+
+clustered_beer <- cluster_it(df = popular_beer_dat,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+
+```
+
+
+Head of the clustering data
+```{r}
+kable(clustered_beer[1:20, ])
+```
 
 
 
@@ -709,6 +669,51 @@ kable(beer_ingredients_join[1:20, ])
 <!-- ``` -->
 
 
+### Back to clustering: cluster on only 5 styles
+* But now add in `total_hops` and `total_malts` as predictors 
+
+```{r, echo=TRUE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bn_certain_styles <- beer_ingredients_join %>%
+  filter(
+    style_collapsed %in% styles_to_keep
+  )
+
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "style_collapsed")
+
+certain_styles_clustered <- cluster_it(df = bn_certain_styles,
+                                 preds = cluster_on,
+                                 to_scale = to_scale,
+                                 resp = response_vars,
+                                 n_centers = 5)
+
+
+
+
+table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment)
+
+ggplot() +
+  geom_point(data = certain_styles_clustered,
+             aes(x = abv, y = ibu,
+                 shape = cluster_assignment,
+                 colour = style_collapsed), alpha = 0.5) +
+  geom_point(data = style_centers_certain_styles,
+             aes(mean_abv, mean_ibu), colour = "black") +
+  geom_text_repel(data = style_centers_certain_styles,
+                  aes(mean_abv, mean_ibu, label = style_collapsed),
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Style", shape = "Cluster Assignment") +
+  theme_bw()
+
+```
+
+
 
 ## Random asides into hops
 
@@ -751,7 +756,8 @@ beer_necessities_hops_gathered <- beer_necessities %>%
 
 # Filter to just those beers that have at least one hop
 beer_necessities_w_hops <- beer_necessities_hops_gathered %>% 
-  filter(!is.na(hop_name))
+  filter(!is.na(hop_name)) %>% 
+  filter(!hop_name == "")
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 

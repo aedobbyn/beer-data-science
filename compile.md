@@ -198,13 +198,110 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
+
+**Find the Most Popualar Styles**
+
+
+```r
+# Pare down to only cases where style is not NA
+beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
+
+# Arrange beer dat by style popularity
+style_popularity <- beer_dat_pared %>% 
+  group_by(style) %>% 
+  count() %>% 
+  arrange(desc(n))
+style_popularity
+
+# Add a column that scales popularity
+style_popularity <- bind_cols(style_popularity, 
+                               n_scaled = as.vector(scale(style_popularity$n)))
+
+# Find styles that are above a z-score of 0
+popular_styles <- style_popularity %>% 
+  filter(n_scaled > 0)
+
+# Pare dat down to only beers that fall into those styles
+popular_beer_dat <- beer_dat_pared %>% 
+  filter(
+    style %in% popular_styles$style
+  ) %>% 
+  droplevels() %>% 
+  as_tibble() 
+nrow(popular_beer_dat)
+
+# Find the centers (mean abv, ibu, srm) of the most popular styles
+style_centers <- popular_beer_dat %>% 
+  group_by(style_collapsed) %>% 
+  add_count() %>% 
+  summarise(
+    mean_abv = mean(abv, na.rm = TRUE),
+    mean_ibu = mean(ibu, na.rm = TRUE), 
+    mean_srm = mean(srm, na.rm = TRUE),
+    n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
+  ) %>% 
+  arrange(desc(n)) %>% 
+  drop_na() %>% 
+  droplevels()
+```
+
+
+Compare popular styles      
+
+
+|style_collapsed          |  mean_abv| mean_ibu|  mean_srm|    n|
+|:------------------------|---------:|--------:|---------:|----:|
+|India Pale Ale           |  6.578468| 66.04268|  9.989313| 6524|
+|Pale Ale                 |  5.695480| 40.86930|  8.890306| 4280|
+|Stout                    |  7.991841| 43.89729| 36.300000| 4238|
+|Wheat                    |  5.158040| 17.47168|  5.861842| 3349|
+|Double India Pale Ale    |  8.930599| 93.48142| 11.006873| 2525|
+|Red                      |  5.742565| 33.81127| 16.178862| 2521|
+|Lager                    |  5.453718| 30.64361|  8.457447| 2230|
+|Saison                   |  6.400189| 27.25114|  7.053476| 2167|
+|Blonde                   |  5.595298| 22.39432|  5.625000| 2044|
+|Porter                   |  6.182049| 33.25369| 32.197605| 1973|
+|Brown                    |  6.159212| 32.21577| 23.592000| 1462|
+|Pilsener                 |  5.227593| 33.51346|  4.413462| 1268|
+|Specialty Beer           |  6.446402| 33.77676| 15.520548| 1044|
+|Bitter                   |  5.322364| 38.28175| 12.460526|  939|
+|Fruit Beer               |  5.195222| 19.24049|  8.666667|  905|
+|Herb and Spice Beer      |  6.621446| 27.77342| 18.166667|  872|
+|Sour                     |  6.224316| 18.88869| 10.040816|  797|
+|Strong Ale               |  8.826425| 36.74233| 22.547945|  767|
+|Tripel                   |  9.029775| 32.51500|  7.680556|  734|
+|Black                    |  6.958714| 65.50831| 31.080000|  622|
+|Barley Wine              | 10.781600| 74.04843| 19.561404|  605|
+|Kölsch                   |  4.982216| 23.37183|  4.371795|  593|
+|Barrel-Aged              |  9.002506| 39.15789| 18.133333|  540|
+|Other Belgian-Style Ales |  7.516318| 37.55812| 17.549020|  506|
+|Pumpkin Beer             |  6.712839| 23.48359| 17.918033|  458|
+|Dubbel                   |  7.509088| 25.05128| 22.940000|  399|
+|Scotch Ale               |  7.620233| 26.36909| 24.222222|  393|
+|German-Style Doppelbock  |  8.045762| 28.88692| 25.696970|  376|
+|Fruit Cider              |  6.205786| 25.60000| 12.000000|  370|
+|German-Style Märzen      |  5.746102| 25.63796| 14.322581|  370|
+
+
+## Unsupervised Clustering 
+* Pare down to beers that have ABV, IBU, and SRM
+* K-means cluster beers based on these predictors
+
+
+**Do Clustering**
+
+* Use only the top beer styles
+* Split off the predictors, ABV, IBU, and SRM
+* Take out NAs, and scale the data
+    * NB: There are not not very many beers have SRM so we may not want to omit based on it
+* Take out some outliers
+  * Beers have to have an ABV between 3 and 20 and an IBU less than 200
+  
+  
 **Cluster**
 
 ```r
 library(NbClust)
-
-# only using top beer styles
-# select only predictor and outcome columns, take out NAs, and scale the data
 
 cluster_it <- function(df, preds, to_scale, resp, n_centers) {
   df_for_clustering <- df %>%
@@ -339,143 +436,6 @@ Head of the clustering data
 |9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |59      |Tripel                |  1.7072231| -0.7614836|  2.5598503| 9.5| 22.0|  40|
 |7                  |(512) TWO                                                    |Imperial or Double India Pale Ale                  |31      |Double India Pale Ale |  1.4244750|  2.1852908| -0.4177496| 9.0| 99.0|   9|
 |2                  |(512) White IPA                                              |American-Style India Pale Ale                      |30      |India Pale Ale        | -0.6678613|  0.5014197| -0.8980077| 5.3| 55.0|   4|
-
-
-**Find the Most Popualar Styles**
-
-
-```r
-# Pare down to only cases where style is not NA
-beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
-
-# Arrange beer dat by style popularity
-style_popularity <- beer_dat_pared %>% 
-  group_by(style) %>% 
-  count() %>% 
-  arrange(desc(n))
-style_popularity
-
-# Add a column that scales popularity
-style_popularity <- bind_cols(style_popularity, 
-                               n_scaled = as.vector(scale(style_popularity$n)))
-
-# Find styles that are above a z-score of 0
-popular_styles <- style_popularity %>% 
-  filter(n_scaled > 0)
-
-# Pare dat down to only beers that fall into those styles
-popular_beer_dat <- beer_dat_pared %>% 
-  filter(
-    style %in% popular_styles$style
-  ) %>% 
-  droplevels() %>% 
-  as_tibble() 
-nrow(popular_beer_dat)
-
-# Find the centers (mean abv, ibu, srm) of the most popular styles
-style_centers <- popular_beer_dat %>% 
-  group_by(style_collapsed) %>% 
-  add_count() %>% 
-  summarise(
-    mean_abv = mean(abv, na.rm = TRUE),
-    mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_srm = mean(srm, na.rm = TRUE),
-    n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
-  ) %>% 
-  arrange(desc(n)) %>% 
-  drop_na() %>% 
-  droplevels()
-```
-
-
-Compare popular styles      
-
-
-|style_collapsed          |  mean_abv| mean_ibu|  mean_srm|    n|
-|:------------------------|---------:|--------:|---------:|----:|
-|India Pale Ale           |  6.578468| 66.04268|  9.989313| 6524|
-|Pale Ale                 |  5.695480| 40.86930|  8.890306| 4280|
-|Stout                    |  7.991841| 43.89729| 36.300000| 4238|
-|Wheat                    |  5.158040| 17.47168|  5.861842| 3349|
-|Double India Pale Ale    |  8.930599| 93.48142| 11.006873| 2525|
-|Red                      |  5.742565| 33.81127| 16.178862| 2521|
-|Lager                    |  5.453718| 30.64361|  8.457447| 2230|
-|Saison                   |  6.400189| 27.25114|  7.053476| 2167|
-|Blonde                   |  5.595298| 22.39432|  5.625000| 2044|
-|Porter                   |  6.182049| 33.25369| 32.197605| 1973|
-|Brown                    |  6.159212| 32.21577| 23.592000| 1462|
-|Pilsener                 |  5.227593| 33.51346|  4.413462| 1268|
-|Specialty Beer           |  6.446402| 33.77676| 15.520548| 1044|
-|Bitter                   |  5.322364| 38.28175| 12.460526|  939|
-|Fruit Beer               |  5.195222| 19.24049|  8.666667|  905|
-|Herb and Spice Beer      |  6.621446| 27.77342| 18.166667|  872|
-|Sour                     |  6.224316| 18.88869| 10.040816|  797|
-|Strong Ale               |  8.826425| 36.74233| 22.547945|  767|
-|Tripel                   |  9.029775| 32.51500|  7.680556|  734|
-|Black                    |  6.958714| 65.50831| 31.080000|  622|
-|Barley Wine              | 10.781600| 74.04843| 19.561404|  605|
-|Kölsch                   |  4.982216| 23.37183|  4.371795|  593|
-|Barrel-Aged              |  9.002506| 39.15789| 18.133333|  540|
-|Other Belgian-Style Ales |  7.516318| 37.55812| 17.549020|  506|
-|Pumpkin Beer             |  6.712839| 23.48359| 17.918033|  458|
-|Dubbel                   |  7.509088| 25.05128| 22.940000|  399|
-|Scotch Ale               |  7.620233| 26.36909| 24.222222|  393|
-|German-Style Doppelbock  |  8.045762| 28.88692| 25.696970|  376|
-|Fruit Cider              |  6.205786| 25.60000| 12.000000|  370|
-|German-Style Märzen      |  5.746102| 25.63796| 14.322581|  370|
-
-
-## Unsupervised Clustering 
-* Pare down to beers that have ABV, IBU, and SRM
-* K-means cluster beers based on these predictors
-
-
-**Do Clustering**
-
-* Use only the top beer styles
-* Split off the predictors, ABV, IBU, and SRM
-* Take out NAs, and scale the data
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it
-* Take out some outliers
-  * Beers have to have an ABV between 3 and 20 and an IBU less than 200
-  
-  
-  
-  
-
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- beer_for_clustering <- popular_beer_dat %>%  -->
-<!--   select(name, style, styleId, style_collapsed, -->
-<!--          abv, ibu, srm) %>%        -->
-<!--   na.omit() %>%  -->
-<!--   filter( -->
-<!--     abv < 20 & abv > 3 -->
-<!--   ) %>% -->
-<!--   filter( -->
-<!--     ibu < 200 -->
-<!--   ) -->
-
-<!-- beer_for_clustering_predictors <- beer_for_clustering %>%  -->
-<!--   select(abv, ibu, srm) %>% -->
-<!--   rename( -->
-<!--     abv_scaled = abv, -->
-<!--     ibu_scaled = ibu, -->
-<!--     srm_scaled = srm -->
-<!--     ) %>% scale() %>%  -->
-<!--   as_tibble() -->
-<!-- ``` -->
-
-<!-- And do the clustering -->
-
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- set.seed(9) -->
-<!-- clustered_beer_out <- kmeans(x = beer_for_clustering_predictors, centers = 10, trace = TRUE) -->
-
-<!-- clustered_beer <- as_tibble(data.frame(cluster_assignment = factor(clustered_beer_out$cluster),  -->
-<!--                             beer_for_clustering_outcome, beer_for_clustering_predictors, -->
-<!--                             beer_for_clustering %>% select(abv, ibu, srm))) -->
-
-<!-- ``` -->
 
 
 
@@ -854,6 +814,71 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 <!-- ``` -->
 
 
+### Back to clustering: cluster on only 5 styles
+* But now add in `total_hops` and `total_malts` as predictors 
+
+
+```r
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bn_certain_styles <- beer_ingredients_join %>%
+  filter(
+    style_collapsed %in% styles_to_keep
+  )
+
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "style_collapsed")
+
+certain_styles_clustered <- cluster_it(df = bn_certain_styles,
+                                 preds = cluster_on,
+                                 to_scale = to_scale,
+                                 resp = response_vars,
+                                 n_centers = 5)
+```
+
+```
+## KMNS(*, k=5): iter=  1, indx=5
+##  QTRAN(): istep=1220, icoun=16
+##  QTRAN(): istep=2440, icoun=879
+## KMNS(*, k=5): iter=  2, indx=1220
+```
+
+```r
+table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment)
+```
+
+```
+##                 cluster
+## style              1   2   3   4   5
+##   Blonde           2  25 125   4   4
+##   India Pale Ale  11   4  41 439  67
+##   Stout          160   3   3   1   3
+##   Tripel           3  60   0   1   1
+##   Wheat            0   9 234   5  15
+```
+
+```r
+ggplot() +
+  geom_point(data = certain_styles_clustered,
+             aes(x = abv, y = ibu,
+                 shape = cluster_assignment,
+                 colour = style_collapsed), alpha = 0.5) +
+  geom_point(data = style_centers_certain_styles,
+             aes(mean_abv, mean_ibu), colour = "black") +
+  geom_text_repel(data = style_centers_certain_styles,
+                  aes(mean_abv, mean_ibu, label = style_collapsed),
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Style") +
+  theme_bw()
+```
+
+![](compile_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
+
 
 ## Random asides into hops
 
@@ -870,7 +895,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
 
 ```r
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
@@ -910,7 +935,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
 
 **Most popular hops**
@@ -984,7 +1009,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
 
 ```r
 ggplot(data = pop_hops_beer_stats) + 
@@ -995,7 +1020,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-19-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-20-2.png)<!-- -->
 
 
 # Neural Net
@@ -1071,38 +1096,36 @@ nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_
 
 ```
 ## # weights:  522 (476 variable)
-## initial  value 5286.654453 
-## iter  10 value 4173.826077
-## iter  20 value 3873.274885
-## iter  30 value 3775.566990
-## iter  40 value 3627.695855
-## iter  50 value 3342.689388
-## iter  60 value 3193.823856
-## iter  70 value 3018.589837
-## iter  80 value 2786.883065
-## iter  90 value 2691.594604
-## iter 100 value 2609.040597
-## iter 110 value 2565.517972
-## iter 120 value 2543.208533
-## iter 130 value 2525.190347
-## iter 140 value 2513.418421
-## iter 150 value 2507.322540
-## iter 160 value 2505.829225
-## iter 170 value 2505.424524
-## iter 180 value 2505.214867
-## iter 190 value 2505.057369
-## iter 200 value 2504.921574
-## iter 210 value 2504.749854
-## iter 220 value 2504.676258
-## iter 230 value 2504.654166
-## iter 240 value 2504.648259
-## iter 250 value 2504.639769
-## iter 260 value 2504.631627
-## iter 270 value 2504.628817
-## iter 280 value 2504.627495
-## iter 290 value 2504.625422
-## iter 300 value 2504.624947
-## final  value 2504.624865 
+## initial  value 5189.002874 
+## iter  10 value 4101.664681
+## iter  20 value 3818.943295
+## iter  30 value 3683.869955
+## iter  40 value 3494.261404
+## iter  50 value 3242.052315
+## iter  60 value 3106.920640
+## iter  70 value 2968.841371
+## iter  80 value 2769.439750
+## iter  90 value 2660.340209
+## iter 100 value 2577.879191
+## iter 110 value 2515.471734
+## iter 120 value 2492.212775
+## iter 130 value 2473.771723
+## iter 140 value 2463.134319
+## iter 150 value 2458.636652
+## iter 160 value 2456.476818
+## iter 170 value 2456.036254
+## iter 180 value 2455.881297
+## iter 190 value 2455.773302
+## iter 200 value 2455.622832
+## iter 210 value 2455.526383
+## iter 220 value 2455.480184
+## iter 230 value 2455.458931
+## iter 240 value 2455.422694
+## iter 250 value 2455.410839
+## iter 260 value 2455.407746
+## iter 270 value 2455.406563
+## iter 280 value 2455.401931
+## final  value 2455.401259 
 ## converged
 ```
 
@@ -1113,7 +1136,7 @@ nn_collapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.4801061 0.4305531
+## 0.5000000 0.4588764
 ```
 
 ```r
@@ -1123,22 +1146,22 @@ nn_collapsed_out$most_important_vars
 
 ```
 ##                              Overall
-## total_hops                 54.667710
-## total_malt                 54.440629
-## abv                        37.319481
-## ibu                         4.217497
-## srm                         4.983142
-## glassGoblet               356.833263
-## glassMug                  321.495989
-## glassOversized Wine Glass 141.130691
-## glassPilsner              585.530578
-## glassPint                 265.535109
-## glassSnifter              320.053330
-## glassStange               168.615480
-## glassThistle              437.826113
-## glassTulip                260.077073
-## glassWeizen               156.934352
-## glassWilli                234.239558
+## total_hops                 69.654945
+## total_malt                 50.311853
+## abv                        42.615502
+## ibu                         3.918066
+## srm                         4.579843
+## glassGoblet               397.374182
+## glassMug                  331.569097
+## glassOversized Wine Glass 191.839994
+## glassPilsner              461.028137
+## glassPint                 278.156121
+## glassSnifter              312.602345
+## glassStange               189.351854
+## glassThistle              452.468707
+## glassTulip                266.547554
+## glassWeizen               123.188935
+## glassWilli                262.940788
 ```
 
 * What about predicing `style`?
@@ -1151,48 +1174,44 @@ nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "sty
 
 ```
 ## # weights:  828 (765 variable)
-## initial  value 5972.680579 
-## iter  10 value 4849.639474
-## iter  20 value 4546.217871
-## iter  30 value 4401.880901
-## iter  40 value 4290.597695
-## iter  50 value 4164.919104
-## iter  60 value 3955.690671
-## iter  70 value 3847.282402
-## iter  80 value 3728.455528
-## iter  90 value 3599.092537
-## iter 100 value 3443.638108
-## iter 110 value 3229.289371
-## iter 120 value 3072.820049
-## iter 130 value 2971.656137
-## iter 140 value 2875.904237
-## iter 150 value 2845.291959
-## iter 160 value 2824.312776
-## iter 170 value 2814.439867
-## iter 180 value 2806.766269
-## iter 190 value 2800.627718
-## iter 200 value 2795.899223
-## iter 210 value 2793.011271
-## iter 220 value 2791.238156
-## iter 230 value 2790.138768
-## iter 240 value 2788.939340
-## iter 250 value 2788.307983
-## iter 260 value 2787.972412
-## iter 270 value 2787.750582
-## iter 280 value 2787.682522
-## iter 290 value 2787.663433
-## iter 300 value 2787.657861
-## iter 310 value 2787.649855
-## iter 320 value 2787.640640
-## iter 330 value 2787.636912
-## iter 340 value 2787.633957
-## iter 350 value 2787.630620
-## iter 360 value 2787.623893
-## iter 370 value 2787.620914
-## iter 380 value 2787.620095
-## iter 380 value 2787.620069
-## iter 380 value 2787.620069
-## final  value 2787.620069 
+## initial  value 6022.452917 
+## iter  10 value 4996.432878
+## iter  20 value 4765.792309
+## iter  30 value 4510.391741
+## iter  40 value 4361.302193
+## iter  50 value 4204.858745
+## iter  60 value 4027.583899
+## iter  70 value 3837.375623
+## iter  80 value 3653.275878
+## iter  90 value 3462.294270
+## iter 100 value 3320.692374
+## iter 110 value 3194.622144
+## iter 120 value 3069.284975
+## iter 130 value 2965.936521
+## iter 140 value 2906.978999
+## iter 150 value 2883.867936
+## iter 160 value 2865.643770
+## iter 170 value 2858.183468
+## iter 180 value 2851.846211
+## iter 190 value 2848.122314
+## iter 200 value 2843.968435
+## iter 210 value 2840.894240
+## iter 220 value 2838.828006
+## iter 230 value 2837.463334
+## iter 240 value 2836.667079
+## iter 250 value 2836.246844
+## iter 260 value 2836.096131
+## iter 270 value 2836.030396
+## iter 280 value 2836.007094
+## iter 290 value 2836.000876
+## iter 300 value 2835.991817
+## iter 310 value 2835.986783
+## iter 320 value 2835.984746
+## iter 330 value 2835.982948
+## iter 340 value 2835.977150
+## iter 350 value 2835.973669
+## iter 360 value 2835.972699
+## final  value 2835.972544 
 ## converged
 ```
 
@@ -1202,7 +1221,7 @@ nn_notcollapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.4160207 0.3779684
+## 0.4224599 0.3875314
 ```
 
 ```r
@@ -1211,22 +1230,22 @@ nn_notcollapsed_out$most_important_vars
 
 ```
 ##                              Overall
-## total_hops                197.520033
-## total_malt                 95.366107
-## abv                        39.730450
-## ibu                         4.635736
-## srm                         8.578252
-## glassGoblet               531.328426
-## glassMug                  458.072478
-## glassOversized Wine Glass 136.526962
-## glassPilsner              462.525660
-## glassPint                 265.032153
-## glassSnifter              345.599612
-## glassStange               144.970902
-## glassThistle               50.962191
-## glassTulip                315.708087
-## glassWeizen               223.001823
-## glassWilli                396.450821
+## total_hops                204.453599
+## total_malt                120.372485
+## abv                        41.370443
+## ibu                         4.490022
+## srm                         8.542849
+## glassGoblet               560.331043
+## glassMug                  428.192923
+## glassOversized Wine Glass 103.542307
+## glassPilsner              480.581556
+## glassPint                 279.514041
+## glassSnifter              379.692790
+## glassStange               161.842943
+## glassThistle              199.484794
+## glassTulip                319.849211
+## glassWeizen               285.273981
+## glassWilli                402.236342
 ```
 
 
@@ -1280,7 +1299,7 @@ bi_rf
 ## Mtry:                             14 
 ## Target node size:                 1 
 ## Variable importance mode:         impurity 
-## OOB prediction error:             56.27 %
+## OOB prediction error:             58.21 %
 ```
 
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
@@ -1291,13 +1310,13 @@ importance(bi_rf)[1:10]
 
 ```
 ##               total_hops               total_malt                      abv 
-##               10.2126296                8.7733925              111.0920998 
+##                9.2570448                8.0986378              104.3388579 
 ##                      ibu                      srm ageddebitteredhopslambic 
-##              169.9378367              100.3377174                0.3159139 
+##              166.3311474               93.9269955                0.2616513 
 ##                  ahtanum                  alchemy                 amarillo 
-##                0.4270823                2.0510118                2.6261386 
+##                0.3506831                2.5963785                2.3769160 
 ##                   apollo 
-##                0.8524182
+##                0.6050837
 ```
 
 
@@ -1315,7 +1334,7 @@ csrf_acc
 
 ```
 ##  Accuracy     Kappa 
-## 0.3464912 0.2731621
+## 0.3011696 0.2313703
 ```
 
 
