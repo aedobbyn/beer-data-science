@@ -203,7 +203,11 @@ split_ingredients <- function(df, ingredients_to_split) {
 
 
 ```r
+library(forcats)
+
 # Pare down to only cases where style is not NA
+beer_dat <- beer_necessities
+
 beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
 
 # Arrange beer dat by style popularity
@@ -872,7 +876,7 @@ ggplot() +
                   label.size = 0.3) +
   ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") +
   labs(x = "ABV", y = "IBU") +
-  labs(colour = "Style") +
+  labs(colour = "Style", shape = "Cluster Assignment") +
   theme_bw()
 ```
 
@@ -950,7 +954,8 @@ beer_necessities_hops_gathered <- beer_necessities %>%
 
 # Filter to just those beers that have at least one hop
 beer_necessities_w_hops <- beer_necessities_hops_gathered %>% 
-  filter(!is.na(hop_name))
+  filter(!is.na(hop_name)) %>% 
+  filter(!hop_name == "")
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 
@@ -973,7 +978,6 @@ kable(pop_hops_beer_stats)
 
 |hop_name                   | mean_ibu| mean_abv|   n|
 |:--------------------------|--------:|--------:|---:|
-|                           | 42.41220| 6.472903|  70|
 |Amarillo                   | 61.36053| 6.959264| 163|
 |Cascade                    | 51.92405| 6.510729| 445|
 |Centennial                 | 63.96526| 7.081883| 243|
@@ -1043,7 +1047,7 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  # browser()
+
   df$outcome <- factor(df$outcome)
   
   cols_to_keep <- c("outcome", predictor_vars)

@@ -22,10 +22,11 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
+source("./read_from_db.R")
 source("./most_popular_styles.R")
-# source("./cluster.R")
-# source("./plot.R")
-source("./get_ingredient_levels.R")
+# # source("./cluster.R")
+# # source("./plot.R")
+# source("./get_ingredient_levels.R")
 ```
 
 * This is a first pass exploration of different aspects of beer 
@@ -224,7 +225,11 @@ split_ingredients <- function(df, ingredients_to_split) {
 **Find the Most Popualar Styles**
 
 ```{r, eval=FALSE, echo=TRUE}
+library(forcats)
+
 # Pare down to only cases where style is not NA
+beer_dat <- beer_necessities
+
 beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
 
 # Arrange beer dat by style popularity
@@ -815,7 +820,7 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  # browser()
+
   df$outcome <- factor(df$outcome)
   
   cols_to_keep <- c("outcome", predictor_vars)
