@@ -1,6 +1,6 @@
 # construct funcs
 
-source("./get_beer.R")
+source("./run_it/get_beer.R")
 
 # ---- build functions for requesting just a single beer, brewery, menu, etc. 
 # (from single_param_endpoints)

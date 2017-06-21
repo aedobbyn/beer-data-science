@@ -1,5 +1,5 @@
 ---
-title: Data Science Musings on Beer
+title: Data Science Musings on Beer -- Abbreviated
 author:
   name: Amanda Dobbyn
 date: '`r format(Sys.time(), "%B %d, %Y")`'
@@ -90,7 +90,7 @@ source("./most_popular_styles.R")
     * If there's only one page (as is the case for the glassware endpoing), numberOfPages won't be returned, so in this case we set number_of_pages to 1
 * The `addition` parameter can be an empty string if nothing else is needed
 
-```{r, eval = FALSE, echo=TRUE}
+```{r, eval = FALSE, echo=FALSE}
 
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
@@ -123,7 +123,7 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
         + If the `name` column doesn't exist, it takes the first nested column
 * We use something similar to unnest ingredient like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE, echo=FALSE}
 unnest_it <- function(df) {
   unnested <- df
   for(col in seq_along(df[["data"]])) {
@@ -153,7 +153,7 @@ unnest_it <- function(df) {
 * If no keyword is contained in `style`, `style_collapsed` is just whatever's in `style`; in other words, it doesn't get collpsed into a bigger bucket
     * This isn't a huge problem because we'll pare down to just the most popular styles later, however we could think about creating a catchall "Other" level for `style_collapsed`
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE, echo=FALSE}
 
 collapse_styles <- function(df) {
   keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
@@ -190,7 +190,7 @@ collapse_styles <- function(df) {
 * For each new column we need, we create it, initialize it with NAs, and name it
 * Then for each element in our list of split up ingredients, if it exists, we add it to the correct column in our df
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE, echo=FALSE}
 split_ingredients <- function(df, ingredients_to_split) {
   
   ncol_df <- ncol(df)
@@ -225,7 +225,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 
 **Find the Most Popualar Styles**
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE, echo=FALSE}
 library(forcats)
 
 # Pare down to only cases where style is not NA
@@ -295,8 +295,7 @@ kable(style_centers)
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
   
-**Cluster**
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 library(NbClust)
 
@@ -351,14 +350,13 @@ response_vars <- c("name", "style", "styleId", "style_collapsed")
 ```
 
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, message=FALSE}
 clustered_beer <- cluster_it(df = popular_beer_dat,
                              preds = cluster_on,
                              to_scale = to_scale,
                              resp = response_vars,
                              n_centers = 10)
 ```
-
 
 Head of the clustering data
 ```{r}
@@ -377,7 +375,7 @@ kable(cluster_table_counts)
 
 Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
   geom_jitter() + theme_minimal()  +
   ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
@@ -396,7 +394,7 @@ clustered_beer_plot_abv_srm
 
 ### Certain selected styles
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
 clustered_beer_certain_styles <- clustered_beer %>% 
   filter(
@@ -425,7 +423,7 @@ by_style_plot
 
 ### Now add in the style centers (means) for collapsed styles
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 library(ggrepel)
 abv_ibu_clusters_vs_style_centers <- ggplot() +   
   geom_point(data = clustered_beer, 
@@ -453,7 +451,7 @@ To get more granular with ingredients, we can split out each individual ingredie
 
 * Join the clustered beer on our main `beer_necessities` dataframe 
 
-```{r, eval=TRUE, echo=TRUE}
+```{r, eval=TRUE, echo=FALSE, message=FALSE}
 clustered_beer_necessities <- clustered_beer %>% 
   inner_join(beer_necessities)
 
@@ -492,7 +490,7 @@ clustered_beer_necessities <- clustered_beer %>%
 * Then we do the final step and group by the groupers
 
 
-```{r, eval=TRUE, echo=TRUE}
+```{r, eval=TRUE, echo=FALSE}
 
 pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
@@ -636,7 +634,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 * Now run the function with `ingredient_want` as first hops, then malt
 * Then join the resulting dataframes and remove/reorder some columns
 
-```{r, echo=TRUE, eval=TRUE}
+```{r, echo=FALSE, eval=TRUE}
 # Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
                                                       clustered_beer_necessities, 
@@ -686,7 +684,7 @@ kable(beer_ingredients_join[1:20, ])
 ### Back to clustering: cluster on only 5 styles
 * But now add in `total_hops` and `total_malts` as predictors 
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
 bn_certain_styles <- beer_ingredients_join %>%
   filter(
@@ -734,7 +732,7 @@ ggplot() +
 **Do more hops always mean more bitterness?**
 
 * It would appear so, from this graph and this regression (beta = 2.394418)
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
@@ -748,7 +746,7 @@ summary(hops_ibu_lm)
 ```
 
 * However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
                                           & beer_ingredients_join$total_hops < 8), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
@@ -761,7 +759,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
 
 **Most popular hops**
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 # Gather up all the hops columns into one called `hop_name`
 beer_necessities_hops_gathered <- beer_necessities %>%
   gather(
@@ -797,7 +795,7 @@ beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
 
 Are there certian hops that are used more often in very high IBU or ABV beers?
 Hard to detect a pattern
-```{r, echo = TRUE}
+```{r, echo=FALSE}
 ggplot(data = beer_necessities_w_popular_hops) + 
   geom_point(aes(abv, ibu, colour = hop_name)) +
   ggtitle("Beers Containing most Popular Hops") +
@@ -805,7 +803,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 ggplot(data = pop_hops_beer_stats) + 
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
@@ -821,7 +819,7 @@ ggplot(data = pop_hops_beer_stats) +
 * In the function, specify the dataframe and the outcome, either `style` or `style_collapsed`; the one not specified as `outcome` will be dropped
 * The predictor columns will be everything not specified in the vector `predictor_vars`
 
-```{r, warning=FALSE, echo=TRUE, eval=TRUE, message=FALSE}
+```{r, warning=FALSE, echo=FALSE, eval=TRUE, message=FALSE}
 
 library(nnet)
 library(caret)
@@ -879,7 +877,7 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 * Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
 
-```{r, echo=TRUE, eval=TRUE}
+```{r, echo=FALSE, eval=TRUE}
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
 nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
@@ -897,7 +895,7 @@ nn_collapsed_out$most_important_vars
 
 * What if we predcit `style` instead of `style_collapsed`?
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
                          predictor_vars = p_vars)
@@ -910,7 +908,7 @@ nn_notcollapsed_out$most_important_vars
 
 
 And now if we drop `glass`?
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 p_vars_no_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
@@ -933,7 +931,7 @@ nn_collapsed_out_no_glass$most_important_vars
 
 * Here we don't include `glass` as a predictor
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 library(ranger)
 library(stringr)
@@ -964,17 +962,12 @@ bi_train <- bi_train %>%
 
 
 bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity")
-```
-
-OOB (out of bag) prediction error is around 58%
-    * This calculated from tree samples constructed but not used in training set; these trees become effectively part of test set
-```{r}
 bi_rf
 ```
 
 
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 importance(bi_rf)[1:10]
 ```
@@ -982,7 +975,7 @@ importance(bi_rf)[1:10]
 
 How does a CSRF (case-specific random forest) fare?
 
-```{r, echo=TRUE}
+```{r, echo=FALSE}
 
 bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
                 params1 = list(num.trees = 5, mtry = 4),
