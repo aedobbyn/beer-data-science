@@ -29,14 +29,12 @@ source("./most_popular_styles.R")
 # source("./get_ingredient_levels.R")
 ```
 
-* This is a first pass exploration of different aspects of beer 
-    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
-        * Outputs of a beer that define it well
-    * Ingredients in a beer such as hops and malts
-        * Inputs to a beer that have some effect on its flavor profile
-    * Glass type
-        * This is defined entirely by style and is very predictive of it
-* The main question on the table:
+This is a first pass exploration of different aspects of beer.
+
+* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
+    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
+
+* The main question on the table is this:
     * Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary?
       * Two approaches: clustering and prediction 
       * Clustering: are there natural clusters across the spectum of beers that align well with the styles they're grouped into? 
@@ -45,7 +43,6 @@ source("./most_popular_styles.R")
               * How well do these match up with various "style centers," defined by mean of ABV, IBU, and SRM per beer style
       * Prediction: can we predict a beer's style based on certain characteristics of the beer?
           * Neural net 
-            
           * Random forest
       
 * Answer thus far
@@ -74,9 +71,19 @@ source("./most_popular_styles.R")
 * Run a neural net
     * Predict either `style` or `style_collapsed` from all the predictors including the total number of hops and malts per beer
 
-* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
-    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
 
+**Short Aside**
+
+The question of what should be a predictor variable for style is a bit murky here. What should be fair game for predicting style and what shouldn't? Characteristics of a beer that are defined *by* its style would seem to be "cheating" in a way. 
+
+* Main candidates are:
+    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
+        * These are outputs of a beer that meaningfully define the beer and are theoretically orthogonal to each other
+    * Ingredients in a beer such as hops and malts
+        * Inputs to a beer that have some effect on its flavor profile
+        * Semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added 
+    * Glass type
+        * This is defined entirely by style and is very predictive of it
 
 
 
@@ -684,7 +691,11 @@ kable(beer_ingredients_join[1:20, ])
 
 
 ### Back to clustering: cluster on only 5 styles
-* But now add in `total_hops` and `total_malts` as predictors 
+
+* We'll pare down the beer data to just beers in 5 selected styles; these styles were intentionally chosen because they are quite distinct: Blonde, IPA, Stout, Tripel, Wheat
+  * Arguably, of these five styles Blondes and Wheats are the closest
+* We'll cluster these into 5 clusters
+* This time we'll add in `total_hops` and `total_malts` as predictors 
 
 ```{r, echo=TRUE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
@@ -704,7 +715,7 @@ certain_styles_clustered <- cluster_it(df = bn_certain_styles,
                                  n_centers = 5)
 ```
 
-
+Table of style vs. cluster.
 ```{r}
 kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
 
@@ -820,6 +831,7 @@ ggplot(data = pop_hops_beer_stats) +
 * Can ABV, IBU, and SRM be used in a neural net to predict `style` or `style_collapsed`?
 * In the function, specify the dataframe and the outcome, either `style` or `style_collapsed`; the one not specified as `outcome` will be dropped
 * The predictor columns will be everything not specified in the vector `predictor_vars`
+* The function returns the outcome variable sleected, neural net output, variable importance, the prediction dataframe, predictions, and accuracy
 
 ```{r, warning=FALSE, echo=TRUE, eval=TRUE, message=FALSE}
 
@@ -965,6 +977,7 @@ bi_train <- bi_train %>%
 
 bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity")
 ```
+
 
 OOB (out of bag) prediction error is around 58%
     * This calculated from tree samples constructed but not used in training set; these trees become effectively part of test set

@@ -5,14 +5,12 @@
 
 
 
-* This is a first pass exploration of different aspects of beer 
-    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
-        * Outputs of a beer that define it well
-    * Ingredients in a beer such as hops and malts
-        * Inputs to a beer that have some effect on its flavor profile
-    * Glass type
-        * This is defined entirely by style and is very predictive of it
-* The main question on the table:
+This is a first pass exploration of different aspects of beer.
+
+* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
+    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
+
+* The main question on the table is this:
     * Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary?
       * Two approaches: clustering and prediction 
       * Clustering: are there natural clusters across the spectum of beers that align well with the styles they're grouped into? 
@@ -21,7 +19,6 @@
               * How well do these match up with various "style centers," defined by mean of ABV, IBU, and SRM per beer style
       * Prediction: can we predict a beer's style based on certain characteristics of the beer?
           * Neural net 
-            
           * Random forest
       
 * Answer thus far
@@ -50,69 +47,37 @@
 * Run a neural net
     * Predict either `style` or `style_collapsed` from all the predictors including the total number of hops and malts per beer
 
-* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
-    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
 
 
+**Short Aside**
 
+The question of what should be a predictor variable for style is a bit murky here. What should be fair game for predicting style and what shouldn't? Characteristics of a beer that are defined *by* its style would seem to be "cheating" in a way. 
 
-**Getting Beer**
-
-~ The age-old dilemma ~
-
-* The BreweryDB API returns a certain number of results per page; if we want 
-* So, we hit the BreweryDB API and ask for `1:number_of_pages`
-    * We can change `number_of_pages` to, e.g., 3 if we only want the first 3 pages
-    * If there's only one page (as is the case for the glassware endpoing), numberOfPages won't be returned, so in this case we set number_of_pages to 1
-* The `addition` parameter can be an empty string if nothing else is needed
-
-
-
-
-
-* Function for unnesting JSON used inside `paginated_request()` below
-    + Takes the column named `name` nested within a column in the data portion of the response
-        + If the `name` column doesn't exist, it takes the first nested column
-* We use something similar to unnest ingredient like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`
+* Main candidates are:
+    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
+        * These are outputs of a beer that meaningfully define the beer and are theoretically orthogonal to each other
+    * Ingredients in a beer such as hops and malts
+        * Inputs to a beer that have some effect on its flavor profile
+        * Semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added 
+    * Glass type
+        * This is defined entirely by style and is very predictive of it
 
 
 
 
 
-**Collapse Styles**
-
-* Save the most popular styles in `keywords`
-* Loop through each keyword
-    * For each beer, `grep` through its style column to see if it contains any one of these keywords
-    * If it does, give it that keyword in a new column `style_collapsed`
-* If a beer's name matches multiple keywords, e.g., American Double India Pale Ale would match Double India Pale Ale, India Pale Ale, and Pale Ale, its `style_collapsed` is the **last** of those that appear in keywords 
-    * This is why keywords are intentionally ordered from most general to most specific
-    * So in the case of an case of American Double India Pale Ale: since Double India Pale Ale appears in `keywords` after India Pale Ale and Pale Ale, an American Double India Pale Ale would get a `style_collapsed` of Double India Pale Ale
-* If no keyword is contained in `style`, `style_collapsed` is just whatever's in `style`; in other words, it doesn't get collpsed into a bigger bucket
-    * This isn't a huge problem because we'll pare down to just the most popular styles later, however we could think about creating a catchall "Other" level for `style_collapsed`
-
-
-
-* Then we collapse further; right now we just combine all wheaty bears into Wheat by `fct_collapse`ing those levels
-
-
-
-**Split out Ingredients**
-
-* When we unnested ingredients, we just concatenated all of the ingredients for a given beer into a long string
-* If we want, we can split out the ingredients that were concatenated in `<ingredient>_name` with this `split_ingredients` function
-* This takes a vector of `ingredients_to_split`, so e.g. `c("hops_name", "malt_name")` and creates one column for each type of ingredient (`hops_name_1`, `hops_name_2`, etc.)
-
-* We `str_split` on the ingredient and get a list back
-* We find the max number of instances of an ingredient per beer, which will be the number of columns we're adding
-* For each new column we need, we create it, initialize it with NAs, and name it
-* Then for each element in our list of split up ingredients, if it exists, we add it to the correct column in our df
 
 
 
 
 
-**Find the Most Popualar Styles**
+
+
+
+
+
+
+
 
 
 
@@ -169,7 +134,17 @@ Compare popular styles
   * Beers have to have an ABV between 3 and 20 and an IBU less than 200
   
   
-**Cluster**
+
+
+
+
+```r
+clustered_beer <- cluster_it(df = popular_beer_dat,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+```
 
 ```
 ## KMNS(*, k=10): iter=  1, indx=14
@@ -222,7 +197,6 @@ Compare popular styles
 ##  QTRAN(): istep=10197, icoun=1833
 ## KMNS(*, k=10): iter=  6, indx=3399
 ```
-
 
 Head of the clustering data
 
@@ -289,17 +263,17 @@ A table of cluster counts broken down by style
 
 Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
 
-![](compile_abbrev_files/figure-html/unnamed-chunk-10-1.png)<!-- -->![](compile_abbrev_files/figure-html/unnamed-chunk-10-2.png)<!-- -->
+![](compile_abbrev_files/figure-html/unnamed-chunk-11-1.png)<!-- -->![](compile_abbrev_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
 
 
 ### Certain selected styles
 
-![](compile_abbrev_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+![](compile_abbrev_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 
 ### Now add in the style centers (means) for collapsed styles
 
-![](compile_abbrev_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
+![](compile_abbrev_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 
 
@@ -309,51 +283,14 @@ Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a ti
 
 To get more granular with ingredients, we can split out each individual ingredient into its own column. If a beer or style contains that ingredient, its row gets a ` in that ingredient column and a 0 otherwise.
 
-* Join the clustered beer on our main `beer_necessities` dataframe 
-
-
-```
-## Joining, by = c("name", "style", "styleId", "style_collapsed", "abv", "ibu", "srm")
-```
-
-* This function takes a dataframe and two other parameters set at the outset:
-    * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
-    * `grouper`: can be a vector of one or more things to group by, like beer `name` or `style`
-    
-* We've already split ingredient number names out from the concatenated string into columns like `malt_name_1`, `malt_name_2`, etc., 
-
-* Now we need to find the range of these columns; there will be a different number of malt columns than hops columns, for instance
-    * The first one will be `<ingredient>_name_1` 
-        * From this we can find the index of this column in our dataframe
-    * We get the name of last one with the `get_last_ing_name_col()` function
-* Then we save a vector of all the ingredient column names in `ingredient_colnames`
-    * We make this variable global to the function because it will stay constant even if the indices change when we select out certain columns
-    
-* `to_keep_col_names` is a vector of all non-ingredient column names that we'll want to keep
-
-* Inside `gather_ingredients()` we:
-    * Take out superflous column names that are not in `to_keep_col_names` or one of the ingredient columns
-    * Find what the new ingredient column indices are, since they'll have changed after we pared down
-    * Actually do the gathering: lump all of the ingredient columns (e.g., `hops_name_1`) into one long column, `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`
-
-
-* Next we get a vector of all ingredient levels and take out the one that's an empty string
-* We'll use this vector of ingredient levels in `select_spread_cols()` below
-    
-* Then we spread the ingredient names 
-  * We take what was previously the `value` in our gathered dataframe, the actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names
-      * The new `value` is `value` is count; it'll populate the row cells
-          * If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise
-  * We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr))
-
-* Then we do the final step and group by the groupers
 
 
 
 
 
-* Now run the function with `ingredient_want` as first hops, then malt
-* Then join the resulting dataframes and remove/reorder some columns
+
+
+
 
 
 
@@ -408,7 +345,7 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 |Tripel         |   3| 60|   0|   1|  1|
 |Wheat          |   0|  9| 234|   5| 15|
 
-![](compile_abbrev_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](compile_abbrev_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
 
 
 
@@ -417,7 +354,7 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 **Do more hops always mean more bitterness?**
 
 * It would appear so, from this graph and this regression (beta = 2.394418)
-![](compile_abbrev_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+![](compile_abbrev_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
 
 ```
 ## 
@@ -441,7 +378,8 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 ```
 
 * However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
-![](compile_abbrev_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+
+![](compile_abbrev_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
 
 **Most popular hops**
@@ -473,7 +411,6 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 
 Are there certian hops that are used more often in very high IBU or ABV beers?
 Hard to detect a pattern
-![](compile_abbrev_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
 ![](compile_abbrev_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
 
@@ -485,9 +422,69 @@ Hard to detect a pattern
 * The predictor columns will be everything not specified in the vector `predictor_vars`
 
 
+```r
+library(nnet)
+library(caret)
+
+run_neural_net <- function(df, outcome, predictor_vars) {
+  out <- list(outcome = outcome)
+  
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  if (outcome == "style_collapsed") {
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
+
+  df$outcome <- factor(df$outcome)
+  
+  cols_to_keep <- c("outcome", predictor_vars)
+  
+  df <- df %>%
+    select_(.dots = cols_to_keep) %>%
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
+
+  # Select 80% of the data for training
+  df_train <- sample_n(df, nrow(df)*(0.8))
+  
+  # The rest is for testing
+  df_test <- df %>%
+    filter(! (row %in% df_train$row)) %>%
+    select(-row)
+  
+  df_train <- df_train %>%
+    select(-row)
+  
+  # Build multinomail neural net
+  nn <- multinom(outcome ~ .,
+                 data = df_train, maxit=500, trace=T)
+
+  # Which variables are the most important in the neural net?
+  most_important_vars <- varImp(nn)
+
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_accuracy <- postResample(df_test$outcome, nn_preds)
+
+  out <- list(out, nn = nn, most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
+           nn_accuracy = nn_accuracy)
+
+  return(out)
+}
+```
 
 * Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
 
+
+```r
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+
+nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+                         predictor_vars = p_vars)
+```
 
 ```
 ## # weights:  522 (476 variable)
@@ -524,9 +521,19 @@ Hard to detect a pattern
 ## converged
 ```
 
+```r
+# How accurate was it?
+nn_collapsed_out$nn_accuracy
+```
+
 ```
 ##  Accuracy     Kappa 
 ## 0.5000000 0.4588764
+```
+
+```r
+# What were the most important variables?
+nn_collapsed_out$most_important_vars
 ```
 
 ```
