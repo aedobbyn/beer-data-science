@@ -246,6 +246,15 @@ bi_rf
 
 importance(bi_rf)
 
+pred_bi_rf <- predict(bi_rf, dat = bi_test)
+table(bi_test$style_collapsed, pred_bi_rf$predictions)
+
+
+
+
+
+
+
 
 
 bi_csrf <- csrf(style_collapsed ~ ., training_data = bi_train, test_data = bi_test,
