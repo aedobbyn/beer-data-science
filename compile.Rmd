@@ -3,25 +3,29 @@ title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
 date: '`r format(Sys.time(), "%B %d, %Y")`'
-output:
-  html_notebook:
-    toc: false
-    theme: yeti
-  pdf_document:
-    toc: false
-  github_document:
-    toc: true
-    
 # output:
-#   html_document:
-#     keep_md: true
+#   html_notebook:
 #     toc: false
 #     theme: yeti
+#   pdf_document:
+#     keep_tex: true
+#     toc: false
 #   github_document:
 #     toc: true
+    
+output:
+  html_document:
+    keep_md: true
+    toc: false
+    theme: yeti
+  github_document:
+    toc: true
 ---
 
-
+```{r, eval=FALSE}
+# If need to close all connections
+lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
+```
 
 ```{r setup, include=FALSE}
 library(knitr)
@@ -672,6 +676,11 @@ Head of the clustering data
 kable(clustered_beer[1:20, ])
 ```
 
+Join the clustered beer on `beer_ingredients_join`
+```{r}
+beer_ingredients_join_clustered <- left_join(beer_ingredients_join, clustered_beer, 
+                                             by = "name")
+```
 
 
 A table of cluster counts broken down by style
@@ -970,10 +979,16 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 * Set the dataframe to be `beer_totals`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
 
-```{r, echo=TRUE, eval=TRUE}
+
+Take out NAs
+```{r}
+bt_omit <- beer_totals %>% na.omit()
+```
+
+```{r, echo=TRUE, eval=TRUE, error=TRUE}
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
-nn_collapsed_out <- run_neural_net(df = beer_totals, outcome = "style_collapsed", 
+nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 
 
@@ -988,9 +1003,9 @@ nn_collapsed_out$most_important_vars
 
 * What if we predcit `style` instead of `style_collapsed`?
 
-```{r, echo=TRUE}
+```{r, echo=TRUE, error=TRUE}
 
-nn_notcollapsed_out <- run_neural_net(df = beer_totals, outcome = "style", 
+nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
 nn_notcollapsed_out$nn_accuracy
@@ -1001,12 +1016,12 @@ nn_notcollapsed_out$most_important_vars
 
 
 And now if we add `glass` as a predictor?
-```{r, echo=TRUE}
+```{r, echo=TRUE, error=TRUE}
 
-p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
-                         predictor_vars = p_vars_no_glass)
+                         predictor_vars = p_vars_add_glass)
 
 nn_collapsed_out_add_glass$nn_accuracy
 
@@ -1020,7 +1035,7 @@ nn_collapsed_out_add_glass$most_important_vars
 ### Random forest with all ingredients
 
 * We can use a random forest to get even more granular with ingredients
-    * The sparse ingredient dataframe was too complex for the multinomial neural net; however, we can 
+    * The sparse ingredient dataframe was too complex for the multinomial neural net but the `ranger` package is built to handle sparse data like this
 
 * Here we don't include `glass` as a predictor
 
@@ -1030,9 +1045,11 @@ library(ranger)
 library(stringr)
 
 bi <- beer_ingredients_join %>% 
-  select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
+  select(-c(id, name, style, hops_name, malt_name,
+            # description,
             glass)) %>% 
-  mutate(row = 1:nrow(.)) 
+  mutate(row = 1:nrow(.)) %>% 
+  na.omit()
 
 bi$style_collapsed <- factor(bi$style_collapsed)
 
@@ -1051,8 +1068,8 @@ bi_test <- bi %>%
   dplyr::select(-row)
 
 bi_train <- bi_train %>%
-  dplyr::select(-row)
-
+  dplyr::select(-row) %>% 
+  select(-`#06300`)
 
 bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity", seed = 11)
 ```
@@ -1094,7 +1111,6 @@ csrf_acc
 ```
 
 
-![](./pour.jpg)
 
 
 
@@ -1116,6 +1132,8 @@ csrf_acc
 * More on the hops deep dive: which hops are used most often in which styles?
 
 
+
+![](./pour.jpg)
 
 
 

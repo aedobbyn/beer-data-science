@@ -2,6 +2,10 @@
 `r format(Sys.time(), "%B %d, %Y")`  
 
 
+```r
+# If need to close all connections
+lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
+```
 
 
 
@@ -335,300 +339,6 @@ Take a look at the table
 Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
 
 
-***
-
-### Unsupervised Clustering 
-We K-means cluster beers based on certain numeric predictor variables. 
-
-
-**Prep**
-
-* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it
-
-* Take out missing values, and scale the data
-* Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
-* Then cluster on just the predictors and compare to the response variable
-  
-
-
-```r
-library(NbClust)
-
-cluster_it <- function(df, preds, to_scale, resp, n_centers) {
-  df_for_clustering <- df %>%
-    select_(.dots = c(response_vars, cluster_on)) %>%
-    na.omit() %>%
-    filter(
-      abv < 20 & abv > 3
-    ) %>%
-    filter(
-      ibu < 200
-    )
-
-  df_all_preds <- df_for_clustering %>%
-    select_(.dots = preds)
-
-  df_preds_scale <- df_all_preds %>%
-    select_(.dots = to_scale) %>%
-    rename(
-      abv_scaled = abv,
-      ibu_scaled = ibu,
-      srm_scaled = srm
-    ) %>%
-    scale() %>%
-    as_tibble()
-
-  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
-
-  df_outcome <- df_for_clustering %>%
-    select_(.dots = resp) %>%
-    na.omit()
-
-  set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
-
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster),
-    df_outcome, df_preds,
-    df_for_clustering %>% select(abv, ibu, srm)))
-
-  return(clustered_df)
-}
-```
-
-
-
- 
-**Cluster**
-
-First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, and SRM.
-
-
-
-```r
-cluster_on <- c("abv", "ibu", "srm")
-to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "style_collapsed")
-
-clustered_beer <- cluster_it(df = popular_beer_dat,
-                             preds = cluster_on,
-                             to_scale = to_scale,
-                             resp = response_vars,
-                             n_centers = 10)
-```
-
-```
-## KMNS(*, k=10): iter=  1, indx=14
-##  QTRAN(): istep=3399, icoun=5
-##  QTRAN(): istep=6798, icoun=24
-##  QTRAN(): istep=10197, icoun=41
-##  QTRAN(): istep=13596, icoun=25
-##  QTRAN(): istep=16995, icoun=115
-##  QTRAN(): istep=20394, icoun=13
-##  QTRAN(): istep=23793, icoun=115
-##  QTRAN(): istep=27192, icoun=557
-##  QTRAN(): istep=30591, icoun=372
-##  QTRAN(): istep=33990, icoun=1417
-##  QTRAN(): istep=37389, icoun=2075
-##  QTRAN(): istep=40788, icoun=1810
-##  QTRAN(): istep=44187, icoun=300
-## KMNS(*, k=10): iter=  2, indx=0
-##  QTRAN(): istep=3399, icoun=14
-##  QTRAN(): istep=6798, icoun=18
-##  QTRAN(): istep=10197, icoun=297
-##  QTRAN(): istep=13596, icoun=307
-##  QTRAN(): istep=16995, icoun=647
-##  QTRAN(): istep=20394, icoun=195
-##  QTRAN(): istep=23793, icoun=634
-##  QTRAN(): istep=27192, icoun=520
-##  QTRAN(): istep=30591, icoun=2482
-## KMNS(*, k=10): iter=  3, indx=118
-##  QTRAN(): istep=3399, icoun=1
-##  QTRAN(): istep=6798, icoun=1
-##  QTRAN(): istep=10197, icoun=18
-##  QTRAN(): istep=13596, icoun=252
-##  QTRAN(): istep=16995, icoun=270
-##  QTRAN(): istep=20394, icoun=161
-##  QTRAN(): istep=23793, icoun=232
-##  QTRAN(): istep=27192, icoun=39
-##  QTRAN(): istep=30591, icoun=489
-##  QTRAN(): istep=33990, icoun=217
-##  QTRAN(): istep=37389, icoun=52
-##  QTRAN(): istep=40788, icoun=596
-##  QTRAN(): istep=44187, icoun=597
-##  QTRAN(): istep=47586, icoun=1130
-##  QTRAN(): istep=50985, icoun=1832
-## KMNS(*, k=10): iter=  4, indx=17
-##  QTRAN(): istep=3399, icoun=9
-##  QTRAN(): istep=6798, icoun=388
-##  QTRAN(): istep=10197, icoun=2244
-## KMNS(*, k=10): iter=  5, indx=374
-##  QTRAN(): istep=3399, icoun=2244
-##  QTRAN(): istep=6798, icoun=583
-##  QTRAN(): istep=10197, icoun=1833
-## KMNS(*, k=10): iter=  6, indx=3399
-```
-
-
-Head of the clustering data
-
-|cluster_assignment |name                                                         |style                                              |style_collapsed       | abv_scaled| ibu_scaled| srm_scaled| abv|  ibu| srm|
-|:------------------|:------------------------------------------------------------|:--------------------------------------------------|:---------------------|----------:|----------:|----------:|---:|----:|---:|
-|3                  |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter                | -0.6113116|  0.3483405|  2.5598503| 5.4| 51.0|  40|
-|2                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale              | -0.3851131|  0.3483405| -0.5138012| 5.8| 51.0|   8|
-|2                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale              | -0.6113116|  0.4631499| -0.2256464| 5.4| 54.0|  11|
-|6                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | -0.4982124| -0.5242109| -0.8019561| 5.6| 28.2|   5|
-|6                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde                | -0.8940598| -0.8380232| -0.8019561| 4.9| 20.0|   5|
-|6                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | -0.7809605| -1.1824514| -0.8980077| 5.1| 11.0|   4|
-|6                  |#9                                                           |American-Style Pale Ale                            |Pale Ale              | -0.7809605| -0.8380232| -0.4177496| 5.1| 20.0|   9|
-|6                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | -0.9506094| -0.5701346| -0.9940593| 4.8| 27.0|   3|
-|6                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager                 | -0.6678613| -0.9145628| -0.8019561| 5.3| 18.0|   5|
-|2                  |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison                |  0.2934824| -0.4553252| -0.6098528| 7.0| 30.0|   7|
-|6                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | -0.8375102| -0.8380232| -0.4177496| 5.0| 20.0|   9|
-|4                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown                 |  0.6327802| -0.4553252|  0.7348697| 7.6| 30.0|  21|
-|1                  |(512) FOUR                                                   |Strong Ale                                         |Strong Ale            |  0.5762306| -0.2639763| -0.5138012| 7.5| 35.0|   8|
-|5                  |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale        |  0.2934824|  0.8841177| -0.5138012| 7.0| 65.0|   8|
-|2                  |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale              | -0.2720139| -0.4553252| -0.6098528| 6.0| 30.0|   7|
-|9                  |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel                |  0.5762306| -0.6466742|  1.4072310| 7.5| 25.0|  28|
-|1                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel                |  1.7072231| -0.7614836| -0.3216980| 9.5| 22.0|  10|
-|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel                |  1.7072231| -0.7614836|  2.5598503| 9.5| 22.0|  40|
-|7                  |(512) TWO                                                    |Imperial or Double India Pale Ale                  |Double India Pale Ale |  1.4244750|  2.1852908| -0.4177496| 9.0| 99.0|   9|
-|2                  |(512) White IPA                                              |American-Style India Pale Ale                      |India Pale Ale        | -0.6678613|  0.5014197| -0.8980077| 5.3| 55.0|   4|
-
-
-
-A table of cluster counts broken down by style
-
-|                         |  1|   2|   3|   4|   5|   6|   7|  8|  9| 10|
-|:------------------------|--:|---:|---:|---:|---:|---:|---:|--:|--:|--:|
-|Barley Wine              |  7|   0|   0|   0|   2|   0|  19| 15|  2|  0|
-|Barrel-Aged              |  5|   3|   2|   4|   1|   2|   1|  1|  4|  0|
-|Bitter                   |  1|  28|   0|  25|   2|  13|   0|  0|  0|  1|
-|Black                    |  0|   0|   4|   1|   0|   0|   0|  0|  2| 36|
-|Blonde                   | 21|  18|   1|   3|   1| 115|   0|  0|  1|  0|
-|Brown                    |  1|   1|  20|  68|   2|   7|   1|  1|  6|  3|
-|Double India Pale Ale    |  5|   0|   0|   0|  38|   0| 174|  6|  0|  9|
-|Dubbel                   |  8|   0|   1|  14|   1|   0|   0|  0| 16|  1|
-|Fruit Beer               |  5|   2|   2|   6|   4|  36|   0|  1|  0|  0|
-|Fruit Cider              |  0|   0|   0|   0|   0|   1|   0|  0|  0|  0|
-|German-Style Doppelbock  |  7|   0|   1|   4|   0|   0|   0|  0| 16|  1|
-|German-Style Märzen      |  0|   2|   1|  15|   0|  12|   0|  0|  0|  0|
-|Herb and Spice Beer      |  5|   4|   8|  11|   6|  13|   0|  1|  6|  1|
-|India Pale Ale           |  2|  93|   1|   6| 397|   6|  27|  0|  0| 26|
-|Kölsch                   |  0|   3|   0|   1|   1|  67|   0|  0|  0|  0|
-|Lager                    |  5|  21|   3|  17|  20|  90|   2|  0|  0|  4|
-|Other Belgian-Style Ales |  6|   5|   4|   7|   8|   3|   1|  0|  4|  1|
-|Pale Ale                 | 11| 221|   1|  30|  32|  50|   0|  0|  1|  3|
-|Pilsener                 |  1|  39|   0|   1|   3|  46|   1|  0|  0|  1|
-|Porter                   |  0|   1| 102|  29|   0|   0|   0|  0| 11|  3|
-|Pumpkin Beer             |  9|   3|   5|  18|   0|   7|   0|  0|  4|  0|
-|Red                      |  2|  36|  14| 127|  10|  29|   3|  0|  1|  6|
-|Saison                   | 35|  44|   2|   6|   2|  48|   0|  0|  2|  0|
-|Scotch Ale               |  7|   1|   4|   9|   0|   0|   0|  0| 12|  0|
-|Sour                     |  1|   4|   1|   2|   1|  17|   0|  0|  2|  0|
-|Specialty Beer           | 11|   5|   8|  13|   5|  15|   1|  0|  6|  1|
-|Stout                    |  2|   3|  91|   2|   0|   1|   0| 24| 22| 19|
-|Strong Ale               | 21|   0|   2|   2|   0|   0|   4|  4| 22|  2|
-|Tripel                   | 59|   1|   0|   0|   0|   0|   2|  0|  2|  1|
-|Wheat                    |  9|  14|   0|   6|   4| 228|   0|  0|  0|  0|
-
-
-Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
-
-
-```r
-clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
-  geom_jitter() + theme_minimal()  +
-  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster Assignment")
-clustered_beer_plot_abv_ibu
-```
-
-![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
-
-```r
-clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
-  geom_jitter() + theme_minimal()  +
-  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "SRM") +
-  labs(colour = "Cluster Assignment")
-clustered_beer_plot_abv_srm
-```
-
-![](compile_files/figure-html/unnamed-chunk-12-2.png)<!-- -->
-
-
-
-Now we can add in the style centers (means) for each `style_collapsed` and label it.
-
-
-```r
-library(ggrepel)
-abv_ibu_clusters_vs_style_centers <- ggplot() +   
-  geom_point(data = clustered_beer, 
-             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-  geom_point(data = style_centers,
-             aes(mean_abv, mean_ibu), colour = "black") +
-  geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
-                  box.padding = unit(0.45, "lines"),
-                  family = "Calibri",
-                  label.size = 0.3) +
-  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster Assignment") +
-  theme_bw()
-abv_ibu_clusters_vs_style_centers
-```
-
-![](compile_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
-
-
-The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
-
-
-
-**Cluster on just certain selected styles**
-
-We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
-
-
-
-```r
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-clustered_beer_certain_styles <- clustered_beer %>% 
-  filter(
-   style_collapsed %in% styles_to_keep 
-  )
-
-style_centers_certain_styles <- style_centers %>% 
-  filter(
-    style_collapsed %in% styles_to_keep 
-  )
-```
-
-
-Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
-
-
-```r
-by_style_plot <- ggplot() +   
-  geom_point(data = clustered_beer_certain_styles, 
-             aes(x = abv, y = ibu,
-                 colour = cluster_assignment), alpha = 0.5) +
-  facet_grid(. ~ style_collapsed) +
-  geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
-  ggtitle("Selected Styles Cluster Assignment") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster") +
-  theme_bw()
-by_style_plot
-```
-
-![](compile_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
-
 
 
 ***
@@ -639,17 +349,14 @@ To get more granular with ingredients, we can split out each individual ingredie
 
 From this, we can find the total number of hops and malts per grouper.
 
-* The dataframe we'll use will be `clustered_beer`, which contains each beer's cluster assignment, joined on our main `beer_necessities` dataframe 
+* The dataframe we'll use will be `beer_necessities`
 
 
-```r
-clustered_beer_necessities <- clustered_beer %>% 
-  inner_join(beer_necessities)
-```
+<!-- ```{r, eval=TRUE, echo=TRUE} -->
+<!-- clustered_beer_necessities <- clustered_beer %>% -->
+<!--   inner_join(beer_necessities) -->
 
-```
-## Joining, by = c("name", "style", "style_collapsed", "abv", "ibu", "srm")
-```
+<!-- ``` -->
 
 * This function takes a dataframe and two other parameters set at the outset:
     * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
@@ -669,7 +376,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   # First ingredient
   first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
-  first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
+  first_ingredient_index <- which(colnames(df)==first_ingredient_name)
   
   # Get the last ingredient
   get_last_ing_name_col <- function(df) {
@@ -682,11 +389,11 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   }
   
   # Last ingredient
-  last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
-  last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
+  last_ingredient_name <- get_last_ing_name_col(df)
+  last_ingredient_index <- which(colnames(df)==last_ingredient_name)
   
   # Vector of all the ingredient column names
-  ingredient_colnames <- names(clustered_beer_necessities)[first_ingredient_index:last_ingredient_index]
+  ingredient_colnames <- names(df)[first_ingredient_index:last_ingredient_index]
   
   # Non-ingredient column names we want to keep
   to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
@@ -717,7 +424,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
       )
     df_gathered
   }
-  beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
+  beer_gathered <- gather_ingredients(df, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 
   
   # Next we get a vector of all ingredient levels and take out the one that's an empty string and 
@@ -829,16 +536,16 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 ```r
 # Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
-                                                      clustered_beer_necessities, 
+                                                      beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
 # Same for malt
 ingredients_per_beer_malt <- pick_ingredient_get_beer(ingredient_want = "malt", 
-                                                      clustered_beer_necessities, 
+                                                      beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
 # Join those on our original dataframe by name
-beer_ingredients_join_first_ingredient <- left_join(clustered_beer_necessities, ingredients_per_beer_hops,
+beer_ingredients_join_first_ingredient <- left_join(beer_necessities, ingredients_per_beer_hops,
                                                     by = "name")
 beer_ingredients_join <- left_join(beer_ingredients_join_first_ingredient, ingredients_per_beer_malt,
                                    by = "name")
@@ -860,58 +567,380 @@ beer_ingredients_join <- beer_ingredients_join %>%
   select(
     id, name, total_hops, total_malt, everything(), -description
   )
+
+# And get a df that includes total_hops and total_malt but not all the other ingredient columns
+beer_totals <- beer_ingredients_join %>% 
+  select(
+    id, name, total_hops, total_malt, style, style_collapsed,
+    abv, ibu, srm, glass, hops_name, malt_name
+  )
 ```
 
 
 
 Now we're left with something of a sparse matrix of all the ingredients compared to all the beers
 
-|id     |name                                                         | total_hops| total_malt|cluster_assignment |style                                              |style_collapsed       | abv|  ibu| srm|glass   |hops_name                                      |malt_name                                                                      | Aged / Debittered Hops (Lambic)| Ahtanum| Alchemy| Amarillo| Apollo| Aramis| Azacca| Bravo| Brewer's Gold| Calypso| Cascade| Celeia| Centennial| Challenger| Chinook| Citra| Cluster| Columbus| Comet| Crystal| CTZ| East Kent Golding| El Dorado| Falconer's Flight| Fuggle (American)| Fuggle (English)| Fuggles| Galaxy| Galena| German Magnum| German Mandarina Bavaria| German Perle| German Polaris| German Tradition| Glacier| Golding (American)| Green Bullet| Hallertau Hallertauer Tradition| Hallertau Northern Brewer| Hallertauer (American)| Hallertauer Hersbrucker| Hops| Horizon| Jarrylo| Kent Goldings| Lemon Drop| Liberty| Magnum| Marynka| Mosaic| Motueka| Mount Hood| Nelson Sauvin| New Zealand Motueka| Northdown| Northern Brewer (American)| Nugget| Orbit| Pacific Jade| Pacifica| Palisades| Perle (American)| Phoenix| Saaz (American)| Saaz (Czech)| Saphir (German Organic)| Simcoe| Sorachi Ace| Southern Cross| Spalt| Spalt Select| Spalt Spalter| Sterling| Strisselspalt| Styrian Goldings| Summit| Target| Tettnang Tettnanger| Tettnanger (American)| Topaz| Tradition| Ultra| Warrior| Willamette| Zeus| Zythos| Abbey Malt| Acidulated Malt| Amber Malt| Aromatic Malt| Asheburne Mild Malt| Barley - Flaked| Barley - Malted| Barley - Roasted| Biscuit Malt| Black Malt| Black Malt - Debittered| Black Patent| Bonlander| Brown Malt| Brown Sugar| Cane Sugar| CaraAmber| Carafa I| Carafa II| Carafa III| CaraFoam| CaraHell| Caramel/Crystal Malt| Caramel/Crystal Malt - Dark| Caramel/Crystal Malt - Heritage| Caramel/Crystal Malt - Light| Caramel/Crystal Malt - Medium| Caramel/Crystal Malt - Organic| Caramel/Crystal Malt 10L| Caramel/Crystal Malt 120L| Caramel/Crystal Malt 150L| Caramel/Crystal Malt 15L| Caramel/Crystal Malt 20L| Caramel/Crystal Malt 300L| Caramel/Crystal Malt 30L| Caramel/Crystal Malt 40L| Caramel/Crystal Malt 45L| Caramel/Crystal Malt 50L| Caramel/Crystal Malt 55L| Caramel/Crystal Malt 60L| Caramel/Crystal Malt 75L| Caramel/Crystal Malt 80L| CaraMunich| CaraMunich II| CaraMunich III| CaraPils/Dextrin Malt| CaraRed| CaraStan| CaraVienne Malt| Carolina Rye Malt| Cherrywood Smoke Malt| Chocolate Malt| Corn - Flaked| Corn Grits| Crisp 77| Crystal 77| Extra Special Malt| Gladfield Pale| Golden Promise| Harrington 2-Row Base Malt| Honey| Honey Malt| Malted Rye| Maris Otter| Melanoidin Malt| Midnight Wheat| Mild Malt| Munich Malt| Munich Malt - Organic| Munich Malt - Type I| Munich Malt - Type II| Munich Malt 20L| Munich Malt 40L| Munich Wheat| Oats - Flaked| Oats - Malted| Oats - Rolled| Oats - Steel Cut (Pinhead Oats)| Pale Chocolate Malt| Pale Malt| Pale Malt - Organic| Palev| Pilsner Malt| Rahr 2-Row Malt| Rahr Special Pale| Rice - Hulls| Roast Malt| Rye - Flaked| Rye Malt| Samuel Adams two-row pale malt blend| Six-Row Pale Malt| Smoked Malt| Special B Malt| Special Roast| Sugar (Albion)| Two-Row Barley Malt| Two-Row Pale Malt| Two-Row Pale Malt - Organic| Two-Row Pale Malt - Toasted| Two-Row Pilsner Malt| Victory Malt| Vienna Malt| Wheat - Flaked| Wheat - Raw| Wheat - Red| Wheat - Torrified| Wheat Malt| Wheat Malt - White| White Wheat| Wyermann Vienna|
-|:------|:------------------------------------------------------------|----------:|----------:|:------------------|:--------------------------------------------------|:---------------------|---:|----:|---:|:-------|:----------------------------------------------|:------------------------------------------------------------------------------|-------------------------------:|-------:|-------:|--------:|------:|------:|------:|-----:|-------------:|-------:|-------:|------:|----------:|----------:|-------:|-----:|-------:|--------:|-----:|-------:|---:|-----------------:|---------:|-----------------:|-----------------:|----------------:|-------:|------:|------:|-------------:|------------------------:|------------:|--------------:|----------------:|-------:|------------------:|------------:|-------------------------------:|-------------------------:|----------------------:|-----------------------:|----:|-------:|-------:|-------------:|----------:|-------:|------:|-------:|------:|-------:|----------:|-------------:|-------------------:|---------:|--------------------------:|------:|-----:|------------:|--------:|---------:|----------------:|-------:|---------------:|------------:|-----------------------:|------:|-----------:|--------------:|-----:|------------:|-------------:|--------:|-------------:|----------------:|------:|------:|-------------------:|---------------------:|-----:|---------:|-----:|-------:|----------:|----:|------:|----------:|---------------:|----------:|-------------:|-------------------:|---------------:|---------------:|----------------:|------------:|----------:|-----------------------:|------------:|---------:|----------:|-----------:|----------:|---------:|--------:|---------:|----------:|--------:|--------:|--------------------:|---------------------------:|-------------------------------:|----------------------------:|-----------------------------:|------------------------------:|------------------------:|-------------------------:|-------------------------:|------------------------:|------------------------:|-------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|----------:|-------------:|--------------:|---------------------:|-------:|--------:|---------------:|-----------------:|---------------------:|--------------:|-------------:|----------:|--------:|----------:|------------------:|--------------:|--------------:|--------------------------:|-----:|----------:|----------:|-----------:|---------------:|--------------:|---------:|-----------:|---------------------:|--------------------:|---------------------:|---------------:|---------------:|------------:|-------------:|-------------:|-------------:|-------------------------------:|-------------------:|---------:|-------------------:|-----:|------------:|---------------:|-----------------:|------------:|----------:|------------:|--------:|------------------------------------:|-----------------:|-----------:|--------------:|-------------:|--------------:|-------------------:|-----------------:|---------------------------:|---------------------------:|--------------------:|------------:|-----------:|--------------:|-----------:|-----------:|-----------------:|----------:|------------------:|-----------:|---------------:|
-|b7SfHG |"Ah Me Joy" Porter                                           |          0|          0|3                  |Robust Porter                                      |Porter                | 5.4| 51.0|  40|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|PBEXhV |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |          0|          0|2                  |American-Style Pale Ale                            |Pale Ale              | 5.8| 51.0|   8|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|AXmvOd |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |          0|          0|2                  |American-Style Pale Ale                            |Pale Ale              | 5.4| 54.0|  11|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|Hr5A0t |"God Country" Kolsch                                         |          0|          0|6                  |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 5.6| 28.2|   5|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|mrVjY4 |"Jemez Field Notes" Golden Lager                             |          0|          0|6                  |Golden or Blonde Ale                               |Blonde                | 4.9| 20.0|   5|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|xFM8w5 |#10 Hefewiezen                                               |          0|          0|6                  |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | 5.1| 11.0|   4|Pint    |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|hB0QeO |#9                                                           |          1|          2|6                  |American-Style Pale Ale                            |Pale Ale              | 5.1| 20.0|   9|Pint    |Apollo, Cascade                                |Caramel/Crystal Malt, Pale Malt                                                |                               0|       0|       0|        0|      1|      0|      0|     0|             0|       0|       1|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         1|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|m8f62Y |#KoLSCH                                                      |          0|          0|6                  |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 4.8| 27.0|   3|Pilsner |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|35lHUq |'Inappropriate' Cream Ale                                    |          0|          0|6                  |American-Style Cream Ale or Lager                  |Lager                 | 5.3| 18.0|   5|Pint    |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|qbRV90 |'tis the Saison                                              |          0|          0|2                  |French & Belgian-Style Saison                      |Saison                | 7.0| 30.0|   7|Pint    |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|qhaIVA |(306) URBAN WHEAT BEER                                       |          0|          0|6                  |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | 5.0| 20.0|   9|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|VwR7Xg |(512) Bruin (A.K.A. Brown Bear)                              |          1|          4|4                  |American-Style Brown Ale                           |Brown                 | 7.6| 30.0|  21|Pint    |Fuggle (American)                              |Caramel/Crystal Malt, Chocolate Malt, Munich Malt, Two-Row Pale Malt - Organic |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 1|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              1|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           1|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           1|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|oJFZwK |(512) FOUR                                                   |          3|          4|1                  |Strong Ale                                         |Strong Ale            | 7.5| 35.0|   8|Pint    |East Kent Golding, Fuggle (English), Northdown |Caramel/Crystal Malt, Chocolate Malt, Maris Otter, Wheat Malt                  |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 1|         0|                 0|                 0|                1|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         1|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              1|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           1|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          1|                  0|           0|               0|
-|ezGh5N |(512) IPA                                                    |          3|          3|5                  |American-Style India Pale Ale                      |India Pale Ale        | 7.0| 65.0|   8|Pint    |Columbus, Glacier, Simcoe                      |Caramel/Crystal Malt, Two-Row Pale Malt - Organic, Wheat Malt                  |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        1|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       1|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      1|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           1|                           0|                    0|            0|           0|              0|           0|           0|                 0|          1|                  0|           0|               0|
-|2fXsvw |(512) Pale                                                   |          2|          3|2                  |American-Style Pale Ale                            |Pale Ale              | 6.0| 30.0|   7|Pint    |Amarillo, Mosaic, Nugget                       |Caramel/Crystal Malt, Two-Row Pale Malt - Organic, Wheat Malt                  |                               0|       0|       0|        1|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      1|       0|          0|             0|                   0|         0|                          0|      1|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           1|                           0|                    0|            0|           0|              0|           0|           0|                 0|          1|                  0|           0|               0|
-|9O3QPg |(512) SIX                                                    |          2|          3|9                  |Belgian-Style Dubbel                               |Dubbel                | 7.5| 25.0|  28|Tulip   |Northdown, Saaz (American)                     |CaraMunich II, Pale Malt - Organic, Special B Malt                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         1|                          0|      0|     0|            0|        0|         0|                0|       0|               1|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             1|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   1|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              1|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|A78JSF |(512) THREE                                                  |          1|          3|1                  |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  10|Pint    |Golding (American)                             |Oats - Malted, Pilsner Malt, Wheat Malt                                        |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  1|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             1|             0|                               0|                   0|         0|                   0|     0|            1|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          1|                  0|           0|               0|
-|WKSYBT |(512) THREE (Cabernet Barrel Aged)                           |          0|          0|9                  |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  40|NA      |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
-|X4KcGF |(512) TWO                                                    |          5|          3|7                  |Imperial or Double India Pale Ale                  |Double India Pale Ale | 9.0| 99.0|   9|Pint    |Columbus, Glacier, Horizon, Nugget, Simcoe     |Caramel/Crystal Malt, Two-Row Pale Malt - Organic, Wheat Malt                  |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        1|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       1|                  0|            0|                               0|                         0|                      0|                       0|    0|       1|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      1|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      1|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    1|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           1|                           0|                    0|            0|           0|              0|           0|           0|                 0|          1|                  0|           0|               0|
-|bXwskR |(512) White IPA                                              |          0|          0|2                  |American-Style India Pale Ale                      |India Pale Ale        | 5.3| 55.0|   4|Pint    |NA                                             |NA                                                                             |                               0|       0|       0|        0|      0|      0|      0|     0|             0|       0|       0|      0|          0|          0|       0|     0|       0|        0|     0|       0|   0|                 0|         0|                 0|                 0|                0|       0|      0|      0|             0|                        0|            0|              0|                0|       0|                  0|            0|                               0|                         0|                      0|                       0|    0|       0|       0|             0|          0|       0|      0|       0|      0|       0|          0|             0|                   0|         0|                          0|      0|     0|            0|        0|         0|                0|       0|               0|            0|                       0|      0|           0|              0|     0|            0|             0|        0|             0|                0|      0|      0|                   0|                     0|     0|         0|     0|       0|          0|    0|      0|          0|               0|          0|             0|                   0|               0|               0|                0|            0|          0|                       0|            0|         0|          0|           0|          0|         0|        0|         0|          0|        0|        0|                    0|                           0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|          0|             0|              0|                     0|       0|        0|               0|                 0|                     0|              0|             0|          0|        0|          0|                  0|              0|              0|                          0|     0|          0|          0|           0|               0|              0|         0|           0|                     0|                    0|                     0|               0|               0|            0|             0|             0|             0|                               0|                   0|         0|                   0|     0|            0|               0|                 0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|                   0|                 0|                           0|                           0|                    0|            0|           0|              0|           0|           0|                 0|          0|                  0|           0|               0|
+|id     |name                                                         | total_hops| total_malt|style                                   |   abv|  ibu| srm|glass |hops_name                         |malt_name                                                   |style_collapsed | #06300| Admiral| Aged / Debittered Hops (Lambic)| Ahtanum| Alchemy| Amarillo| Amarillo Gold| Apollo| Aquila| Aramis| Argentine Cascade| Athanum| Aurora| Australian Dr. Rudi| Azacca| Azzeca| Belma| Bobek| Bramling Cross| Bravo| Brewer's Gold| Brewer's Gold (American)| Calypso| Cascade| Celeia| Centennial| Challenger| Chinook| Citra| Cluster| Cobb| Columbus| Columbus (Tomahawk)| Comet| Crystal| CTZ| Delta| East Kent Golding| El Dorado| Ella| Enigma| Equinox| Eureka| Experimental 05256| Experimental 06277| Falconer's Flight| First Gold| French Strisserspalt| French Triskel| Fuggle (American)| Fuggle (English)| Fuggles| Galaxy| Galena| German Magnum| German Mandarina Bavaria| German Opal| German Perle| German Polaris| German Select| German Tradition| Glacier| Golding (American)| Green Bullet| Hallertau Hallertauer Mittelfrüher| Hallertau Hallertauer Tradition| Hallertau Northern Brewer| Hallertauer (American)| Hallertauer Herkules| Hallertauer Hersbrucker| Hallertauer Perle| Hallertauer Select| Helga| Hop Extract| Hops| Horizon| Huell Melon| Idaho 7| Jarrylo| Kent Goldings| Kohatu| Lemon Drop| Liberty| Magnum| Marynka| Meridian| Millenium| Mosaic| Motueka| Mount Hood| Mt. Rainier| Nelson Sauvin| New Zealand Hallertauer| New Zealand Motueka| New Zealand Sauvin| Newport| Noble| Northdown| Northern Brewer (American)| Nugget| Orbit| Pacific Gem| Pacific Jade| Pacifica| Palisades| Perle (American)| Phoenix| Pilgrim| Premiant| Pride of Ringwood| Rakau| Revolution| Saaz (American)| Saaz (Czech)| Santiam| Saphir (German Organic)| Simcoe| Sladek (Saaz)| Sorachi Ace| Southern Cross| Sovereign| Spalt| Spalt Select| Spalt Spalter| Sterling| Sticklebract| Strisselspalt| Styrian Aurora| Styrian Bobeks| Styrian Goldings| Summit| Super Galena| Target| Tettnang Tettnanger| Tettnanger (American)| Tomahawk| Topaz| Tradition| Ultra| Vanguard| Vic Secret| Waimea| Wakatu| Warrior| Willamette| Yakima Willamette| Zeus| Zythos| Abbey Malt| Acidulated Malt| Amber Malt| Aromatic Malt| Asheburne Mild Malt| Bamberg Smoked Malt| Barley - Black| Barley - Flaked| Barley - Lightly Roasted| Barley - Malted| Barley - Raw| Barley - Roasted| Barley - Roasted/De-husked| Beechwood Smoked| Belgian Pale| Belgian Pilsner| Biscuit Malt| Black Malt| Black Malt - Debittered| Black Malt - Organic| Black Patent| Black Roast| Blackprinz Malt| Blue Agave Nectar| Blue Corn| Bonlander| Briess 2-row Chocolate Malt| Briess Blackprinz Malt| British Pale Malt| Brown Malt| Brown Sugar| Buckwheat - Roasted| C-15| Canada 2-Row Silo| Cane Sugar| Cara Malt| CaraAmber| CaraAroma| CaraBrown| Carafa I| Carafa II| Carafa III| Carafa Special| CaraFoam| CaraHell| Caramel/Crystal Malt| Caramel/Crystal Malt - Dark| Caramel/Crystal Malt - Extra Dark| Caramel/Crystal Malt - Heritage| Caramel/Crystal Malt - Light| Caramel/Crystal Malt - Medium| Caramel/Crystal Malt - Organic| Caramel/Crystal Malt 10L| Caramel/Crystal Malt 120L| Caramel/Crystal Malt 150L| Caramel/Crystal Malt 15L| Caramel/Crystal Malt 20L| Caramel/Crystal Malt 300L| Caramel/Crystal Malt 30L| Caramel/Crystal Malt 40L| Caramel/Crystal Malt 45L| Caramel/Crystal Malt 50L| Caramel/Crystal Malt 55L| Caramel/Crystal Malt 60L| Caramel/Crystal Malt 70L| Caramel/Crystal Malt 75L| Caramel/Crystal Malt 80L| Caramel/Crystal Malt 85L| Caramel/Crystal Malt 8L| Caramel/Crystal Malt 90L| CaraMunich| CaraMunich 120L| CaraMunich 20L| CaraMunich 40L| CaraMunich 60L| CaraMunich I| CaraMunich II| CaraMunich III| CaraPils/Dextrin Malt| CaraRed| CaraRye| CaraStan| CaraVienne Malt| CaraWheat| Carolina Rye Malt| Cereal| Cherry Smoked| Cherrywood Smoke Malt| Chit Malt| Chocolate Malt| Chocolate Rye Malt| Chocolate Wheat Malt| Coffee Malt| Corn| Corn - Field| Corn - Flaked| Corn Grits| Crisp 120| Crisp 77| Crystal 77| Dark Chocolate| Dememera Sugar| Dextrin Malt| Dextrose Syrup| Extra Special Malt| Fawcett Crystal Rye| Fawcett Rye| German Cologne| Gladfield Pale| Glen Eagle Maris Otter| Golden Promise| Harrington 2-Row Base Malt| High Fructose Corn Syrup| Honey| Honey Malt| Hugh Baird Pale Ale Malt| Kiln Amber| Lactose| Lager Malt| Malt Extract| Malted Rye| Malto Franco-Belge Pils Malt| Maple Syrup| Maris Otter| Melanoidin Malt| Metcalfe| Midnight Wheat| Mild Malt| Millet| Munich Malt| Munich Malt - Dark| Munich Malt - Light| Munich Malt - Organic| Munich Malt - Smoked| Munich Malt - Type I| Munich Malt - Type II| Munich Malt 10L| Munich Malt 20L| Munich Malt 40L| Munich Wheat| Oats - Flaked| Oats - Golden Naked| Oats - Malted| Oats - Rolled| Oats - Steel Cut (Pinhead Oats)| Oats - Toasted| Pale Chocolate Malt| Pale Malt| Pale Malt - Halcyon| Pale Malt - Optic| Pale Malt - Organic| Pale Wheat| Palev| Pearl Malt| Peated Malt - Smoked| Piloncillo| Pilsner Malt| Pilsner Malt - Organic| Rahr 2-Row Malt| Rahr Special Pale| Rauchmalz| Rice| Rice - Flaked| Rice - Hulls| Rice - Red| Rice - White| Roast Malt| Rye - Flaked| Rye Malt| Samuel Adams two-row pale malt blend| Six-Row Pale Malt| Smoked Malt| Special B Malt| Special Roast| Special W Malt| Spelt Malt| Sugar (Albion)| Toasted Malt| Torrefied Wheat| Two-Row Barley Malt| Two-Row Pale Malt| Two-Row Pale Malt - Organic| Two-Row Pale Malt - Toasted| Two-Row Pilsner Malt| Two-Row Pilsner Malt - Belgian| Two-Row Pilsner Malt - Germany| Victory Malt| Vienna Malt| Weyermann Rye| Wheat - Flaked| Wheat - Raw| Wheat - Red| Wheat - Toasted| Wheat - Torrified| Wheat Malt| Wheat Malt - Dark| Wheat Malt - German| Wheat Malt - Light| Wheat Malt - Organic| Wheat Malt - Red| Wheat Malt - Smoked| Wheat Malt - White| White Wheat| Wyermann Vienna|
+|:------|:------------------------------------------------------------|----------:|----------:|:---------------------------------------|-----:|----:|---:|:-----|:---------------------------------|:-----------------------------------------------------------|:---------------|------:|-------:|-------------------------------:|-------:|-------:|--------:|-------------:|------:|------:|------:|-----------------:|-------:|------:|-------------------:|------:|------:|-----:|-----:|--------------:|-----:|-------------:|------------------------:|-------:|-------:|------:|----------:|----------:|-------:|-----:|-------:|----:|--------:|-------------------:|-----:|-------:|---:|-----:|-----------------:|---------:|----:|------:|-------:|------:|------------------:|------------------:|-----------------:|----------:|--------------------:|--------------:|-----------------:|----------------:|-------:|------:|------:|-------------:|------------------------:|-----------:|------------:|--------------:|-------------:|----------------:|-------:|------------------:|------------:|----------------------------------:|-------------------------------:|-------------------------:|----------------------:|--------------------:|-----------------------:|-----------------:|------------------:|-----:|-----------:|----:|-------:|-----------:|-------:|-------:|-------------:|------:|----------:|-------:|------:|-------:|--------:|---------:|------:|-------:|----------:|-----------:|-------------:|-----------------------:|-------------------:|------------------:|-------:|-----:|---------:|--------------------------:|------:|-----:|-----------:|------------:|--------:|---------:|----------------:|-------:|-------:|--------:|-----------------:|-----:|----------:|---------------:|------------:|-------:|-----------------------:|------:|-------------:|-----------:|--------------:|---------:|-----:|------------:|-------------:|--------:|------------:|-------------:|--------------:|--------------:|----------------:|------:|------------:|------:|-------------------:|---------------------:|--------:|-----:|---------:|-----:|--------:|----------:|------:|------:|-------:|----------:|-----------------:|----:|------:|----------:|---------------:|----------:|-------------:|-------------------:|-------------------:|--------------:|---------------:|------------------------:|---------------:|------------:|----------------:|--------------------------:|----------------:|------------:|---------------:|------------:|----------:|-----------------------:|--------------------:|------------:|-----------:|---------------:|-----------------:|---------:|---------:|---------------------------:|----------------------:|-----------------:|----------:|-----------:|-------------------:|----:|-----------------:|----------:|---------:|---------:|---------:|---------:|--------:|---------:|----------:|--------------:|--------:|--------:|--------------------:|---------------------------:|---------------------------------:|-------------------------------:|----------------------------:|-----------------------------:|------------------------------:|------------------------:|-------------------------:|-------------------------:|------------------------:|------------------------:|-------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|------------------------:|-----------------------:|------------------------:|----------:|---------------:|--------------:|--------------:|--------------:|------------:|-------------:|--------------:|---------------------:|-------:|-------:|--------:|---------------:|---------:|-----------------:|------:|-------------:|---------------------:|---------:|--------------:|------------------:|--------------------:|-----------:|----:|------------:|-------------:|----------:|---------:|--------:|----------:|--------------:|--------------:|------------:|--------------:|------------------:|-------------------:|-----------:|--------------:|--------------:|----------------------:|--------------:|--------------------------:|------------------------:|-----:|----------:|------------------------:|----------:|-------:|----------:|------------:|----------:|----------------------------:|-----------:|-----------:|---------------:|--------:|--------------:|---------:|------:|-----------:|------------------:|-------------------:|---------------------:|--------------------:|--------------------:|---------------------:|---------------:|---------------:|---------------:|------------:|-------------:|-------------------:|-------------:|-------------:|-------------------------------:|--------------:|-------------------:|---------:|-------------------:|-----------------:|-------------------:|----------:|-----:|----------:|--------------------:|----------:|------------:|----------------------:|---------------:|-----------------:|---------:|----:|-------------:|------------:|----------:|------------:|----------:|------------:|--------:|------------------------------------:|-----------------:|-----------:|--------------:|-------------:|--------------:|----------:|--------------:|------------:|---------------:|-------------------:|-----------------:|---------------------------:|---------------------------:|--------------------:|------------------------------:|------------------------------:|------------:|-----------:|-------------:|--------------:|-----------:|-----------:|---------------:|-----------------:|----------:|-----------------:|-------------------:|------------------:|--------------------:|----------------:|-------------------:|------------------:|-----------:|---------------:|
+|cBLTUw |"18" Imperial IPA 2                                          |          0|          0|American-Style Imperial Stout           | 11.10|   NA|  33|Pint  |NA                                |NA                                                          |Stout           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|ZsQEJt |"633" American Pale Ale                                      |          0|          0|American-Style Pale Ale                 |  6.33| 25.0|  NA|NA    |NA                                |NA                                                          |Pale Ale        |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|tmEthz |"Admiral" Stache                                             |          2|          4|Baltic-Style Porter                     |  7.00| 23.0|  37|Pint  |Perle (American), Saaz (American) |Barley - Malted, Chocolate Malt, Munich Malt, Oats - Flaked |Porter          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                1|       0|       0|        0|                 0|     0|          0|               1|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               1|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              1|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           1|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             1|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|b7SfHG |"Ah Me Joy" Porter                                           |          0|          0|Robust Porter                           |  5.40| 51.0|  40|NA    |NA                                |NA                                                          |Porter          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|zcJMId |"Alternating Currant" Sour                                   |          0|          0|American-Style Sour Ale                 |  4.80| 12.0|  NA|NA    |NA                                |NA                                                          |Sour            |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|UM8GL6 |"B" Street Pineapple Blonde                                  |          0|          0|Golden or Blonde Ale                    |  4.60|   NA|   5|NA    |NA                                |NA                                                          |Blonde          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|NIaY9C |"B.B. Rodriguez" Double Brown                                |          0|          0|American-Style Brown Ale                |  8.50| 30.0|  NA|NA    |NA                                |NA                                                          |Brown           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|PBEXhV |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |          0|          0|American-Style Pale Ale                 |  5.80| 51.0|   8|NA    |NA                                |NA                                                          |Pale Ale        |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|wRmmdv |"California Crude" Black IPA                                 |          0|          0|American-Style Black Ale                |  7.60| 80.0|  NA|NA    |NA                                |NA                                                          |Black           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|EPYNpW |"C’est Noir" Imperial Stout                                  |          0|          0|British-Style Imperial Stout            | 10.80| 70.0|  NA|NA    |NA                                |NA                                                          |Stout           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|AXmvOd |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |          0|          0|American-Style Pale Ale                 |  5.40| 54.0|  11|NA    |NA                                |NA                                                          |Pale Ale        |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|c5pZg5 |"EVL1" Imperial Red Ale                                      |          0|          0|Imperial Red Ale                        | 10.40| 64.0|  NA|NA    |NA                                |NA                                                          |Red             |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|xBKAka |"Galactic Wrath" IPA                                         |          0|          0|American-Style India Pale Ale           |  7.50| 75.0|  NA|NA    |NA                                |NA                                                          |India Pale Ale  |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|Hr5A0t |"God Country" Kolsch                                         |          0|          0|German-Style Kölsch / Köln-Style Kölsch |  5.60| 28.2|   5|NA    |NA                                |NA                                                          |Kölsch          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|UjFyXJ |"Hey Victor" Smoked Porter                                   |          0|          0|Smoke Beer (Lager or Ale)               |  5.50|   NA|  NA|NA    |NA                                |NA                                                          |Lager           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|5UcMBc |"Ignition" IPA                                               |          0|          0|American-Style India Pale Ale           |  6.60| 45.0|  NA|Pint  |NA                                |NA                                                          |India Pale Ale  |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|mrVjY4 |"Jemez Field Notes" Golden Lager                             |          0|          0|Golden or Blonde Ale                    |  4.90| 20.0|   5|NA    |NA                                |NA                                                          |Blonde          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|54rSgo |"Jemmy Dean" Breakfast Stout                                 |          0|          0|Sweet or Cream Stout                    |    NA|   NA|  NA|Pint  |NA                                |NA                                                          |Stout           |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|JsKjkk |"Mauvaises Choses"                                           |          0|          0|Belgian-Style Pale Strong Ale           |  7.00| 30.0|  NA|Tulip |NA                                |NA                                                          |Strong Ale      |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       0|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        0|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          0|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 0|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
+|b7WWL6 |"Mike Saw a Sasquatch" Session Ale                           |          2|          2|Golden or Blonde Ale                    |  4.70| 26.0|  NA|Pint  |Cascade, Sterling                 |Honey Malt, Two-Row Pale Malt                               |Blonde          |      0|       0|                               0|       0|       0|        0|             0|      0|      0|      0|                 0|       0|      0|                   0|      0|      0|     0|     0|              0|     0|             0|                        0|       0|       1|      0|          0|          0|       0|     0|       0|    0|        0|                   0|     0|       0|   0|     0|                 0|         0|    0|      0|       0|      0|                  0|                  0|                 0|          0|                    0|              0|                 0|                0|       0|      0|      0|             0|                        0|           0|            0|              0|             0|                0|       0|                  0|            0|                                  0|                               0|                         0|                      0|                    0|                       0|                 0|                  0|     0|           0|    0|       0|           0|       0|       0|             0|      0|          0|       0|      0|       0|        0|         0|      0|       0|          0|           0|             0|                       0|                   0|                  0|       0|     0|         0|                          0|      0|     0|           0|            0|        0|         0|                0|       0|       0|        0|                 0|     0|          0|               0|            0|       0|                       0|      0|             0|           0|              0|         0|     0|            0|             0|        1|            0|             0|              0|              0|                0|      0|            0|      0|                   0|                     0|        0|     0|         0|     0|        0|          0|      0|      0|       0|          0|                 0|    0|      0|          0|               0|          0|             0|                   0|                   0|              0|               0|                        0|               0|            0|                0|                          0|                0|            0|               0|            0|          0|                       0|                    0|            0|           0|               0|                 0|         0|         0|                           0|                      0|                 0|          0|           0|                   0|    0|                 0|          0|         0|         0|         0|         0|        0|         0|          0|              0|        0|        0|                    0|                           0|                                 0|                               0|                            0|                             0|                              0|                        0|                         0|                         0|                        0|                        0|                         0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                        0|                       0|                        0|          0|               0|              0|              0|              0|            0|             0|              0|                     0|       0|       0|        0|               0|         0|                 0|      0|             0|                     0|         0|              0|                  0|                    0|           0|    0|            0|             0|          0|         0|        0|          0|              0|              0|            0|              0|                  0|                   0|           0|              0|              0|                      0|              0|                          0|                        0|     0|          1|                        0|          0|       0|          0|            0|          0|                            0|           0|           0|               0|        0|              0|         0|      0|           0|                  0|                   0|                     0|                    0|                    0|                     0|               0|               0|               0|            0|             0|                   0|             0|             0|                               0|              0|                   0|         0|                   0|                 0|                   0|          0|     0|          0|                    0|          0|            0|                      0|               0|                 0|         0|    0|             0|            0|          0|            0|          0|            0|        0|                                    0|                 0|           0|              0|             0|              0|          0|              0|            0|               0|                   0|                 1|                           0|                           0|                    0|                              0|                              0|            0|           0|             0|              0|           0|           0|               0|                 0|          0|                 0|                   0|                  0|                    0|                0|                   0|                  0|           0|               0|
 
 
 
 
-### Back to clustering: cluster on only 5 styles
+***
 
-* We'll pare down the beer data to just beers in 5 selected styles; these styles were intentionally chosen because they are quite distinct: Blonde, IPA, Stout, Tripel, Wheat
-  * Arguably, of these five styles Blondes and Wheats are the closest
-* We'll cluster these into 5 clusters
-* This time we'll add in `total_hops` and `total_malts` as predictors 
+### Unsupervised Clustering 
+We K-means cluster beers based on certain numeric predictor variables. 
+
+
+**Prep**
+
+* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
+    * NB: There are not not very many beers have SRM so we may not want to omit based on it
+
+* Take out missing values, and scale the data
+* Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
+* Then cluster on just the predictors and compare to the response variable
+  
+
+
+```r
+library(NbClust)
+
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>%
+    select_(.dots = c(response_vars, cluster_on)) %>%
+    na.omit() %>%
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
+
+  df_all_preds <- df_for_clustering %>%
+    select_(.dots = preds)
+
+  df_preds_scale <- df_all_preds %>%
+    select_(.dots = to_scale) %>%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>%
+    scale() %>%
+    as_tibble()
+
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
+
+  df_outcome <- df_for_clustering %>%
+    select_(.dots = resp) %>%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+```
+
+
+
+ 
+**Cluster**
+
+First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, SRM, total_hops, and total_malt.
+
+
+
+```r
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+response_vars <- c("name", "style", "style_collapsed")
+
+clustered_beer <- cluster_it(df = beer_totals,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+```
+
+```
+## KMNS(*, k=10): iter=  1, indx=5
+##  QTRAN(): istep=4472, icoun=1
+##  QTRAN(): istep=8944, icoun=84
+##  QTRAN(): istep=13416, icoun=31
+##  QTRAN(): istep=17888, icoun=310
+##  QTRAN(): istep=22360, icoun=444
+##  QTRAN(): istep=26832, icoun=3571
+## KMNS(*, k=10): iter=  2, indx=28
+##  QTRAN(): istep=4472, icoun=3
+##  QTRAN(): istep=8944, icoun=26
+##  QTRAN(): istep=13416, icoun=0
+##  QTRAN(): istep=17888, icoun=45
+##  QTRAN(): istep=22360, icoun=37
+##  QTRAN(): istep=26832, icoun=170
+##  QTRAN(): istep=31304, icoun=45
+##  QTRAN(): istep=35776, icoun=64
+##  QTRAN(): istep=40248, icoun=692
+## KMNS(*, k=10): iter=  3, indx=6
+##  QTRAN(): istep=4472, icoun=16
+##  QTRAN(): istep=8944, icoun=36
+##  QTRAN(): istep=13416, icoun=318
+##  QTRAN(): istep=17888, icoun=1114
+##  QTRAN(): istep=22360, icoun=1628
+##  QTRAN(): istep=26832, icoun=1518
+## KMNS(*, k=10): iter=  4, indx=227
+##  QTRAN(): istep=4472, icoun=560
+##  QTRAN(): istep=8944, icoun=1426
+##  QTRAN(): istep=13416, icoun=401
+## KMNS(*, k=10): iter=  5, indx=4472
+```
+
+
+Head of the clustering data
+
+|cluster_assignment |name                                                         |style                                              |style_collapsed | abv_scaled| ibu_scaled| srm_scaled| total_hops| total_malt| abv|  ibu| srm|
+|:------------------|:------------------------------------------------------------|:--------------------------------------------------|:---------------|----------:|----------:|----------:|----------:|----------:|---:|----:|---:|
+|3                  |"Admiral" Stache                                             |Baltic-Style Porter                                |Porter          |  0.2915030| -0.6641211|  2.1990458|  0.4954773|  1.1342326| 7.0| 23.0|  37|
+|3                  |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter          | -0.5813196|  0.4600343|  2.4832200| -0.1956564| -0.2062241| 5.4| 51.0|  40|
+|10                 |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale        | -0.3631139|  0.4600343| -0.5479716| -0.1956564| -0.2062241| 5.8| 51.0|   8|
+|10                 |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale        | -0.5813196|  0.5804795| -0.2637974| -0.1956564| -0.2062241| 5.4| 54.0|  11|
+|2                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.4722168| -0.4553494| -0.8321458| -0.1956564| -0.2062241| 5.6| 28.2|   5|
+|2                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde          | -0.8540767| -0.7845663| -0.8321458| -0.1956564| -0.2062241| 4.9| 20.0|   5|
+|2                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat           | -0.7449738| -1.1459020| -0.9268705| -0.1956564| -0.2062241| 5.1| 11.0|   4|
+|2                  |#9                                                           |American-Style Pale Ale                            |Pale Ale        | -0.7449738| -0.7845663| -0.4532468|  0.4954773|  0.4640043| 5.1| 20.0|   9|
+|2                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.9086281| -0.5035275| -1.0215953| -0.1956564| -0.2062241| 4.8| 27.0|   3|
+|2                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager           | -0.6358710| -0.8648631| -0.8321458| -0.1956564| -0.2062241| 5.3| 18.0|   5|
+|10                 |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison          |  0.2915030| -0.3830822| -0.6426963| -0.1956564| -0.2062241| 7.0| 30.0|   7|
+|2                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat           | -0.7995252| -0.7845663| -0.4532468| -0.1956564| -0.2062241| 5.0| 20.0|   9|
+|7                  |(512) ALT                                                    |German-Style Altbier                               |Altbier         | -0.2540111| -0.1421918|  0.6834500|  0.1499105|  0.7991185| 6.0| 36.0|  21|
+|7                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown           |  0.6188115| -0.3830822|  0.6834500|  0.1499105|  1.1342326| 7.6| 30.0|  21|
+|9                  |(512) FOUR                                                   |Strong Ale                                         |Strong Ale      |  0.5642601| -0.1823402| -0.5479716|  0.8410441|  1.1342326| 7.5| 35.0|   8|
+|5                  |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale  |  0.2915030|  1.0221120| -0.5479716|  0.8410441|  0.7991185| 7.0| 65.0|   8|
+|9                  |(512) ONE                                                    |Belgian-Style Pale Strong Ale                      |Strong Ale      |  0.8370171| -0.7042695| -0.5479716| -0.1956564|  0.4640043| 8.0| 22.0|   8|
+|10                 |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale        | -0.2540111| -0.3830822| -0.6426963|  0.8410441|  0.7991185| 6.0| 30.0|   7|
+|6                  |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel          |  0.5642601| -0.5838243|  1.3465231|  0.4954773|  0.7991185| 7.5| 25.0|  28|
+|9                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel          |  1.6552883| -0.7042695| -0.3585221|  0.1499105|  0.7991185| 9.5| 22.0|  10|
+
+Join the clustered beer on `beer_ingredients_join`
+
+
+
+A table of cluster counts broken down by style
+
+|                                                         |  1|   2|   3|   4|   5|  6|   7|  8|  9|  10|
+|:--------------------------------------------------------|--:|---:|---:|---:|---:|--:|---:|--:|--:|---:|
+|Adambier                                                 |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Altbier                                                  |  0|   0|   1|   0|   2|  1|  11|  0|  0|   7|
+|Amber                                                    |  0|   9|   0|   0|   1|  0|   4|  0|  0|   3|
+|American-Style Malt Liquor                               |  0|   1|   0|   0|   0|  0|   0|  0|  1|   0|
+|American-Style Märzen / Oktoberfest                      |  0|   5|   0|   0|   0|  0|   6| 11|  1|   2|
+|Apple Wine                                               |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Bamberg-Style Bock Rauchbier                             |  0|   0|   0|   0|   0|  0|   1|  0|  0|   0|
+|Bamberg-Style Helles Rauchbier                           |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Bamberg-Style Märzen Rauchbier                           |  0|   0|   0|   0|   0|  0|   3|  0|  0|   0|
+|Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles) |  0|   2|   1|   0|   0|  0|   1|  0|  0|   1|
+|Barley Wine                                              | 28|   0|   0|  19|   2|  2|   0|  0| 11|   0|
+|Barrel-Aged                                              |  9|   2|   3|   2|   1|  8|   4|  0| 16|   3|
+|Belgian-style Fruit Beer                                 |  0|   2|   0|   0|   0|  0|   0|  0|  0|   0|
+|Belgian-Style Fruit Lambic                               |  0|   0|   0|   0|   1|  1|   2|  0|  0|   0|
+|Belgian-Style Gueuze Lambic                              |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Belgian-Style Lambic                                     |  0|   2|   0|   0|   0|  0|   0|  0|  0|   0|
+|Belgian-Style Quadrupel                                  | 10|   0|   0|   0|   0|  9|   0|  0|  8|   0|
+|Belgian-Style Table Beer                                 |  0|   5|   0|   0|   0|  0|   1|  0|  0|   0|
+|Bitter                                                   |  1|  15|   0|   0|   2|  1|  22|  0|  1|  38|
+|Black                                                    |  0|   0|   8|   4|   6| 24|   1|  0|  0|   0|
+|Blonde                                                   |  0| 113|   1|   0|   1|  1|   4|  0| 19|  21|
+|Braggot                                                  |  0|   1|   0|   0|   0|  1|   0|  0|  1|   0|
+|Brett Beer                                               |  0|   1|   0|   1|   0|  1|   0|  0|  2|   2|
+|Brown                                                    |  2|   8|  28|   1|   6| 11|  90|  0|  0|   2|
+|California Common Beer                                   |  0|   1|   1|   0|   0|  0|   2|  0|  0|   8|
+|Chili Pepper Beer                                        |  0|   5|   0|   0|   0|  0|   2|  0|  0|   3|
+|Chocolate / Cocoa-Flavored Beer                          |  0|   1|   3|   0|   0|  0|   2|  0|  0|   2|
+|Coffee-Flavored Beer                                     |  0|   0|   9|   0|   2|  8|   1|  0|  0|   0|
+|Common Cider                                             |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Common Perry                                             |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Contemporary Gose                                        |  0|   9|   1|   0|   0|  0|   0|  0|  0|   0|
+|Cyser (Apple Melomel)                                    |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Dark American-Belgo-Style Ale                            |  0|   0|   0|   0|   0|  2|   1|  0|  0|   0|
+|Dortmunder / European-Style Export                       |  0|   3|   0|   0|   0|  0|   1|  0|  0|   4|
+|Double India Pale Ale                                    |  5|   0|   0| 179|  40|  3|   0|  0|  5|   0|
+|Dry Mead                                                 |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Dubbel                                                   |  0|   0|   2|   0|   1| 13|  15|  0| 10|   0|
+|Dutch-Style Kuit, Kuyt or Koyt                           |  0|   0|   0|   0|   0|  0|   0|  0|  0|   1|
+|Energy Enhanced Malt Beverage                            |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|English Cider                                            |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|English-Style Dark Mild Ale                              |  0|   1|   2|   0|   0|  1|   3|  0|  0|   0|
+|English-Style Pale Mild Ale                              |  0|   6|   1|   0|   1|  0|   4|  0|  0|   2|
+|English-Style Summer Ale                                 |  0|  11|   0|   0|   0|  0|   0|  0|  0|   1|
+|European-Style Dark / Münchner Dunkel                    |  0|   0|   2|   0|   0|  0|   8|  0|  0|   0|
+|Field Beer                                               |  0|   1|   0|   0|   1|  0|   4|  0|  0|   5|
+|Flavored Malt Beverage                                   |  0|   3|   0|   0|   0|  0|   0|  0|  0|   0|
+|French Cider                                             |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|French-Style Bière de Garde                              |  0|   1|   0|   0|   0|  0|   4|  0|  6|   3|
+|Fresh "Wet" Hop Ale                                      |  0|   0|   0|   0|   8|  0|   0|  0|  0|   6|
+|Fruit Beer                                               |  1|  36|   2|   0|   4|  0|   6|  0|  5|   2|
+|Fruit Cider                                              |  0|   0|   0|   0|   0|  0|   1|  0|  0|   0|
+|German-Style Doppelbock                                  |  0|   0|   2|   0|   0| 13|   5|  0|  9|   0|
+|German-Style Eisbock                                     |  0|   0|   0|   0|   0|  0|   0|  0|  1|   0|
+|German-Style Heller Bock/Maibock                         |  0|   1|   1|   0|   1|  0|   6|  0|  4|   9|
+|German-Style Leichtbier                                  |  0|   1|   0|   0|   0|  0|   0|  0|  0|   0|
+|German-Style Leichtes Weizen / Weissbier                 |  0|   4|   0|   0|   0|  0|   0|  0|  0|   0|
+|German-Style Märzen                                      |  0|   8|   0|   0|   0|  0|  10| 11|  0|   1|
+|German-Style Oktoberfest / Wiesen (Meadow)               |  0|   3|   0|   0|   0|  0|   2|  3|  1|   1|
+|German-Style Rye Ale (Roggenbier) with or without Yeast  |  0|   1|   1|   0|   0|  1|   2|  0|  0|   0|
+|German-Style Schwarzbier                                 |  0|   0|  14|   0|   0|  1|   3|  0|  0|   0|
+|Ginjo Beer or Sake-Yeast Beer                            |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Gluten-Free Beer                                         |  0|   1|   0|   0|   1|  0|   1|  0|  0|   0|
+|Grodziskie                                               |  0|   2|   0|   0|   0|  0|   0|  0|  0|   0|
+|Herb and Spice Beer                                      |  1|  12|   9|   0|   7|  6|  12|  0|  4|   4|
+|Historical Beer                                          |  0|   6|   1|   0|   0|  0|   1|  0|  0|   1|
+|India Pale Ale                                           |  0|   5|   3|  38| 402|  8|   5| 15|  2|  99|
+|Kellerbier (Cellar beer) or Zwickelbier - Ale            |  0|   2|   0|   0|   0|  0|   0|  0|  0|   2|
+|Kölsch                                                   |  0|  67|   0|   0|   1|  0|   1|  0|  0|   3|
+|Lager                                                    |  1| 132|   6|   6|  24|  8|  51|  0|  9|  30|
+|Leipzig-Style Gose                                       |  0|  12|   0|   0|   0|  0|   0|  0|  0|   1|
+|Metheglin                                                |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Mixed Culture Brett Beer                                 |  0|   0|   0|   0|   0|  0|   0|  0|  1|   0|
+|Münchner (Munich)-Style Helles                           |  0|  32|   1|   0|   0|  0|   1|  0|  0|   0|
+|New England Cider                                        |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Non-Alcoholic (Beer) Malt Beverages                      |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Old Ale                                                  |  7|   0|   0|   0|   1|  4|   2|  0|  5|   1|
+|Open Category Mead                                       |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Other Belgian-Style Ales                                 |  0|   3|   4|   1|   8|  5|   7|  0|  6|   5|
+|Other Fruit Melomel                                      |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Other Specialty Cider or Perry                           |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Pale Ale                                                 |  1|  52|   1|   1|  51|  5|  28| 19| 11| 229|
+|Pale American-Belgo-Style Ale                            |  0|   1|   0|   0|   3|  0|   1|  0|  1|   4|
+|Pilsener                                                 |  0|  69|   0|   1|   4|  1|   1|  0|  1|  59|
+|Porter                                                   |  1|   0| 121|   0|   0| 32|  28|  0|  1|   1|
+|Pumpkin Beer                                             |  1|   7|   5|   0|   0|  4|  18|  0|  8|   3|
+|Pyment (Grape Melomel)                                   |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Red                                                      |  0|  25|  15|  13|  28| 13| 125|  7|  7|  40|
+|Saison                                                   |  0|  53|   3|   0|   2|  1|   7|  0| 31|  42|
+|Scotch Ale                                               |  0|   0|   4|   0|   0| 12|   9|  0|  7|   1|
+|Scottish-Style Export Ale                                |  0|   1|   0|   0|   0|  0|   4|  0|  0|   0|
+|Scottish-Style Heavy Ale                                 |  0|   0|   1|   0|   0|  7|   2|  0|  4|   0|
+|Scottish-Style Light Ale                                 |  0|   1|   0|   0|   0|  0|   3|  0|  0|   0|
+|Semi-Sweet Mead                                          |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Session Beer                                             |  0|  17|   0|   0|   2|  0|   0|  0|  0|  18|
+|Sour                                                     |  1|  19|   2|   0|   1|  4|   4|  0|  2|   4|
+|South German-Style Bernsteinfarbenes Weizen / Weissbier  |  0|   1|   0|   0|   0|  0|   0|  0|  0|   0|
+|South German-Style Dunkel Weizen / Dunkel Weissbier      |  0|   0|   0|   0|   0|  1|  13|  0|  1|   0|
+|South German-Style Kristall Weizen / Kristall Weissbier  |  0|   1|   0|   0|   0|  0|   0|  0|  0|   0|
+|South German-Style Weizenbock / Weissbock                |  0|   1|   0|   0|   0|  0|   0|  0|  4|   1|
+|Specialty Beer                                           |  0|  15|   9|   1|   5|  5|  14|  0| 11|   5|
+|Stout                                                    | 27|   2| 114|   0|   1| 50|   3|  0|  3|   3|
+|Strong Ale                                               |  6|   0|   2|   4|   3| 16|   4|  0| 45|   2|
+|Sweet Mead                                               |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Traditional German-Style Bock                            |  0|   1|   4|   0|   0|  3|  11|  0|  2|   5|
+|Traditional Perry                                        |  0|   0|   0|   0|   0|  0|   0|  0|  0|   0|
+|Tripel                                                   |  1|   0|   0|   2|   0|  3|   0|  0| 58|   1|
+|Wheat                                                    |  0| 266|   3|   0|   4|  1|  13|  0| 12|  18|
+|Wild Beer                                                |  0|   3|   0|   0|   0|  0|   0|  0|  1|   1|
+
+
+Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
+
+
+```r
+clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment")
+clustered_beer_plot_abv_ibu
+```
+
+![](compile_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+
+```r
+clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "SRM") +
+  labs(colour = "Cluster Assignment")
+clustered_beer_plot_abv_srm
+```
+
+![](compile_files/figure-html/unnamed-chunk-17-2.png)<!-- -->
+
+
+
+Now we can add in the style centers (means) for each `style_collapsed` and label it.
+
+
+```r
+library(ggrepel)
+abv_ibu_clusters_vs_style_centers <- ggplot() +   
+  geom_point(data = clustered_beer, 
+             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+  geom_point(data = style_centers,
+             aes(mean_abv, mean_ibu), colour = "black") +
+  geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment") +
+  theme_bw()
+abv_ibu_clusters_vs_style_centers
+```
+
+![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+
+
+The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
+
+
+
+**Cluster on just certain selected styles**
+
+We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
+These styles were intentionally chosen because they are quite distinct: Blonde, IPA, Stout, Tripel, Wheat. Arguably, of these five styles Blondes and Wheats are the closest
+
+
 
 
 ```r
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bn_certain_styles <- beer_ingredients_join %>%
+bt_certain_styles <- beer_totals %>%
   filter(
     style_collapsed %in% styles_to_keep
   )
 
+
 cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-to_scale <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 response_vars <- c("name", "style", "style_collapsed")
 
-certain_styles_clustered <- cluster_it(df = bn_certain_styles,
+certain_styles_clustered <- cluster_it(df = bt_certain_styles,
                                  preds = cluster_on,
                                  to_scale = to_scale,
                                  resp = response_vars,
@@ -919,23 +948,200 @@ certain_styles_clustered <- cluster_it(df = bn_certain_styles,
 ```
 
 ```
-## KMNS(*, k=5): iter=  1, indx=5
-##  QTRAN(): istep=1220, icoun=16
-##  QTRAN(): istep=2440, icoun=879
-## KMNS(*, k=5): iter=  2, indx=1220
+## KMNS(*, k=5): iter=  1, indx=4
+##  QTRAN(): istep=1322, icoun=2
+##  QTRAN(): istep=2644, icoun=20
+##  QTRAN(): istep=3966, icoun=96
+##  QTRAN(): istep=5288, icoun=0
+##  QTRAN(): istep=6610, icoun=13
+##  QTRAN(): istep=7932, icoun=285
+## KMNS(*, k=5): iter=  2, indx=13
+##  QTRAN(): istep=1322, icoun=147
+##  QTRAN(): istep=2644, icoun=138
+##  QTRAN(): istep=3966, icoun=20
+##  QTRAN(): istep=5288, icoun=599
+## KMNS(*, k=5): iter=  3, indx=20
+##  QTRAN(): istep=1322, icoun=146
+##  QTRAN(): istep=2644, icoun=617
+## KMNS(*, k=5): iter=  4, indx=1322
 ```
+
+```r
+style_centers_certain_styles <- style_centers %>% 
+  filter(style_collapsed %in% styles_to_keep)
+```
+
+
+
+
 
 Table of style vs. cluster.
 
-|               |   1|  2|   3|   4|  5|
-|:--------------|---:|--:|---:|---:|--:|
-|Blonde         |   2| 25| 125|   4|  4|
-|India Pale Ale |  11|  4|  41| 439| 67|
-|Stout          | 160|  3|   3|   1|  3|
-|Tripel         |   3| 60|   0|   1|  1|
-|Wheat          |   0|  9| 234|   5| 15|
+|                                                         |  1|   2|   3|  4|   5|
+|:--------------------------------------------------------|--:|---:|---:|--:|---:|
+|Adambier                                                 |  0|   0|   0|  0|   0|
+|Altbier                                                  |  0|   0|   0|  0|   0|
+|Amber                                                    |  0|   0|   0|  0|   0|
+|American-Style Malt Liquor                               |  0|   0|   0|  0|   0|
+|American-Style Märzen / Oktoberfest                      |  0|   0|   0|  0|   0|
+|Apple Wine                                               |  0|   0|   0|  0|   0|
+|Bamberg-Style Bock Rauchbier                             |  0|   0|   0|  0|   0|
+|Bamberg-Style Helles Rauchbier                           |  0|   0|   0|  0|   0|
+|Bamberg-Style Märzen Rauchbier                           |  0|   0|   0|  0|   0|
+|Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles) |  0|   0|   0|  0|   0|
+|Barley Wine                                              |  0|   0|   0|  0|   0|
+|Barrel-Aged                                              |  0|   0|   0|  0|   0|
+|Belgian-style Fruit Beer                                 |  0|   0|   0|  0|   0|
+|Belgian-Style Fruit Lambic                               |  0|   0|   0|  0|   0|
+|Belgian-Style Gueuze Lambic                              |  0|   0|   0|  0|   0|
+|Belgian-Style Lambic                                     |  0|   0|   0|  0|   0|
+|Belgian-Style Quadrupel                                  |  0|   0|   0|  0|   0|
+|Belgian-Style Table Beer                                 |  0|   0|   0|  0|   0|
+|Bitter                                                   |  0|   0|   0|  0|   0|
+|Black                                                    |  0|   0|   0|  0|   0|
+|Blonde                                                   |  1| 142|   1|  0|  16|
+|Braggot                                                  |  0|   0|   0|  0|   0|
+|Brett Beer                                               |  0|   0|   0|  0|   0|
+|Brown                                                    |  0|   0|   0|  0|   0|
+|California Common Beer                                   |  0|   0|   0|  0|   0|
+|Chili Pepper Beer                                        |  0|   0|   0|  0|   0|
+|Chocolate / Cocoa-Flavored Beer                          |  0|   0|   0|  0|   0|
+|Coffee-Flavored Beer                                     |  0|   0|   0|  0|   0|
+|Common Cider                                             |  0|   0|   0|  0|   0|
+|Common Perry                                             |  0|   0|   0|  0|   0|
+|Contemporary Gose                                        |  0|   0|   0|  0|   0|
+|Cyser (Apple Melomel)                                    |  0|   0|   0|  0|   0|
+|Dark American-Belgo-Style Ale                            |  0|   0|   0|  0|   0|
+|Dortmunder / European-Style Export                       |  0|   0|   0|  0|   0|
+|Double India Pale Ale                                    |  0|   0|   0|  0|   0|
+|Dry Mead                                                 |  0|   0|   0|  0|   0|
+|Dubbel                                                   |  0|   0|   0|  0|   0|
+|Dutch-Style Kuit, Kuyt or Koyt                           |  0|   0|   0|  0|   0|
+|Energy Enhanced Malt Beverage                            |  0|   0|   0|  0|   0|
+|English Cider                                            |  0|   0|   0|  0|   0|
+|English-Style Dark Mild Ale                              |  0|   0|   0|  0|   0|
+|English-Style Pale Mild Ale                              |  0|   0|   0|  0|   0|
+|English-Style Summer Ale                                 |  0|   0|   0|  0|   0|
+|European-Style Dark / Münchner Dunkel                    |  0|   0|   0|  0|   0|
+|Field Beer                                               |  0|   0|   0|  0|   0|
+|Flavored Malt Beverage                                   |  0|   0|   0|  0|   0|
+|French Cider                                             |  0|   0|   0|  0|   0|
+|French-Style Bière de Garde                              |  0|   0|   0|  0|   0|
+|Fresh "Wet" Hop Ale                                      |  0|   0|   0|  0|   0|
+|Fruit Beer                                               |  0|   0|   0|  0|   0|
+|Fruit Cider                                              |  0|   0|   0|  0|   0|
+|German-Style Doppelbock                                  |  0|   0|   0|  0|   0|
+|German-Style Eisbock                                     |  0|   0|   0|  0|   0|
+|German-Style Heller Bock/Maibock                         |  0|   0|   0|  0|   0|
+|German-Style Leichtbier                                  |  0|   0|   0|  0|   0|
+|German-Style Leichtes Weizen / Weissbier                 |  0|   0|   0|  0|   0|
+|German-Style Märzen                                      |  0|   0|   0|  0|   0|
+|German-Style Oktoberfest / Wiesen (Meadow)               |  0|   0|   0|  0|   0|
+|German-Style Rye Ale (Roggenbier) with or without Yeast  |  0|   0|   0|  0|   0|
+|German-Style Schwarzbier                                 |  0|   0|   0|  0|   0|
+|Ginjo Beer or Sake-Yeast Beer                            |  0|   0|   0|  0|   0|
+|Gluten-Free Beer                                         |  0|   0|   0|  0|   0|
+|Grodziskie                                               |  0|   0|   0|  0|   0|
+|Herb and Spice Beer                                      |  0|   0|   0|  0|   0|
+|Historical Beer                                          |  0|   0|   0|  0|   0|
+|India Pale Ale                                           |  2|  48|  10| 17| 500|
+|Kellerbier (Cellar beer) or Zwickelbier - Ale            |  0|   0|   0|  0|   0|
+|Kölsch                                                   |  0|   0|   0|  0|   0|
+|Lager                                                    |  0|   0|   0|  0|   0|
+|Leipzig-Style Gose                                       |  0|   0|   0|  0|   0|
+|Metheglin                                                |  0|   0|   0|  0|   0|
+|Mixed Culture Brett Beer                                 |  0|   0|   0|  0|   0|
+|Münchner (Munich)-Style Helles                           |  0|   0|   0|  0|   0|
+|New England Cider                                        |  0|   0|   0|  0|   0|
+|Non-Alcoholic (Beer) Malt Beverages                      |  0|   0|   0|  0|   0|
+|Old Ale                                                  |  0|   0|   0|  0|   0|
+|Open Category Mead                                       |  0|   0|   0|  0|   0|
+|Other Belgian-Style Ales                                 |  0|   0|   0|  0|   0|
+|Other Fruit Melomel                                      |  0|   0|   0|  0|   0|
+|Other Specialty Cider or Perry                           |  0|   0|   0|  0|   0|
+|Pale Ale                                                 |  0|   0|   0|  0|   0|
+|Pale American-Belgo-Style Ale                            |  0|   0|   0|  0|   0|
+|Pilsener                                                 |  0|   0|   0|  0|   0|
+|Porter                                                   |  0|   0|   0|  0|   0|
+|Pumpkin Beer                                             |  0|   0|   0|  0|   0|
+|Pyment (Grape Melomel)                                   |  0|   0|   0|  0|   0|
+|Red                                                      |  0|   0|   0|  0|   0|
+|Saison                                                   |  0|   0|   0|  0|   0|
+|Scotch Ale                                               |  0|   0|   0|  0|   0|
+|Scottish-Style Export Ale                                |  0|   0|   0|  0|   0|
+|Scottish-Style Heavy Ale                                 |  0|   0|   0|  0|   0|
+|Scottish-Style Light Ale                                 |  0|   0|   0|  0|   0|
+|Semi-Sweet Mead                                          |  0|   0|   0|  0|   0|
+|Session Beer                                             |  0|   0|   0|  0|   0|
+|Sour                                                     |  0|   0|   0|  0|   0|
+|South German-Style Bernsteinfarbenes Weizen / Weissbier  |  0|   0|   0|  0|   0|
+|South German-Style Dunkel Weizen / Dunkel Weissbier      |  0|   0|   0|  0|   0|
+|South German-Style Kristall Weizen / Kristall Weissbier  |  0|   0|   0|  0|   0|
+|South German-Style Weizenbock / Weissbock                |  0|   0|   0|  0|   0|
+|Specialty Beer                                           |  0|   0|   0|  0|   0|
+|Stout                                                    | 58|   6| 135|  0|   4|
+|Strong Ale                                               |  0|   0|   0|  0|   0|
+|Sweet Mead                                               |  0|   0|   0|  0|   0|
+|Traditional German-Style Bock                            |  0|   0|   0|  0|   0|
+|Traditional Perry                                        |  0|   0|   0|  0|   0|
+|Tripel                                                   |  3|   3|   1|  0|  58|
+|Wheat                                                    |  3| 287|   5|  9|  13|
+|Wild Beer                                                |  0|   0|   0|  0|   0|
+
+
+
+Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
+
+
+
+
+```r
+by_style_plot <- ggplot() +   
+  geom_point(data = certain_styles_clustered, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
 
 ![](compile_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+
+
+
+
+<!-- ### Back to clustering: cluster on only 5 styles -->
+
+<!-- * We'll pare down the beer data to just beers in 5 selected styles; 
+<!-- * We'll cluster these into 5 clusters -->
+<!-- <!-- * This time we'll add in `total_hops` and `total_malt` as predictors  --> -->
+
+
+
+
+<!-- ggplot() + -->
+<!--   geom_point(data = certain_styles_clustered, -->
+<!--              aes(x = abv, y = ibu, -->
+<!--                  shape = cluster_assignment, -->
+<!--                  colour = style_collapsed), alpha = 0.5) + -->
+<!--   geom_point(data = style_centers_certain_styles, -->
+<!--              aes(mean_abv, mean_ibu), colour = "black") + -->
+<!--   geom_text_repel(data = style_centers_certain_styles, -->
+<!--                   aes(mean_abv, mean_ibu, label = style_collapsed), -->
+<!--                   box.padding = unit(0.45, "lines"), -->
+<!--                   family = "Calibri", -->
+<!--                   label.size = 0.3) + -->
+<!--   ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") + -->
+<!--   labs(x = "ABV", y = "IBU") + -->
+<!--   labs(colour = "Style", shape = "Cluster Assignment") + -->
+<!--   theme_bw() -->
+
+<!-- ``` -->
 
 
 
@@ -967,19 +1173,20 @@ summary(hops_ibu_lm)
 ## lm(formula = ibu ~ total_hops, data = beer_ingredients_join)
 ## 
 ## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -40.024 -19.235  -7.235  18.765 141.765 
+##    Min     1Q Median     3Q    Max 
+## -39.95 -18.95  -7.25  14.92 959.05 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  41.2352     0.4619   89.28  < 2e-16 ***
-## total_hops    2.3944     0.4526    5.29  1.3e-07 ***
+## (Intercept) 40.95273    0.18040 227.008  < 2e-16 ***
+## total_hops   0.22822    0.06661   3.426 0.000613 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 26 on 3417 degrees of freedom
-## Multiple R-squared:  0.008123,	Adjusted R-squared:  0.007833 
-## F-statistic: 27.98 on 1 and 3417 DF,  p-value: 1.3e-07
+## Residual standard error: 26.97 on 23117 degrees of freedom
+##   (40376 observations deleted due to missingness)
+## Multiple R-squared:  0.0005076,	Adjusted R-squared:  0.0004644 
+## F-statistic: 11.74 on 1 and 23117 DF,  p-value: 0.0006126
 ```
 
 * However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
@@ -1150,48 +1357,71 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 }
 ```
 
-* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+* Set the dataframe to be `beer_totals`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+
+
+Take out NAs
+
 
 
 ```r
-p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
-nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 ```
 
 ```
-## # weights:  522 (476 variable)
-## initial  value 5189.002874 
-## iter  10 value 4101.664681
-## iter  20 value 3818.943295
-## iter  30 value 3683.869955
-## iter  40 value 3494.261404
-## iter  50 value 3242.052315
-## iter  60 value 3106.920640
-## iter  70 value 2968.841371
-## iter  80 value 2769.439750
-## iter  90 value 2660.340209
-## iter 100 value 2577.879191
-## iter 110 value 2515.471734
-## iter 120 value 2492.212775
-## iter 130 value 2473.771723
-## iter 140 value 2463.134319
-## iter 150 value 2458.636652
-## iter 160 value 2456.476818
-## iter 170 value 2456.036254
-## iter 180 value 2455.881297
-## iter 190 value 2455.773302
-## iter 200 value 2455.622832
-## iter 210 value 2455.526383
-## iter 220 value 2455.480184
-## iter 230 value 2455.458931
-## iter 240 value 2455.422694
-## iter 250 value 2455.410839
-## iter 260 value 2455.407746
-## iter 270 value 2455.406563
-## iter 280 value 2455.401931
-## final  value 2455.401259 
+## # weights:  294 (246 variable)
+## initial  value 822.287316 
+## iter  10 value 623.355115
+## iter  20 value 582.845775
+## iter  30 value 559.536687
+## iter  40 value 544.403158
+## iter  50 value 524.724758
+## iter  60 value 501.808851
+## iter  70 value 442.855936
+## iter  80 value 412.727867
+## iter  90 value 386.837641
+## iter 100 value 366.894171
+## iter 110 value 339.925641
+## iter 120 value 323.409818
+## iter 130 value 313.136912
+## iter 140 value 304.074270
+## iter 150 value 296.466830
+## iter 160 value 290.940877
+## iter 170 value 286.735959
+## iter 180 value 282.757412
+## iter 190 value 278.647028
+## iter 200 value 276.593551
+## iter 210 value 275.046390
+## iter 220 value 274.229137
+## iter 230 value 273.104009
+## iter 240 value 271.695862
+## iter 250 value 270.962252
+## iter 260 value 270.585409
+## iter 270 value 270.124280
+## iter 280 value 269.669738
+## iter 290 value 269.202010
+## iter 300 value 268.653758
+## iter 310 value 268.146454
+## iter 320 value 267.803129
+## iter 330 value 267.531495
+## iter 340 value 267.277081
+## iter 350 value 266.665823
+## iter 360 value 266.225507
+## iter 370 value 265.787453
+## iter 380 value 265.189994
+## iter 390 value 264.869483
+## iter 400 value 264.649929
+## iter 410 value 264.309707
+## iter 420 value 264.194056
+## iter 430 value 264.183757
+## iter 440 value 264.180408
+## iter 450 value 264.178520
+## iter 460 value 264.178134
+## iter 470 value 264.178037
+## final  value 264.178032 
 ## converged
 ```
 
@@ -1202,7 +1432,7 @@ nn_collapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.5000000 0.4588764
+## 0.3454545 0.3033075
 ```
 
 ```r
@@ -1211,23 +1441,12 @@ nn_collapsed_out$most_important_vars
 ```
 
 ```
-##                              Overall
-## total_hops                 69.654945
-## total_malt                 50.311853
-## abv                        42.615502
-## ibu                         3.918066
-## srm                         4.579843
-## glassGoblet               397.374182
-## glassMug                  331.569097
-## glassOversized Wine Glass 191.839994
-## glassPilsner              461.028137
-## glassPint                 278.156121
-## glassSnifter              312.602345
-## glassStange               189.351854
-## glassThistle              452.468707
-## glassTulip                266.547554
-## glassWeizen               123.188935
-## glassWilli                262.940788
+##              Overall
+## total_hops 11813.618
+## total_malt 10331.065
+## abv        15331.999
+## ibu         1126.268
+## srm         3473.219
 ```
 
 
@@ -1235,51 +1454,65 @@ nn_collapsed_out$most_important_vars
 
 
 ```r
-nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
+nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 ```
 
 ```
-## # weights:  828 (765 variable)
-## initial  value 6022.452917 
-## iter  10 value 4996.432878
-## iter  20 value 4765.792309
-## iter  30 value 4510.391741
-## iter  40 value 4361.302193
-## iter  50 value 4204.858745
-## iter  60 value 4027.583899
-## iter  70 value 3837.375623
-## iter  80 value 3653.275878
-## iter  90 value 3462.294270
-## iter 100 value 3320.692374
-## iter 110 value 3194.622144
-## iter 120 value 3069.284975
-## iter 130 value 2965.936521
-## iter 140 value 2906.978999
-## iter 150 value 2883.867936
-## iter 160 value 2865.643770
-## iter 170 value 2858.183468
-## iter 180 value 2851.846211
-## iter 190 value 2848.122314
-## iter 200 value 2843.968435
-## iter 210 value 2840.894240
-## iter 220 value 2838.828006
-## iter 230 value 2837.463334
-## iter 240 value 2836.667079
-## iter 250 value 2836.246844
-## iter 260 value 2836.096131
-## iter 270 value 2836.030396
-## iter 280 value 2836.007094
-## iter 290 value 2836.000876
-## iter 300 value 2835.991817
-## iter 310 value 2835.986783
-## iter 320 value 2835.984746
-## iter 330 value 2835.982948
-## iter 340 value 2835.977150
-## iter 350 value 2835.973669
-## iter 360 value 2835.972699
-## final  value 2835.972544 
-## converged
+## # weights:  476 (402 variable)
+## initial  value 928.291695 
+## iter  10 value 712.632908
+## iter  20 value 641.252836
+## iter  30 value 602.786152
+## iter  40 value 579.643934
+## iter  50 value 563.154766
+## iter  60 value 543.297871
+## iter  70 value 521.663750
+## iter  80 value 495.088950
+## iter  90 value 467.551267
+## iter 100 value 422.245279
+## iter 110 value 386.215766
+## iter 120 value 359.180839
+## iter 130 value 328.013830
+## iter 140 value 301.425195
+## iter 150 value 287.222719
+## iter 160 value 274.753709
+## iter 170 value 265.547782
+## iter 180 value 258.377255
+## iter 190 value 251.237492
+## iter 200 value 245.745479
+## iter 210 value 241.927238
+## iter 220 value 239.263798
+## iter 230 value 237.458174
+## iter 240 value 235.917336
+## iter 250 value 234.504986
+## iter 260 value 233.110260
+## iter 270 value 232.022047
+## iter 280 value 231.156307
+## iter 290 value 230.456862
+## iter 300 value 229.881603
+## iter 310 value 229.326906
+## iter 320 value 228.759868
+## iter 330 value 228.315645
+## iter 340 value 227.825844
+## iter 350 value 227.359514
+## iter 360 value 226.894490
+## iter 370 value 226.595858
+## iter 380 value 226.426451
+## iter 390 value 226.279488
+## iter 400 value 226.151740
+## iter 410 value 226.052559
+## iter 420 value 225.994632
+## iter 430 value 225.957861
+## iter 440 value 225.901020
+## iter 450 value 225.845185
+## iter 460 value 225.803950
+## iter 470 value 225.750993
+## iter 480 value 225.692686
+## iter 490 value 225.610367
+## iter 500 value 225.525580
+## final  value 225.525580 
+## stopped after 500 iterations
 ```
 
 ```r
@@ -1288,7 +1521,7 @@ nn_notcollapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.4224599 0.3875314
+## 0.2200000 0.1536458
 ```
 
 ```r
@@ -1296,101 +1529,42 @@ nn_notcollapsed_out$most_important_vars
 ```
 
 ```
-##                              Overall
-## total_hops                204.453599
-## total_malt                120.372485
-## abv                        41.370443
-## ibu                         4.490022
-## srm                         8.542849
-## glassGoblet               560.331043
-## glassMug                  428.192923
-## glassOversized Wine Glass 103.542307
-## glassPilsner              480.581556
-## glassPint                 279.514041
-## glassSnifter              379.692790
-## glassStange               161.842943
-## glassThistle              199.484794
-## glassTulip                319.849211
-## glassWeizen               285.273981
-## glassWilli                402.236342
+##              Overall
+## total_hops 1553.4085
+## total_malt  851.3612
+## abv        1377.1472
+## ibu         114.1868
+## srm         290.3407
 ```
 
 
-And now if we drop `glass`?
+And now if we add `glass` as a predictor?
 
 ```r
-p_vars_no_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
-nn_collapsed_out_no_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars_no_glass)
 ```
 
 ```
-## # weights:  522 (476 variable)
-## initial  value 5236.145016 
-## iter  10 value 4082.038509
-## iter  20 value 3858.491269
-## iter  30 value 3720.703952
-## iter  40 value 3494.242497
-## iter  50 value 3281.935700
-## iter  60 value 3149.716012
-## iter  70 value 2961.425572
-## iter  80 value 2782.820310
-## iter  90 value 2684.365914
-## iter 100 value 2608.859823
-## iter 110 value 2564.879856
-## iter 120 value 2544.784423
-## iter 130 value 2530.106423
-## iter 140 value 2519.650287
-## iter 150 value 2514.338195
-## iter 160 value 2513.189531
-## iter 170 value 2512.956552
-## iter 180 value 2512.764390
-## iter 190 value 2512.596447
-## iter 200 value 2512.402201
-## iter 210 value 2512.292879
-## iter 220 value 2512.238512
-## iter 230 value 2512.226630
-## iter 240 value 2512.201402
-## iter 250 value 2512.191406
-## iter 260 value 2512.188362
-## iter 270 value 2512.187644
-## iter 280 value 2512.187248
-## final  value 2512.187127 
-## converged
+## Error in run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", : object 'p_vars_no_glass' not found
 ```
 
 ```r
-nn_collapsed_out_no_glass$nn_accuracy
+nn_collapsed_out_add_glass$nn_accuracy
 ```
 
 ```
-##  Accuracy     Kappa 
-## 0.4770408 0.4361770
+## Error in eval(expr, envir, enclos): object 'nn_collapsed_out_add_glass' not found
 ```
 
 ```r
-nn_collapsed_out_no_glass$most_important_vars
+nn_collapsed_out_add_glass$most_important_vars
 ```
 
 ```
-##                              Overall
-## total_hops                 70.750103
-## total_malt                 68.640660
-## abv                        37.797184
-## ibu                         3.902783
-## srm                         4.554177
-## glassGoblet               383.850580
-## glassMug                  336.192229
-## glassOversized Wine Glass 119.553928
-## glassPilsner              585.312255
-## glassPint                 298.943364
-## glassSnifter              344.712146
-## glassStange               189.979984
-## glassThistle              832.762378
-## glassTulip                271.027999
-## glassWeizen               126.127095
-## glassWilli                260.200505
+## Error in eval(expr, envir, enclos): object 'nn_collapsed_out_add_glass' not found
 ```
 
 
@@ -1399,7 +1573,7 @@ nn_collapsed_out_no_glass$most_important_vars
 ### Random forest with all ingredients
 
 * We can use a random forest to get even more granular with ingredients
-    * The sparse ingredient dataframe was too complex for the multinomial neural net; however, we can 
+    * The sparse ingredient dataframe was too complex for the multinomial neural net but the `ranger` package is built to handle sparse data like this
 
 * Here we don't include `glass` as a predictor
 
@@ -1409,9 +1583,11 @@ library(ranger)
 library(stringr)
 
 bi <- beer_ingredients_join %>% 
-  select(-c(id, name, cluster_assignment, style, hops_name, malt_name,
+  select(-c(id, name, style, hops_name, malt_name,
+            # description,
             glass)) %>% 
-  mutate(row = 1:nrow(.)) 
+  mutate(row = 1:nrow(.)) %>% 
+  na.omit()
 
 bi$style_collapsed <- factor(bi$style_collapsed)
 
@@ -1430,8 +1606,8 @@ bi_test <- bi %>%
   dplyr::select(-row)
 
 bi_train <- bi_train %>%
-  dplyr::select(-row)
-
+  dplyr::select(-row) %>% 
+  select(-`#06300`)
 
 bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity", seed = 11)
 ```
@@ -1448,12 +1624,12 @@ OOB (out of bag) prediction error is around 58%
 ## 
 ## Type:                             Classification 
 ## Number of trees:                  500 
-## Sample size:                      2735 
-## Number of independent variables:  201 
-## Mtry:                             14 
+## Sample size:                      3588 
+## Number of independent variables:  356 
+## Mtry:                             18 
 ## Target node size:                 1 
 ## Variable importance mode:         impurity 
-## OOB prediction error:             56.75 %
+## OOB prediction error:             65.52 %
 ```
 
 
@@ -1465,262 +1641,6870 @@ table(bi_test$style_collapsed, pred_bi_rf$predictions)
 ```
 
 ```
-##                           
-##                            Barley Wine Barrel-Aged Bitter Black Blonde
-##   Barley Wine                        0           0      0     0      0
-##   Barrel-Aged                        0           0      0     0      0
-##   Bitter                             0           0      0     0      0
-##   Black                              0           0      0     0      0
-##   Blonde                             0           0      0     0      0
-##   Brown                              0           0      0     0      0
-##   Double India Pale Ale              0           0      0     0      0
-##   Dubbel                             0           0      0     0      0
-##   Fruit Beer                         0           0      0     0      0
-##   Fruit Cider                        0           0      0     0      0
-##   German-Style Doppelbock            0           0      0     0      0
-##   German-Style Märzen                0           0      0     0      0
-##   Herb and Spice Beer                0           0      0     0      0
-##   India Pale Ale                     0           0      0     0      0
-##   Kölsch                             0           0      0     0      0
-##   Lager                              0           0      0     0      0
-##   Other Belgian-Style Ales           0           0      0     0      0
-##   Pale Ale                           0           0      0     0      0
-##   Pilsener                           0           0      0     0      0
-##   Porter                             0           0      0     0      0
-##   Pumpkin Beer                       0           0      0     0      0
-##   Red                                0           0      0     0      0
-##   Saison                             0           0      0     0      0
-##   Scotch Ale                         0           0      0     0      0
-##   Sour                               0           0      0     0      0
-##   Specialty Beer                     0           0      0     0      0
-##   Stout                              0           0      0     0      0
-##   Strong Ale                         0           0      0     0      0
-##   Tripel                             0           0      0     0      0
-##   Wheat                              0           0      0     0      0
-##                           
-##                            Brown Double India Pale Ale Dubbel Fruit Beer
-##   Barley Wine                  0                     9      0          0
-##   Barrel-Aged                  0                     0      0          0
-##   Bitter                       0                     0      0          0
-##   Black                        0                     0      0          0
-##   Blonde                       0                     2      0          0
-##   Brown                        1                     1      0          0
-##   Double India Pale Ale        0                    42      0          0
-##   Dubbel                       0                     2      0          0
-##   Fruit Beer                   0                     0      0          0
-##   Fruit Cider                  0                     0      0          0
-##   German-Style Doppelbock      0                     2      0          0
-##   German-Style Märzen          0                     0      0          0
-##   Herb and Spice Beer          0                     1      0          0
-##   India Pale Ale               0                     3      0          0
-##   Kölsch                       0                     0      0          0
-##   Lager                        0                     1      0          0
-##   Other Belgian-Style Ales     0                     2      0          0
-##   Pale Ale                     0                     3      0          0
-##   Pilsener                     0                     0      0          0
-##   Porter                       0                     0      0          0
-##   Pumpkin Beer                 0                     2      0          0
-##   Red                          0                     1      0          0
-##   Saison                       0                     3      0          0
-##   Scotch Ale                   0                     1      0          0
-##   Sour                         0                     0      0          0
-##   Specialty Beer               0                     1      0          0
-##   Stout                        0                     1      0          0
-##   Strong Ale                   0                    11      0          0
-##   Tripel                       0                    13      0          0
-##   Wheat                        0                     1      0          0
-##                           
-##                            Fruit Cider German-Style Doppelbock
-##   Barley Wine                        0                       0
-##   Barrel-Aged                        0                       0
-##   Bitter                             0                       0
-##   Black                              0                       0
-##   Blonde                             0                       0
-##   Brown                              0                       0
-##   Double India Pale Ale              0                       0
-##   Dubbel                             0                       0
-##   Fruit Beer                         0                       0
-##   Fruit Cider                        0                       0
-##   German-Style Doppelbock            0                       0
-##   German-Style Märzen                0                       0
-##   Herb and Spice Beer                0                       0
-##   India Pale Ale                     0                       0
-##   Kölsch                             0                       0
-##   Lager                              0                       0
-##   Other Belgian-Style Ales           0                       0
-##   Pale Ale                           0                       0
-##   Pilsener                           0                       0
-##   Porter                             0                       0
-##   Pumpkin Beer                       0                       0
-##   Red                                0                       0
-##   Saison                             0                       0
-##   Scotch Ale                         0                       0
-##   Sour                               0                       0
-##   Specialty Beer                     0                       0
-##   Stout                              0                       0
-##   Strong Ale                         0                       0
-##   Tripel                             0                       0
-##   Wheat                              0                       0
-##                           
-##                            German-Style Märzen Herb and Spice Beer
-##   Barley Wine                                0                   0
-##   Barrel-Aged                                0                   0
-##   Bitter                                     0                   0
-##   Black                                      0                   0
-##   Blonde                                     0                   0
-##   Brown                                      0                   0
-##   Double India Pale Ale                      0                   0
-##   Dubbel                                     0                   0
-##   Fruit Beer                                 0                   0
-##   Fruit Cider                                0                   0
-##   German-Style Doppelbock                    0                   0
-##   German-Style Märzen                        2                   0
-##   Herb and Spice Beer                        1                   0
-##   India Pale Ale                             0                   0
-##   Kölsch                                     0                   0
-##   Lager                                      0                   0
-##   Other Belgian-Style Ales                   0                   0
-##   Pale Ale                                   0                   0
-##   Pilsener                                   0                   0
-##   Porter                                     0                   0
-##   Pumpkin Beer                               0                   0
-##   Red                                        0                   0
-##   Saison                                     0                   0
-##   Scotch Ale                                 0                   0
-##   Sour                                       0                   0
-##   Specialty Beer                             0                   0
-##   Stout                                      0                   0
-##   Strong Ale                                 0                   0
-##   Tripel                                     0                   0
-##   Wheat                                      0                   0
-##                           
-##                            India Pale Ale Kölsch Lager
-##   Barley Wine                           0      0     0
-##   Barrel-Aged                           1      0     0
-##   Bitter                                1      0     0
-##   Black                                 8      0     0
-##   Blonde                                2      0     0
-##   Brown                                 1      0     0
-##   Double India Pale Ale                 4      0     0
-##   Dubbel                                0      0     0
-##   Fruit Beer                            1      0     0
-##   Fruit Cider                           0      0     0
-##   German-Style Doppelbock               0      0     0
-##   German-Style Märzen                   0      0     0
-##   Herb and Spice Beer                   1      0     0
-##   India Pale Ale                       92      0     0
-##   Kölsch                                0      0     0
-##   Lager                                 6      0     1
-##   Other Belgian-Style Ales              0      0     0
-##   Pale Ale                             10      0     0
-##   Pilsener                              1      0     0
-##   Porter                                0      0     0
-##   Pumpkin Beer                          0      0     0
-##   Red                                   4      0     0
-##   Saison                                1      0     0
-##   Scotch Ale                            0      0     0
-##   Sour                                  1      0     0
-##   Specialty Beer                        0      0     0
-##   Stout                                 0      0     0
-##   Strong Ale                            0      0     0
-##   Tripel                                0      0     0
-##   Wheat                                 1      0     0
-##                           
-##                            Other Belgian-Style Ales Pale Ale Pilsener
-##   Barley Wine                                     0        0        0
-##   Barrel-Aged                                     0        0        0
-##   Bitter                                          0       10        0
-##   Black                                           0        0        0
-##   Blonde                                          0        7        0
-##   Brown                                           0        0        0
-##   Double India Pale Ale                           0        0        0
-##   Dubbel                                          0        0        0
-##   Fruit Beer                                      0        0        0
-##   Fruit Cider                                     0        0        0
-##   German-Style Doppelbock                         0        0        0
-##   German-Style Märzen                             0        1        0
-##   Herb and Spice Beer                             0        1        0
-##   India Pale Ale                                  0       11        0
-##   Kölsch                                          0        1        0
-##   Lager                                           0        5        0
-##   Other Belgian-Style Ales                        0        0        0
-##   Pale Ale                                        0       59        0
-##   Pilsener                                        0       12        0
-##   Porter                                          0        3        0
-##   Pumpkin Beer                                    0        0        0
-##   Red                                             0        5        0
-##   Saison                                          0        8        0
-##   Scotch Ale                                      0        0        0
-##   Sour                                            0        0        0
-##   Specialty Beer                                  0        2        0
-##   Stout                                           0        0        0
-##   Strong Ale                                      0        0        0
-##   Tripel                                          0        0        0
-##   Wheat                                           0        6        1
-##                           
-##                            Porter Pumpkin Beer Red Saison Scotch Ale Sour
-##   Barley Wine                   0            0   0      0          0    0
-##   Barrel-Aged                   0            0   1      0          0    0
-##   Bitter                        0            0   4      0          0    0
-##   Black                         2            0   0      0          0    0
-##   Blonde                        0            0   1      4          0    0
-##   Brown                         8            0   7      0          0    0
-##   Double India Pale Ale         0            0   0      0          0    0
-##   Dubbel                        2            0   1      0          0    0
-##   Fruit Beer                    2            0   3      0          0    0
-##   Fruit Cider                   0            0   0      0          0    0
-##   German-Style Doppelbock       2            0   0      0          0    0
-##   German-Style Märzen           0            0   1      0          0    0
-##   Herb and Spice Beer           2            0   2      1          0    0
-##   India Pale Ale                0            0   0      0          0    0
-##   Kölsch                        0            0   0      0          0    0
-##   Lager                         1            0   3      1          0    0
-##   Other Belgian-Style Ales      2            0   2      0          0    0
-##   Pale Ale                      0            0   3      2          0    0
-##   Pilsener                      0            0   0      0          0    0
-##   Porter                       18            0   1      0          0    0
-##   Pumpkin Beer                  1            0   3      0          0    0
-##   Red                           4            0  21      0          0    0
-##   Saison                        0            0   1      7          0    0
-##   Scotch Ale                    3            0   2      0          0    0
-##   Sour                          1            0   1      1          0    0
-##   Specialty Beer                2            0   3      0          0    0
-##   Stout                        12            0   0      1          0    0
-##   Strong Ale                    0            0   0      0          0    0
-##   Tripel                        0            0   0      2          0    0
-##   Wheat                         0            0   3      1          0    0
-##                           
-##                            Specialty Beer Stout Strong Ale Tripel Wheat
-##   Barley Wine                           0     2          0      0     0
-##   Barrel-Aged                           0     0          0      0     2
-##   Bitter                                0     0          0      0     2
-##   Black                                 0     0          0      0     0
-##   Blonde                                0     0          0      0    19
-##   Brown                                 0     2          0      0     0
-##   Double India Pale Ale                 0     0          0      0     0
-##   Dubbel                                0     0          0      0     0
-##   Fruit Beer                            0     0          0      0     5
-##   Fruit Cider                           0     0          0      0     0
-##   German-Style Doppelbock               0     1          0      0     0
-##   German-Style Märzen                   0     0          0      0     1
-##   Herb and Spice Beer                   0     1          0      0     1
-##   India Pale Ale                        0     0          0      0     0
-##   Kölsch                                0     0          0      0    14
-##   Lager                                 0     0          0      0    13
-##   Other Belgian-Style Ales              0     2          0      0     1
-##   Pale Ale                              0     0          0      0     2
-##   Pilsener                              0     0          0      0     6
-##   Porter                                0     6          0      0     1
-##   Pumpkin Beer                          0     0          0      0     0
-##   Red                                   0     0          0      0     0
-##   Saison                                0     0          0      0     5
-##   Scotch Ale                            0     1          0      0     0
-##   Sour                                  0     1          0      0     3
-##   Specialty Beer                        0     0          0      0     0
-##   Stout                                 0    27          0      0     0
-##   Strong Ale                            0     1          0      0     0
-##   Tripel                                0     0          0      0     0
-##   Wheat                                 0     0          0      0    46
+##                                                           
+##                                                            Altbier Amber
+##   Altbier                                                        0     0
+##   Amber                                                          0     0
+##   American-Style Malt Liquor                                     0     0
+##   American-Style Märzen / Oktoberfest                            0     0
+##   Bamberg-Style Bock Rauchbier                                   0     0
+##   Bamberg-Style Märzen Rauchbier                                 0     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)       0     0
+##   Barley Wine                                                    0     0
+##   Barrel-Aged                                                    0     0
+##   Belgian-style Fruit Beer                                       0     0
+##   Belgian-Style Fruit Lambic                                     0     0
+##   Belgian-Style Lambic                                           0     0
+##   Belgian-Style Quadrupel                                        0     0
+##   Belgian-Style Table Beer                                       0     0
+##   Bitter                                                         0     0
+##   Black                                                          0     0
+##   Blonde                                                         0     0
+##   Braggot                                                        0     0
+##   Brett Beer                                                     0     0
+##   Brown                                                          0     0
+##   California Common Beer                                         0     0
+##   Chili Pepper Beer                                              0     0
+##   Chocolate / Cocoa-Flavored Beer                                0     0
+##   Coffee-Flavored Beer                                           0     0
+##   Contemporary Gose                                              0     0
+##   Dark American-Belgo-Style Ale                                  0     0
+##   Dortmunder / European-Style Export                             0     0
+##   Double India Pale Ale                                          0     0
+##   Dubbel                                                         0     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                 0     0
+##   English-Style Dark Mild Ale                                    0     0
+##   English-Style Pale Mild Ale                                    0     0
+##   English-Style Summer Ale                                       0     0
+##   European-Style Dark / Münchner Dunkel                          0     0
+##   Field Beer                                                     0     0
+##   Flavored Malt Beverage                                         0     0
+##   French-Style Bière de Garde                                    0     0
+##   Fresh "Wet" Hop Ale                                            0     0
+##   Fruit Beer                                                     0     0
+##   Fruit Cider                                                    0     0
+##   German-Style Doppelbock                                        0     0
+##   German-Style Eisbock                                           0     0
+##   German-Style Heller Bock/Maibock                               0     0
+##   German-Style Leichtbier                                        0     0
+##   German-Style Leichtes Weizen / Weissbier                       0     0
+##   German-Style Märzen                                            0     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                     0     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast        0     0
+##   German-Style Schwarzbier                                       0     0
+##   Gluten-Free Beer                                               0     0
+##   Grodziskie                                                     0     0
+##   Herb and Spice Beer                                            0     0
+##   Historical Beer                                                0     0
+##   India Pale Ale                                                 0     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                  0     0
+##   Kölsch                                                         0     0
+##   Lager                                                          0     0
+##   Leipzig-Style Gose                                             0     0
+##   Mixed Culture Brett Beer                                       0     0
+##   Münchner (Munich)-Style Helles                                 0     0
+##   Old Ale                                                        0     0
+##   Other Belgian-Style Ales                                       0     0
+##   Pale Ale                                                       0     0
+##   Pale American-Belgo-Style Ale                                  0     0
+##   Pilsener                                                       0     0
+##   Porter                                                         0     0
+##   Pumpkin Beer                                                   0     0
+##   Red                                                            0     0
+##   Saison                                                         0     0
+##   Scotch Ale                                                     0     0
+##   Scottish-Style Export Ale                                      0     0
+##   Scottish-Style Heavy Ale                                       0     0
+##   Scottish-Style Light Ale                                       0     0
+##   Session Beer                                                   0     0
+##   Sour                                                           0     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier        0     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier            0     0
+##   South German-Style Kristall Weizen / Kristall Weissbier        0     0
+##   South German-Style Weizenbock / Weissbock                      0     0
+##   Specialty Beer                                                 0     0
+##   Stout                                                          0     0
+##   Strong Ale                                                     0     0
+##   Traditional German-Style Bock                                  0     0
+##   Tripel                                                         0     0
+##   Wheat                                                          0     0
+##   Wild Beer                                                      0     0
+##                                                           
+##                                                            American-Style Malt Liquor
+##   Altbier                                                                           0
+##   Amber                                                                             0
+##   American-Style Malt Liquor                                                        0
+##   American-Style Märzen / Oktoberfest                                               0
+##   Bamberg-Style Bock Rauchbier                                                      0
+##   Bamberg-Style Märzen Rauchbier                                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                          0
+##   Barley Wine                                                                       0
+##   Barrel-Aged                                                                       0
+##   Belgian-style Fruit Beer                                                          0
+##   Belgian-Style Fruit Lambic                                                        0
+##   Belgian-Style Lambic                                                              0
+##   Belgian-Style Quadrupel                                                           0
+##   Belgian-Style Table Beer                                                          0
+##   Bitter                                                                            0
+##   Black                                                                             0
+##   Blonde                                                                            0
+##   Braggot                                                                           0
+##   Brett Beer                                                                        0
+##   Brown                                                                             0
+##   California Common Beer                                                            0
+##   Chili Pepper Beer                                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                                   0
+##   Coffee-Flavored Beer                                                              0
+##   Contemporary Gose                                                                 0
+##   Dark American-Belgo-Style Ale                                                     0
+##   Dortmunder / European-Style Export                                                0
+##   Double India Pale Ale                                                             0
+##   Dubbel                                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                    0
+##   English-Style Dark Mild Ale                                                       0
+##   English-Style Pale Mild Ale                                                       0
+##   English-Style Summer Ale                                                          0
+##   European-Style Dark / Münchner Dunkel                                             0
+##   Field Beer                                                                        0
+##   Flavored Malt Beverage                                                            0
+##   French-Style Bière de Garde                                                       0
+##   Fresh "Wet" Hop Ale                                                               0
+##   Fruit Beer                                                                        0
+##   Fruit Cider                                                                       0
+##   German-Style Doppelbock                                                           0
+##   German-Style Eisbock                                                              0
+##   German-Style Heller Bock/Maibock                                                  0
+##   German-Style Leichtbier                                                           0
+##   German-Style Leichtes Weizen / Weissbier                                          0
+##   German-Style Märzen                                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                           0
+##   German-Style Schwarzbier                                                          0
+##   Gluten-Free Beer                                                                  0
+##   Grodziskie                                                                        0
+##   Herb and Spice Beer                                                               0
+##   Historical Beer                                                                   0
+##   India Pale Ale                                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                     0
+##   Kölsch                                                                            0
+##   Lager                                                                             0
+##   Leipzig-Style Gose                                                                0
+##   Mixed Culture Brett Beer                                                          0
+##   Münchner (Munich)-Style Helles                                                    0
+##   Old Ale                                                                           0
+##   Other Belgian-Style Ales                                                          0
+##   Pale Ale                                                                          0
+##   Pale American-Belgo-Style Ale                                                     0
+##   Pilsener                                                                          0
+##   Porter                                                                            0
+##   Pumpkin Beer                                                                      0
+##   Red                                                                               0
+##   Saison                                                                            0
+##   Scotch Ale                                                                        0
+##   Scottish-Style Export Ale                                                         0
+##   Scottish-Style Heavy Ale                                                          0
+##   Scottish-Style Light Ale                                                          0
+##   Session Beer                                                                      0
+##   Sour                                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                               0
+##   South German-Style Kristall Weizen / Kristall Weissbier                           0
+##   South German-Style Weizenbock / Weissbock                                         0
+##   Specialty Beer                                                                    0
+##   Stout                                                                             0
+##   Strong Ale                                                                        0
+##   Traditional German-Style Bock                                                     0
+##   Tripel                                                                            0
+##   Wheat                                                                             0
+##   Wild Beer                                                                         0
+##                                                           
+##                                                            American-Style Märzen / Oktoberfest
+##   Altbier                                                                                    0
+##   Amber                                                                                      0
+##   American-Style Malt Liquor                                                                 0
+##   American-Style Märzen / Oktoberfest                                                        0
+##   Bamberg-Style Bock Rauchbier                                                               0
+##   Bamberg-Style Märzen Rauchbier                                                             0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                   0
+##   Barley Wine                                                                                0
+##   Barrel-Aged                                                                                0
+##   Belgian-style Fruit Beer                                                                   0
+##   Belgian-Style Fruit Lambic                                                                 0
+##   Belgian-Style Lambic                                                                       0
+##   Belgian-Style Quadrupel                                                                    0
+##   Belgian-Style Table Beer                                                                   0
+##   Bitter                                                                                     0
+##   Black                                                                                      0
+##   Blonde                                                                                     0
+##   Braggot                                                                                    0
+##   Brett Beer                                                                                 0
+##   Brown                                                                                      0
+##   California Common Beer                                                                     0
+##   Chili Pepper Beer                                                                          0
+##   Chocolate / Cocoa-Flavored Beer                                                            0
+##   Coffee-Flavored Beer                                                                       0
+##   Contemporary Gose                                                                          0
+##   Dark American-Belgo-Style Ale                                                              0
+##   Dortmunder / European-Style Export                                                         0
+##   Double India Pale Ale                                                                      0
+##   Dubbel                                                                                     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                             0
+##   English-Style Dark Mild Ale                                                                0
+##   English-Style Pale Mild Ale                                                                0
+##   English-Style Summer Ale                                                                   0
+##   European-Style Dark / Münchner Dunkel                                                      0
+##   Field Beer                                                                                 0
+##   Flavored Malt Beverage                                                                     0
+##   French-Style Bière de Garde                                                                0
+##   Fresh "Wet" Hop Ale                                                                        0
+##   Fruit Beer                                                                                 0
+##   Fruit Cider                                                                                0
+##   German-Style Doppelbock                                                                    0
+##   German-Style Eisbock                                                                       0
+##   German-Style Heller Bock/Maibock                                                           0
+##   German-Style Leichtbier                                                                    0
+##   German-Style Leichtes Weizen / Weissbier                                                   0
+##   German-Style Märzen                                                                        0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                 0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                    0
+##   German-Style Schwarzbier                                                                   0
+##   Gluten-Free Beer                                                                           0
+##   Grodziskie                                                                                 0
+##   Herb and Spice Beer                                                                        0
+##   Historical Beer                                                                            0
+##   India Pale Ale                                                                             0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                              0
+##   Kölsch                                                                                     0
+##   Lager                                                                                      0
+##   Leipzig-Style Gose                                                                         0
+##   Mixed Culture Brett Beer                                                                   0
+##   Münchner (Munich)-Style Helles                                                             0
+##   Old Ale                                                                                    0
+##   Other Belgian-Style Ales                                                                   0
+##   Pale Ale                                                                                   0
+##   Pale American-Belgo-Style Ale                                                              0
+##   Pilsener                                                                                   0
+##   Porter                                                                                     0
+##   Pumpkin Beer                                                                               0
+##   Red                                                                                        0
+##   Saison                                                                                     0
+##   Scotch Ale                                                                                 0
+##   Scottish-Style Export Ale                                                                  0
+##   Scottish-Style Heavy Ale                                                                   0
+##   Scottish-Style Light Ale                                                                   0
+##   Session Beer                                                                               0
+##   Sour                                                                                       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                    0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                        0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                    0
+##   South German-Style Weizenbock / Weissbock                                                  0
+##   Specialty Beer                                                                             0
+##   Stout                                                                                      0
+##   Strong Ale                                                                                 0
+##   Traditional German-Style Bock                                                              0
+##   Tripel                                                                                     0
+##   Wheat                                                                                      0
+##   Wild Beer                                                                                  0
+##                                                           
+##                                                            Bamberg-Style Bock Rauchbier
+##   Altbier                                                                             0
+##   Amber                                                                               0
+##   American-Style Malt Liquor                                                          0
+##   American-Style Märzen / Oktoberfest                                                 0
+##   Bamberg-Style Bock Rauchbier                                                        0
+##   Bamberg-Style Märzen Rauchbier                                                      0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                            0
+##   Barley Wine                                                                         0
+##   Barrel-Aged                                                                         0
+##   Belgian-style Fruit Beer                                                            0
+##   Belgian-Style Fruit Lambic                                                          0
+##   Belgian-Style Lambic                                                                0
+##   Belgian-Style Quadrupel                                                             0
+##   Belgian-Style Table Beer                                                            0
+##   Bitter                                                                              0
+##   Black                                                                               0
+##   Blonde                                                                              0
+##   Braggot                                                                             0
+##   Brett Beer                                                                          0
+##   Brown                                                                               0
+##   California Common Beer                                                              0
+##   Chili Pepper Beer                                                                   0
+##   Chocolate / Cocoa-Flavored Beer                                                     0
+##   Coffee-Flavored Beer                                                                0
+##   Contemporary Gose                                                                   0
+##   Dark American-Belgo-Style Ale                                                       0
+##   Dortmunder / European-Style Export                                                  0
+##   Double India Pale Ale                                                               0
+##   Dubbel                                                                              0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                      0
+##   English-Style Dark Mild Ale                                                         0
+##   English-Style Pale Mild Ale                                                         0
+##   English-Style Summer Ale                                                            0
+##   European-Style Dark / Münchner Dunkel                                               0
+##   Field Beer                                                                          0
+##   Flavored Malt Beverage                                                              0
+##   French-Style Bière de Garde                                                         0
+##   Fresh "Wet" Hop Ale                                                                 0
+##   Fruit Beer                                                                          0
+##   Fruit Cider                                                                         0
+##   German-Style Doppelbock                                                             0
+##   German-Style Eisbock                                                                0
+##   German-Style Heller Bock/Maibock                                                    0
+##   German-Style Leichtbier                                                             0
+##   German-Style Leichtes Weizen / Weissbier                                            0
+##   German-Style Märzen                                                                 0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                          0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                             0
+##   German-Style Schwarzbier                                                            0
+##   Gluten-Free Beer                                                                    0
+##   Grodziskie                                                                          0
+##   Herb and Spice Beer                                                                 0
+##   Historical Beer                                                                     0
+##   India Pale Ale                                                                      0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                       0
+##   Kölsch                                                                              0
+##   Lager                                                                               0
+##   Leipzig-Style Gose                                                                  0
+##   Mixed Culture Brett Beer                                                            0
+##   Münchner (Munich)-Style Helles                                                      0
+##   Old Ale                                                                             0
+##   Other Belgian-Style Ales                                                            0
+##   Pale Ale                                                                            0
+##   Pale American-Belgo-Style Ale                                                       0
+##   Pilsener                                                                            0
+##   Porter                                                                              0
+##   Pumpkin Beer                                                                        0
+##   Red                                                                                 0
+##   Saison                                                                              0
+##   Scotch Ale                                                                          0
+##   Scottish-Style Export Ale                                                           0
+##   Scottish-Style Heavy Ale                                                            0
+##   Scottish-Style Light Ale                                                            0
+##   Session Beer                                                                        0
+##   Sour                                                                                0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                             0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                 0
+##   South German-Style Kristall Weizen / Kristall Weissbier                             0
+##   South German-Style Weizenbock / Weissbock                                           0
+##   Specialty Beer                                                                      0
+##   Stout                                                                               0
+##   Strong Ale                                                                          0
+##   Traditional German-Style Bock                                                       0
+##   Tripel                                                                              0
+##   Wheat                                                                               0
+##   Wild Beer                                                                           0
+##                                                           
+##                                                            Bamberg-Style Märzen Rauchbier
+##   Altbier                                                                               0
+##   Amber                                                                                 0
+##   American-Style Malt Liquor                                                            0
+##   American-Style Märzen / Oktoberfest                                                   0
+##   Bamberg-Style Bock Rauchbier                                                          0
+##   Bamberg-Style Märzen Rauchbier                                                        0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                              0
+##   Barley Wine                                                                           0
+##   Barrel-Aged                                                                           0
+##   Belgian-style Fruit Beer                                                              0
+##   Belgian-Style Fruit Lambic                                                            0
+##   Belgian-Style Lambic                                                                  0
+##   Belgian-Style Quadrupel                                                               0
+##   Belgian-Style Table Beer                                                              0
+##   Bitter                                                                                0
+##   Black                                                                                 0
+##   Blonde                                                                                0
+##   Braggot                                                                               0
+##   Brett Beer                                                                            0
+##   Brown                                                                                 0
+##   California Common Beer                                                                0
+##   Chili Pepper Beer                                                                     0
+##   Chocolate / Cocoa-Flavored Beer                                                       0
+##   Coffee-Flavored Beer                                                                  0
+##   Contemporary Gose                                                                     0
+##   Dark American-Belgo-Style Ale                                                         0
+##   Dortmunder / European-Style Export                                                    0
+##   Double India Pale Ale                                                                 0
+##   Dubbel                                                                                0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                        0
+##   English-Style Dark Mild Ale                                                           0
+##   English-Style Pale Mild Ale                                                           0
+##   English-Style Summer Ale                                                              0
+##   European-Style Dark / Münchner Dunkel                                                 0
+##   Field Beer                                                                            0
+##   Flavored Malt Beverage                                                                0
+##   French-Style Bière de Garde                                                           0
+##   Fresh "Wet" Hop Ale                                                                   0
+##   Fruit Beer                                                                            0
+##   Fruit Cider                                                                           0
+##   German-Style Doppelbock                                                               0
+##   German-Style Eisbock                                                                  0
+##   German-Style Heller Bock/Maibock                                                      0
+##   German-Style Leichtbier                                                               0
+##   German-Style Leichtes Weizen / Weissbier                                              0
+##   German-Style Märzen                                                                   0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                            0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                               0
+##   German-Style Schwarzbier                                                              0
+##   Gluten-Free Beer                                                                      0
+##   Grodziskie                                                                            0
+##   Herb and Spice Beer                                                                   0
+##   Historical Beer                                                                       0
+##   India Pale Ale                                                                        0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                         0
+##   Kölsch                                                                                0
+##   Lager                                                                                 0
+##   Leipzig-Style Gose                                                                    0
+##   Mixed Culture Brett Beer                                                              0
+##   Münchner (Munich)-Style Helles                                                        0
+##   Old Ale                                                                               0
+##   Other Belgian-Style Ales                                                              0
+##   Pale Ale                                                                              0
+##   Pale American-Belgo-Style Ale                                                         0
+##   Pilsener                                                                              0
+##   Porter                                                                                0
+##   Pumpkin Beer                                                                          0
+##   Red                                                                                   0
+##   Saison                                                                                0
+##   Scotch Ale                                                                            0
+##   Scottish-Style Export Ale                                                             0
+##   Scottish-Style Heavy Ale                                                              0
+##   Scottish-Style Light Ale                                                              0
+##   Session Beer                                                                          0
+##   Sour                                                                                  0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                               0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                   0
+##   South German-Style Kristall Weizen / Kristall Weissbier                               0
+##   South German-Style Weizenbock / Weissbock                                             0
+##   Specialty Beer                                                                        0
+##   Stout                                                                                 0
+##   Strong Ale                                                                            0
+##   Traditional German-Style Bock                                                         0
+##   Tripel                                                                                0
+##   Wheat                                                                                 0
+##   Wild Beer                                                                             0
+##                                                           
+##                                                            Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)
+##   Altbier                                                                                                         0
+##   Amber                                                                                                           0
+##   American-Style Malt Liquor                                                                                      0
+##   American-Style Märzen / Oktoberfest                                                                             0
+##   Bamberg-Style Bock Rauchbier                                                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                                        0
+##   Barley Wine                                                                                                     0
+##   Barrel-Aged                                                                                                     0
+##   Belgian-style Fruit Beer                                                                                        0
+##   Belgian-Style Fruit Lambic                                                                                      0
+##   Belgian-Style Lambic                                                                                            0
+##   Belgian-Style Quadrupel                                                                                         0
+##   Belgian-Style Table Beer                                                                                        0
+##   Bitter                                                                                                          0
+##   Black                                                                                                           0
+##   Blonde                                                                                                          0
+##   Braggot                                                                                                         0
+##   Brett Beer                                                                                                      0
+##   Brown                                                                                                           0
+##   California Common Beer                                                                                          0
+##   Chili Pepper Beer                                                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                                                 0
+##   Coffee-Flavored Beer                                                                                            0
+##   Contemporary Gose                                                                                               0
+##   Dark American-Belgo-Style Ale                                                                                   0
+##   Dortmunder / European-Style Export                                                                              0
+##   Double India Pale Ale                                                                                           0
+##   Dubbel                                                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                                  0
+##   English-Style Dark Mild Ale                                                                                     0
+##   English-Style Pale Mild Ale                                                                                     0
+##   English-Style Summer Ale                                                                                        0
+##   European-Style Dark / Münchner Dunkel                                                                           0
+##   Field Beer                                                                                                      0
+##   Flavored Malt Beverage                                                                                          0
+##   French-Style Bière de Garde                                                                                     0
+##   Fresh "Wet" Hop Ale                                                                                             0
+##   Fruit Beer                                                                                                      0
+##   Fruit Cider                                                                                                     0
+##   German-Style Doppelbock                                                                                         0
+##   German-Style Eisbock                                                                                            0
+##   German-Style Heller Bock/Maibock                                                                                0
+##   German-Style Leichtbier                                                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                                                        0
+##   German-Style Märzen                                                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                                         0
+##   German-Style Schwarzbier                                                                                        0
+##   Gluten-Free Beer                                                                                                0
+##   Grodziskie                                                                                                      0
+##   Herb and Spice Beer                                                                                             0
+##   Historical Beer                                                                                                 0
+##   India Pale Ale                                                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                                   0
+##   Kölsch                                                                                                          0
+##   Lager                                                                                                           0
+##   Leipzig-Style Gose                                                                                              0
+##   Mixed Culture Brett Beer                                                                                        0
+##   Münchner (Munich)-Style Helles                                                                                  0
+##   Old Ale                                                                                                         0
+##   Other Belgian-Style Ales                                                                                        0
+##   Pale Ale                                                                                                        0
+##   Pale American-Belgo-Style Ale                                                                                   0
+##   Pilsener                                                                                                        0
+##   Porter                                                                                                          0
+##   Pumpkin Beer                                                                                                    0
+##   Red                                                                                                             0
+##   Saison                                                                                                          0
+##   Scotch Ale                                                                                                      0
+##   Scottish-Style Export Ale                                                                                       0
+##   Scottish-Style Heavy Ale                                                                                        0
+##   Scottish-Style Light Ale                                                                                        0
+##   Session Beer                                                                                                    0
+##   Sour                                                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                                         0
+##   South German-Style Weizenbock / Weissbock                                                                       0
+##   Specialty Beer                                                                                                  0
+##   Stout                                                                                                           0
+##   Strong Ale                                                                                                      0
+##   Traditional German-Style Bock                                                                                   0
+##   Tripel                                                                                                          0
+##   Wheat                                                                                                           0
+##   Wild Beer                                                                                                       0
+##                                                           
+##                                                            Barley Wine
+##   Altbier                                                            0
+##   Amber                                                              0
+##   American-Style Malt Liquor                                         0
+##   American-Style Märzen / Oktoberfest                                0
+##   Bamberg-Style Bock Rauchbier                                       0
+##   Bamberg-Style Märzen Rauchbier                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)           0
+##   Barley Wine                                                        0
+##   Barrel-Aged                                                        0
+##   Belgian-style Fruit Beer                                           0
+##   Belgian-Style Fruit Lambic                                         0
+##   Belgian-Style Lambic                                               0
+##   Belgian-Style Quadrupel                                            0
+##   Belgian-Style Table Beer                                           0
+##   Bitter                                                             0
+##   Black                                                              0
+##   Blonde                                                             0
+##   Braggot                                                            0
+##   Brett Beer                                                         0
+##   Brown                                                              0
+##   California Common Beer                                             0
+##   Chili Pepper Beer                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                    0
+##   Coffee-Flavored Beer                                               0
+##   Contemporary Gose                                                  0
+##   Dark American-Belgo-Style Ale                                      0
+##   Dortmunder / European-Style Export                                 0
+##   Double India Pale Ale                                              0
+##   Dubbel                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                     0
+##   English-Style Dark Mild Ale                                        0
+##   English-Style Pale Mild Ale                                        0
+##   English-Style Summer Ale                                           0
+##   European-Style Dark / Münchner Dunkel                              0
+##   Field Beer                                                         0
+##   Flavored Malt Beverage                                             0
+##   French-Style Bière de Garde                                        0
+##   Fresh "Wet" Hop Ale                                                0
+##   Fruit Beer                                                         0
+##   Fruit Cider                                                        0
+##   German-Style Doppelbock                                            0
+##   German-Style Eisbock                                               0
+##   German-Style Heller Bock/Maibock                                   0
+##   German-Style Leichtbier                                            0
+##   German-Style Leichtes Weizen / Weissbier                           0
+##   German-Style Märzen                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast            0
+##   German-Style Schwarzbier                                           0
+##   Gluten-Free Beer                                                   0
+##   Grodziskie                                                         0
+##   Herb and Spice Beer                                                0
+##   Historical Beer                                                    0
+##   India Pale Ale                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                      0
+##   Kölsch                                                             0
+##   Lager                                                              0
+##   Leipzig-Style Gose                                                 0
+##   Mixed Culture Brett Beer                                           0
+##   Münchner (Munich)-Style Helles                                     0
+##   Old Ale                                                            0
+##   Other Belgian-Style Ales                                           0
+##   Pale Ale                                                           0
+##   Pale American-Belgo-Style Ale                                      0
+##   Pilsener                                                           0
+##   Porter                                                             0
+##   Pumpkin Beer                                                       0
+##   Red                                                                0
+##   Saison                                                             0
+##   Scotch Ale                                                         0
+##   Scottish-Style Export Ale                                          0
+##   Scottish-Style Heavy Ale                                           0
+##   Scottish-Style Light Ale                                           0
+##   Session Beer                                                       0
+##   Sour                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                0
+##   South German-Style Kristall Weizen / Kristall Weissbier            0
+##   South German-Style Weizenbock / Weissbock                          0
+##   Specialty Beer                                                     0
+##   Stout                                                              0
+##   Strong Ale                                                         0
+##   Traditional German-Style Bock                                      0
+##   Tripel                                                             0
+##   Wheat                                                              0
+##   Wild Beer                                                          0
+##                                                           
+##                                                            Barrel-Aged
+##   Altbier                                                            0
+##   Amber                                                              0
+##   American-Style Malt Liquor                                         0
+##   American-Style Märzen / Oktoberfest                                0
+##   Bamberg-Style Bock Rauchbier                                       0
+##   Bamberg-Style Märzen Rauchbier                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)           0
+##   Barley Wine                                                        0
+##   Barrel-Aged                                                        0
+##   Belgian-style Fruit Beer                                           0
+##   Belgian-Style Fruit Lambic                                         0
+##   Belgian-Style Lambic                                               0
+##   Belgian-Style Quadrupel                                            0
+##   Belgian-Style Table Beer                                           0
+##   Bitter                                                             0
+##   Black                                                              0
+##   Blonde                                                             0
+##   Braggot                                                            0
+##   Brett Beer                                                         0
+##   Brown                                                              0
+##   California Common Beer                                             0
+##   Chili Pepper Beer                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                    0
+##   Coffee-Flavored Beer                                               0
+##   Contemporary Gose                                                  0
+##   Dark American-Belgo-Style Ale                                      0
+##   Dortmunder / European-Style Export                                 0
+##   Double India Pale Ale                                              0
+##   Dubbel                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                     0
+##   English-Style Dark Mild Ale                                        0
+##   English-Style Pale Mild Ale                                        0
+##   English-Style Summer Ale                                           0
+##   European-Style Dark / Münchner Dunkel                              0
+##   Field Beer                                                         0
+##   Flavored Malt Beverage                                             0
+##   French-Style Bière de Garde                                        0
+##   Fresh "Wet" Hop Ale                                                0
+##   Fruit Beer                                                         0
+##   Fruit Cider                                                        0
+##   German-Style Doppelbock                                            0
+##   German-Style Eisbock                                               0
+##   German-Style Heller Bock/Maibock                                   0
+##   German-Style Leichtbier                                            0
+##   German-Style Leichtes Weizen / Weissbier                           0
+##   German-Style Märzen                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast            0
+##   German-Style Schwarzbier                                           0
+##   Gluten-Free Beer                                                   0
+##   Grodziskie                                                         0
+##   Herb and Spice Beer                                                0
+##   Historical Beer                                                    0
+##   India Pale Ale                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                      0
+##   Kölsch                                                             0
+##   Lager                                                              0
+##   Leipzig-Style Gose                                                 0
+##   Mixed Culture Brett Beer                                           0
+##   Münchner (Munich)-Style Helles                                     0
+##   Old Ale                                                            0
+##   Other Belgian-Style Ales                                           0
+##   Pale Ale                                                           0
+##   Pale American-Belgo-Style Ale                                      0
+##   Pilsener                                                           0
+##   Porter                                                             0
+##   Pumpkin Beer                                                       0
+##   Red                                                                0
+##   Saison                                                             0
+##   Scotch Ale                                                         0
+##   Scottish-Style Export Ale                                          0
+##   Scottish-Style Heavy Ale                                           0
+##   Scottish-Style Light Ale                                           0
+##   Session Beer                                                       0
+##   Sour                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                0
+##   South German-Style Kristall Weizen / Kristall Weissbier            0
+##   South German-Style Weizenbock / Weissbock                          0
+##   Specialty Beer                                                     0
+##   Stout                                                              0
+##   Strong Ale                                                         0
+##   Traditional German-Style Bock                                      0
+##   Tripel                                                             0
+##   Wheat                                                              0
+##   Wild Beer                                                          0
+##                                                           
+##                                                            Belgian-style Fruit Beer
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Belgian-Style Fruit Lambic
+##   Altbier                                                                           0
+##   Amber                                                                             0
+##   American-Style Malt Liquor                                                        0
+##   American-Style Märzen / Oktoberfest                                               0
+##   Bamberg-Style Bock Rauchbier                                                      0
+##   Bamberg-Style Märzen Rauchbier                                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                          0
+##   Barley Wine                                                                       0
+##   Barrel-Aged                                                                       0
+##   Belgian-style Fruit Beer                                                          0
+##   Belgian-Style Fruit Lambic                                                        0
+##   Belgian-Style Lambic                                                              0
+##   Belgian-Style Quadrupel                                                           0
+##   Belgian-Style Table Beer                                                          0
+##   Bitter                                                                            0
+##   Black                                                                             0
+##   Blonde                                                                            0
+##   Braggot                                                                           0
+##   Brett Beer                                                                        0
+##   Brown                                                                             0
+##   California Common Beer                                                            0
+##   Chili Pepper Beer                                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                                   0
+##   Coffee-Flavored Beer                                                              0
+##   Contemporary Gose                                                                 0
+##   Dark American-Belgo-Style Ale                                                     0
+##   Dortmunder / European-Style Export                                                0
+##   Double India Pale Ale                                                             0
+##   Dubbel                                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                    0
+##   English-Style Dark Mild Ale                                                       0
+##   English-Style Pale Mild Ale                                                       0
+##   English-Style Summer Ale                                                          0
+##   European-Style Dark / Münchner Dunkel                                             0
+##   Field Beer                                                                        0
+##   Flavored Malt Beverage                                                            0
+##   French-Style Bière de Garde                                                       0
+##   Fresh "Wet" Hop Ale                                                               0
+##   Fruit Beer                                                                        0
+##   Fruit Cider                                                                       0
+##   German-Style Doppelbock                                                           0
+##   German-Style Eisbock                                                              0
+##   German-Style Heller Bock/Maibock                                                  0
+##   German-Style Leichtbier                                                           0
+##   German-Style Leichtes Weizen / Weissbier                                          0
+##   German-Style Märzen                                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                           0
+##   German-Style Schwarzbier                                                          0
+##   Gluten-Free Beer                                                                  0
+##   Grodziskie                                                                        0
+##   Herb and Spice Beer                                                               0
+##   Historical Beer                                                                   0
+##   India Pale Ale                                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                     0
+##   Kölsch                                                                            0
+##   Lager                                                                             0
+##   Leipzig-Style Gose                                                                0
+##   Mixed Culture Brett Beer                                                          0
+##   Münchner (Munich)-Style Helles                                                    0
+##   Old Ale                                                                           0
+##   Other Belgian-Style Ales                                                          0
+##   Pale Ale                                                                          0
+##   Pale American-Belgo-Style Ale                                                     0
+##   Pilsener                                                                          0
+##   Porter                                                                            0
+##   Pumpkin Beer                                                                      0
+##   Red                                                                               0
+##   Saison                                                                            0
+##   Scotch Ale                                                                        0
+##   Scottish-Style Export Ale                                                         0
+##   Scottish-Style Heavy Ale                                                          0
+##   Scottish-Style Light Ale                                                          0
+##   Session Beer                                                                      0
+##   Sour                                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                               0
+##   South German-Style Kristall Weizen / Kristall Weissbier                           0
+##   South German-Style Weizenbock / Weissbock                                         0
+##   Specialty Beer                                                                    0
+##   Stout                                                                             0
+##   Strong Ale                                                                        0
+##   Traditional German-Style Bock                                                     0
+##   Tripel                                                                            0
+##   Wheat                                                                             0
+##   Wild Beer                                                                         0
+##                                                           
+##                                                            Belgian-Style Lambic
+##   Altbier                                                                     0
+##   Amber                                                                       0
+##   American-Style Malt Liquor                                                  0
+##   American-Style Märzen / Oktoberfest                                         0
+##   Bamberg-Style Bock Rauchbier                                                0
+##   Bamberg-Style Märzen Rauchbier                                              0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                    0
+##   Barley Wine                                                                 0
+##   Barrel-Aged                                                                 0
+##   Belgian-style Fruit Beer                                                    0
+##   Belgian-Style Fruit Lambic                                                  0
+##   Belgian-Style Lambic                                                        0
+##   Belgian-Style Quadrupel                                                     0
+##   Belgian-Style Table Beer                                                    0
+##   Bitter                                                                      0
+##   Black                                                                       0
+##   Blonde                                                                      0
+##   Braggot                                                                     0
+##   Brett Beer                                                                  0
+##   Brown                                                                       0
+##   California Common Beer                                                      0
+##   Chili Pepper Beer                                                           0
+##   Chocolate / Cocoa-Flavored Beer                                             0
+##   Coffee-Flavored Beer                                                        0
+##   Contemporary Gose                                                           0
+##   Dark American-Belgo-Style Ale                                               0
+##   Dortmunder / European-Style Export                                          0
+##   Double India Pale Ale                                                       0
+##   Dubbel                                                                      0
+##   Dutch-Style Kuit, Kuyt or Koyt                                              0
+##   English-Style Dark Mild Ale                                                 0
+##   English-Style Pale Mild Ale                                                 0
+##   English-Style Summer Ale                                                    0
+##   European-Style Dark / Münchner Dunkel                                       0
+##   Field Beer                                                                  0
+##   Flavored Malt Beverage                                                      0
+##   French-Style Bière de Garde                                                 0
+##   Fresh "Wet" Hop Ale                                                         0
+##   Fruit Beer                                                                  0
+##   Fruit Cider                                                                 0
+##   German-Style Doppelbock                                                     0
+##   German-Style Eisbock                                                        0
+##   German-Style Heller Bock/Maibock                                            0
+##   German-Style Leichtbier                                                     0
+##   German-Style Leichtes Weizen / Weissbier                                    0
+##   German-Style Märzen                                                         0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                  0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                     0
+##   German-Style Schwarzbier                                                    0
+##   Gluten-Free Beer                                                            0
+##   Grodziskie                                                                  0
+##   Herb and Spice Beer                                                         0
+##   Historical Beer                                                             0
+##   India Pale Ale                                                              0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                               0
+##   Kölsch                                                                      0
+##   Lager                                                                       0
+##   Leipzig-Style Gose                                                          0
+##   Mixed Culture Brett Beer                                                    0
+##   Münchner (Munich)-Style Helles                                              0
+##   Old Ale                                                                     0
+##   Other Belgian-Style Ales                                                    0
+##   Pale Ale                                                                    0
+##   Pale American-Belgo-Style Ale                                               0
+##   Pilsener                                                                    0
+##   Porter                                                                      0
+##   Pumpkin Beer                                                                0
+##   Red                                                                         0
+##   Saison                                                                      0
+##   Scotch Ale                                                                  0
+##   Scottish-Style Export Ale                                                   0
+##   Scottish-Style Heavy Ale                                                    0
+##   Scottish-Style Light Ale                                                    0
+##   Session Beer                                                                0
+##   Sour                                                                        0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                         0
+##   South German-Style Kristall Weizen / Kristall Weissbier                     0
+##   South German-Style Weizenbock / Weissbock                                   0
+##   Specialty Beer                                                              0
+##   Stout                                                                       0
+##   Strong Ale                                                                  0
+##   Traditional German-Style Bock                                               0
+##   Tripel                                                                      0
+##   Wheat                                                                       0
+##   Wild Beer                                                                   0
+##                                                           
+##                                                            Belgian-Style Quadrupel
+##   Altbier                                                                        0
+##   Amber                                                                          0
+##   American-Style Malt Liquor                                                     0
+##   American-Style Märzen / Oktoberfest                                            0
+##   Bamberg-Style Bock Rauchbier                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                       0
+##   Barley Wine                                                                    0
+##   Barrel-Aged                                                                    0
+##   Belgian-style Fruit Beer                                                       0
+##   Belgian-Style Fruit Lambic                                                     0
+##   Belgian-Style Lambic                                                           0
+##   Belgian-Style Quadrupel                                                        0
+##   Belgian-Style Table Beer                                                       0
+##   Bitter                                                                         0
+##   Black                                                                          0
+##   Blonde                                                                         0
+##   Braggot                                                                        0
+##   Brett Beer                                                                     0
+##   Brown                                                                          0
+##   California Common Beer                                                         0
+##   Chili Pepper Beer                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                0
+##   Coffee-Flavored Beer                                                           0
+##   Contemporary Gose                                                              0
+##   Dark American-Belgo-Style Ale                                                  0
+##   Dortmunder / European-Style Export                                             0
+##   Double India Pale Ale                                                          0
+##   Dubbel                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                 0
+##   English-Style Dark Mild Ale                                                    0
+##   English-Style Pale Mild Ale                                                    0
+##   English-Style Summer Ale                                                       0
+##   European-Style Dark / Münchner Dunkel                                          0
+##   Field Beer                                                                     0
+##   Flavored Malt Beverage                                                         0
+##   French-Style Bière de Garde                                                    0
+##   Fresh "Wet" Hop Ale                                                            0
+##   Fruit Beer                                                                     0
+##   Fruit Cider                                                                    0
+##   German-Style Doppelbock                                                        0
+##   German-Style Eisbock                                                           0
+##   German-Style Heller Bock/Maibock                                               0
+##   German-Style Leichtbier                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                       0
+##   German-Style Märzen                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                        0
+##   German-Style Schwarzbier                                                       0
+##   Gluten-Free Beer                                                               0
+##   Grodziskie                                                                     0
+##   Herb and Spice Beer                                                            0
+##   Historical Beer                                                                0
+##   India Pale Ale                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                  0
+##   Kölsch                                                                         0
+##   Lager                                                                          0
+##   Leipzig-Style Gose                                                             0
+##   Mixed Culture Brett Beer                                                       0
+##   Münchner (Munich)-Style Helles                                                 0
+##   Old Ale                                                                        0
+##   Other Belgian-Style Ales                                                       0
+##   Pale Ale                                                                       0
+##   Pale American-Belgo-Style Ale                                                  0
+##   Pilsener                                                                       0
+##   Porter                                                                         0
+##   Pumpkin Beer                                                                   0
+##   Red                                                                            0
+##   Saison                                                                         0
+##   Scotch Ale                                                                     0
+##   Scottish-Style Export Ale                                                      0
+##   Scottish-Style Heavy Ale                                                       0
+##   Scottish-Style Light Ale                                                       0
+##   Session Beer                                                                   0
+##   Sour                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                        0
+##   South German-Style Weizenbock / Weissbock                                      0
+##   Specialty Beer                                                                 0
+##   Stout                                                                          0
+##   Strong Ale                                                                     0
+##   Traditional German-Style Bock                                                  0
+##   Tripel                                                                         0
+##   Wheat                                                                          0
+##   Wild Beer                                                                      0
+##                                                           
+##                                                            Belgian-Style Table Beer
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Bitter Black
+##   Altbier                                                       0     0
+##   Amber                                                         0     0
+##   American-Style Malt Liquor                                    0     0
+##   American-Style Märzen / Oktoberfest                           0     0
+##   Bamberg-Style Bock Rauchbier                                  0     0
+##   Bamberg-Style Märzen Rauchbier                                0     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)      0     0
+##   Barley Wine                                                   0     0
+##   Barrel-Aged                                                   0     0
+##   Belgian-style Fruit Beer                                      0     0
+##   Belgian-Style Fruit Lambic                                    0     0
+##   Belgian-Style Lambic                                          0     0
+##   Belgian-Style Quadrupel                                       0     0
+##   Belgian-Style Table Beer                                      0     0
+##   Bitter                                                        0     0
+##   Black                                                         0     0
+##   Blonde                                                        0     0
+##   Braggot                                                       0     0
+##   Brett Beer                                                    0     0
+##   Brown                                                         0     0
+##   California Common Beer                                        0     0
+##   Chili Pepper Beer                                             0     0
+##   Chocolate / Cocoa-Flavored Beer                               0     0
+##   Coffee-Flavored Beer                                          0     0
+##   Contemporary Gose                                             0     0
+##   Dark American-Belgo-Style Ale                                 0     0
+##   Dortmunder / European-Style Export                            0     0
+##   Double India Pale Ale                                         0     0
+##   Dubbel                                                        0     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                0     0
+##   English-Style Dark Mild Ale                                   0     0
+##   English-Style Pale Mild Ale                                   0     0
+##   English-Style Summer Ale                                      0     0
+##   European-Style Dark / Münchner Dunkel                         0     0
+##   Field Beer                                                    0     0
+##   Flavored Malt Beverage                                        0     0
+##   French-Style Bière de Garde                                   0     0
+##   Fresh "Wet" Hop Ale                                           0     0
+##   Fruit Beer                                                    0     0
+##   Fruit Cider                                                   0     0
+##   German-Style Doppelbock                                       0     0
+##   German-Style Eisbock                                          0     0
+##   German-Style Heller Bock/Maibock                              0     0
+##   German-Style Leichtbier                                       0     0
+##   German-Style Leichtes Weizen / Weissbier                      0     0
+##   German-Style Märzen                                           0     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                    0     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast       0     0
+##   German-Style Schwarzbier                                      0     0
+##   Gluten-Free Beer                                              0     0
+##   Grodziskie                                                    0     0
+##   Herb and Spice Beer                                           0     0
+##   Historical Beer                                               0     0
+##   India Pale Ale                                                0     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                 0     0
+##   Kölsch                                                        0     0
+##   Lager                                                         0     0
+##   Leipzig-Style Gose                                            0     0
+##   Mixed Culture Brett Beer                                      0     0
+##   Münchner (Munich)-Style Helles                                0     0
+##   Old Ale                                                       0     0
+##   Other Belgian-Style Ales                                      0     0
+##   Pale Ale                                                      0     0
+##   Pale American-Belgo-Style Ale                                 0     0
+##   Pilsener                                                      0     0
+##   Porter                                                        0     0
+##   Pumpkin Beer                                                  0     0
+##   Red                                                           0     0
+##   Saison                                                        0     0
+##   Scotch Ale                                                    0     0
+##   Scottish-Style Export Ale                                     0     0
+##   Scottish-Style Heavy Ale                                      0     0
+##   Scottish-Style Light Ale                                      0     0
+##   Session Beer                                                  0     0
+##   Sour                                                          0     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier       0     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier           0     0
+##   South German-Style Kristall Weizen / Kristall Weissbier       0     0
+##   South German-Style Weizenbock / Weissbock                     0     0
+##   Specialty Beer                                                0     0
+##   Stout                                                         0     0
+##   Strong Ale                                                    0     0
+##   Traditional German-Style Bock                                 0     0
+##   Tripel                                                        0     0
+##   Wheat                                                         0     0
+##   Wild Beer                                                     0     0
+##                                                           
+##                                                            Blonde Braggot
+##   Altbier                                                       0       0
+##   Amber                                                         0       0
+##   American-Style Malt Liquor                                    0       0
+##   American-Style Märzen / Oktoberfest                           0       0
+##   Bamberg-Style Bock Rauchbier                                  0       0
+##   Bamberg-Style Märzen Rauchbier                                0       0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)      0       0
+##   Barley Wine                                                   0       0
+##   Barrel-Aged                                                   0       0
+##   Belgian-style Fruit Beer                                      0       0
+##   Belgian-Style Fruit Lambic                                    0       0
+##   Belgian-Style Lambic                                          0       0
+##   Belgian-Style Quadrupel                                       0       0
+##   Belgian-Style Table Beer                                      0       0
+##   Bitter                                                        0       0
+##   Black                                                         0       0
+##   Blonde                                                        1       0
+##   Braggot                                                       0       0
+##   Brett Beer                                                    0       0
+##   Brown                                                         0       0
+##   California Common Beer                                        0       0
+##   Chili Pepper Beer                                             0       0
+##   Chocolate / Cocoa-Flavored Beer                               0       0
+##   Coffee-Flavored Beer                                          0       0
+##   Contemporary Gose                                             0       0
+##   Dark American-Belgo-Style Ale                                 0       0
+##   Dortmunder / European-Style Export                            0       0
+##   Double India Pale Ale                                         0       0
+##   Dubbel                                                        0       0
+##   Dutch-Style Kuit, Kuyt or Koyt                                0       0
+##   English-Style Dark Mild Ale                                   0       0
+##   English-Style Pale Mild Ale                                   0       0
+##   English-Style Summer Ale                                      0       0
+##   European-Style Dark / Münchner Dunkel                         0       0
+##   Field Beer                                                    0       0
+##   Flavored Malt Beverage                                        0       0
+##   French-Style Bière de Garde                                   0       0
+##   Fresh "Wet" Hop Ale                                           0       0
+##   Fruit Beer                                                    0       0
+##   Fruit Cider                                                   0       0
+##   German-Style Doppelbock                                       0       0
+##   German-Style Eisbock                                          0       0
+##   German-Style Heller Bock/Maibock                              0       0
+##   German-Style Leichtbier                                       0       0
+##   German-Style Leichtes Weizen / Weissbier                      0       0
+##   German-Style Märzen                                           1       0
+##   German-Style Oktoberfest / Wiesen (Meadow)                    0       0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast       0       0
+##   German-Style Schwarzbier                                      0       0
+##   Gluten-Free Beer                                              0       0
+##   Grodziskie                                                    0       0
+##   Herb and Spice Beer                                           0       0
+##   Historical Beer                                               0       0
+##   India Pale Ale                                                0       0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                 0       0
+##   Kölsch                                                        0       0
+##   Lager                                                         0       0
+##   Leipzig-Style Gose                                            0       0
+##   Mixed Culture Brett Beer                                      0       0
+##   Münchner (Munich)-Style Helles                                0       0
+##   Old Ale                                                       0       0
+##   Other Belgian-Style Ales                                      0       0
+##   Pale Ale                                                      0       0
+##   Pale American-Belgo-Style Ale                                 0       0
+##   Pilsener                                                      0       0
+##   Porter                                                        0       0
+##   Pumpkin Beer                                                  0       0
+##   Red                                                           0       0
+##   Saison                                                        0       0
+##   Scotch Ale                                                    0       0
+##   Scottish-Style Export Ale                                     0       0
+##   Scottish-Style Heavy Ale                                      0       0
+##   Scottish-Style Light Ale                                      0       0
+##   Session Beer                                                  0       0
+##   Sour                                                          0       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier       0       0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier           0       0
+##   South German-Style Kristall Weizen / Kristall Weissbier       0       0
+##   South German-Style Weizenbock / Weissbock                     0       0
+##   Specialty Beer                                                0       0
+##   Stout                                                         0       0
+##   Strong Ale                                                    0       0
+##   Traditional German-Style Bock                                 0       0
+##   Tripel                                                        0       0
+##   Wheat                                                         0       0
+##   Wild Beer                                                     0       0
+##                                                           
+##                                                            Brett Beer
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       0
+##   Barrel-Aged                                                       0
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           0
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             0
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              0
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           0
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          0
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               0
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             0
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          0
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                            0
+##   Pumpkin Beer                                                      0
+##   Red                                                               0
+##   Saison                                                            0
+##   Scotch Ale                                                        0
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    0
+##   Stout                                                             0
+##   Strong Ale                                                        0
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             0
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Brown
+##   Altbier                                                      1
+##   Amber                                                        0
+##   American-Style Malt Liquor                                   0
+##   American-Style Märzen / Oktoberfest                          0
+##   Bamberg-Style Bock Rauchbier                                 0
+##   Bamberg-Style Märzen Rauchbier                               0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)     0
+##   Barley Wine                                                  0
+##   Barrel-Aged                                                  0
+##   Belgian-style Fruit Beer                                     0
+##   Belgian-Style Fruit Lambic                                   0
+##   Belgian-Style Lambic                                         0
+##   Belgian-Style Quadrupel                                      0
+##   Belgian-Style Table Beer                                     0
+##   Bitter                                                       0
+##   Black                                                        0
+##   Blonde                                                       0
+##   Braggot                                                      0
+##   Brett Beer                                                   0
+##   Brown                                                        1
+##   California Common Beer                                       0
+##   Chili Pepper Beer                                            0
+##   Chocolate / Cocoa-Flavored Beer                              0
+##   Coffee-Flavored Beer                                         0
+##   Contemporary Gose                                            0
+##   Dark American-Belgo-Style Ale                                0
+##   Dortmunder / European-Style Export                           0
+##   Double India Pale Ale                                        0
+##   Dubbel                                                       0
+##   Dutch-Style Kuit, Kuyt or Koyt                               0
+##   English-Style Dark Mild Ale                                  0
+##   English-Style Pale Mild Ale                                  2
+##   English-Style Summer Ale                                     0
+##   European-Style Dark / Münchner Dunkel                        0
+##   Field Beer                                                   0
+##   Flavored Malt Beverage                                       0
+##   French-Style Bière de Garde                                  0
+##   Fresh "Wet" Hop Ale                                          0
+##   Fruit Beer                                                   0
+##   Fruit Cider                                                  0
+##   German-Style Doppelbock                                      0
+##   German-Style Eisbock                                         0
+##   German-Style Heller Bock/Maibock                             0
+##   German-Style Leichtbier                                      0
+##   German-Style Leichtes Weizen / Weissbier                     0
+##   German-Style Märzen                                          0
+##   German-Style Oktoberfest / Wiesen (Meadow)                   0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast      0
+##   German-Style Schwarzbier                                     0
+##   Gluten-Free Beer                                             0
+##   Grodziskie                                                   0
+##   Herb and Spice Beer                                          0
+##   Historical Beer                                              0
+##   India Pale Ale                                               0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                0
+##   Kölsch                                                       0
+##   Lager                                                        0
+##   Leipzig-Style Gose                                           0
+##   Mixed Culture Brett Beer                                     0
+##   Münchner (Munich)-Style Helles                               0
+##   Old Ale                                                      0
+##   Other Belgian-Style Ales                                     0
+##   Pale Ale                                                     0
+##   Pale American-Belgo-Style Ale                                0
+##   Pilsener                                                     0
+##   Porter                                                       0
+##   Pumpkin Beer                                                 0
+##   Red                                                          0
+##   Saison                                                       0
+##   Scotch Ale                                                   0
+##   Scottish-Style Export Ale                                    0
+##   Scottish-Style Heavy Ale                                     0
+##   Scottish-Style Light Ale                                     0
+##   Session Beer                                                 0
+##   Sour                                                         0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier          0
+##   South German-Style Kristall Weizen / Kristall Weissbier      0
+##   South German-Style Weizenbock / Weissbock                    0
+##   Specialty Beer                                               0
+##   Stout                                                        0
+##   Strong Ale                                                   0
+##   Traditional German-Style Bock                                0
+##   Tripel                                                       0
+##   Wheat                                                        0
+##   Wild Beer                                                    0
+##                                                           
+##                                                            California Common Beer
+##   Altbier                                                                       0
+##   Amber                                                                         0
+##   American-Style Malt Liquor                                                    0
+##   American-Style Märzen / Oktoberfest                                           0
+##   Bamberg-Style Bock Rauchbier                                                  0
+##   Bamberg-Style Märzen Rauchbier                                                0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                      0
+##   Barley Wine                                                                   0
+##   Barrel-Aged                                                                   0
+##   Belgian-style Fruit Beer                                                      0
+##   Belgian-Style Fruit Lambic                                                    0
+##   Belgian-Style Lambic                                                          0
+##   Belgian-Style Quadrupel                                                       0
+##   Belgian-Style Table Beer                                                      0
+##   Bitter                                                                        0
+##   Black                                                                         0
+##   Blonde                                                                        0
+##   Braggot                                                                       0
+##   Brett Beer                                                                    0
+##   Brown                                                                         0
+##   California Common Beer                                                        0
+##   Chili Pepper Beer                                                             0
+##   Chocolate / Cocoa-Flavored Beer                                               0
+##   Coffee-Flavored Beer                                                          0
+##   Contemporary Gose                                                             0
+##   Dark American-Belgo-Style Ale                                                 0
+##   Dortmunder / European-Style Export                                            0
+##   Double India Pale Ale                                                         0
+##   Dubbel                                                                        0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                0
+##   English-Style Dark Mild Ale                                                   0
+##   English-Style Pale Mild Ale                                                   0
+##   English-Style Summer Ale                                                      0
+##   European-Style Dark / Münchner Dunkel                                         0
+##   Field Beer                                                                    0
+##   Flavored Malt Beverage                                                        0
+##   French-Style Bière de Garde                                                   0
+##   Fresh "Wet" Hop Ale                                                           0
+##   Fruit Beer                                                                    0
+##   Fruit Cider                                                                   0
+##   German-Style Doppelbock                                                       0
+##   German-Style Eisbock                                                          0
+##   German-Style Heller Bock/Maibock                                              0
+##   German-Style Leichtbier                                                       0
+##   German-Style Leichtes Weizen / Weissbier                                      0
+##   German-Style Märzen                                                           0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                    0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                       0
+##   German-Style Schwarzbier                                                      0
+##   Gluten-Free Beer                                                              0
+##   Grodziskie                                                                    0
+##   Herb and Spice Beer                                                           0
+##   Historical Beer                                                               0
+##   India Pale Ale                                                                0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                 0
+##   Kölsch                                                                        0
+##   Lager                                                                         0
+##   Leipzig-Style Gose                                                            0
+##   Mixed Culture Brett Beer                                                      0
+##   Münchner (Munich)-Style Helles                                                0
+##   Old Ale                                                                       0
+##   Other Belgian-Style Ales                                                      0
+##   Pale Ale                                                                      0
+##   Pale American-Belgo-Style Ale                                                 0
+##   Pilsener                                                                      0
+##   Porter                                                                        0
+##   Pumpkin Beer                                                                  0
+##   Red                                                                           0
+##   Saison                                                                        0
+##   Scotch Ale                                                                    0
+##   Scottish-Style Export Ale                                                     0
+##   Scottish-Style Heavy Ale                                                      0
+##   Scottish-Style Light Ale                                                      0
+##   Session Beer                                                                  0
+##   Sour                                                                          0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                       0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                           0
+##   South German-Style Kristall Weizen / Kristall Weissbier                       0
+##   South German-Style Weizenbock / Weissbock                                     0
+##   Specialty Beer                                                                0
+##   Stout                                                                         0
+##   Strong Ale                                                                    0
+##   Traditional German-Style Bock                                                 0
+##   Tripel                                                                        0
+##   Wheat                                                                         0
+##   Wild Beer                                                                     0
+##                                                           
+##                                                            Chili Pepper Beer
+##   Altbier                                                                  0
+##   Amber                                                                    0
+##   American-Style Malt Liquor                                               0
+##   American-Style Märzen / Oktoberfest                                      0
+##   Bamberg-Style Bock Rauchbier                                             0
+##   Bamberg-Style Märzen Rauchbier                                           0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                 0
+##   Barley Wine                                                              0
+##   Barrel-Aged                                                              0
+##   Belgian-style Fruit Beer                                                 0
+##   Belgian-Style Fruit Lambic                                               0
+##   Belgian-Style Lambic                                                     0
+##   Belgian-Style Quadrupel                                                  0
+##   Belgian-Style Table Beer                                                 0
+##   Bitter                                                                   0
+##   Black                                                                    0
+##   Blonde                                                                   0
+##   Braggot                                                                  0
+##   Brett Beer                                                               0
+##   Brown                                                                    0
+##   California Common Beer                                                   0
+##   Chili Pepper Beer                                                        0
+##   Chocolate / Cocoa-Flavored Beer                                          0
+##   Coffee-Flavored Beer                                                     0
+##   Contemporary Gose                                                        0
+##   Dark American-Belgo-Style Ale                                            0
+##   Dortmunder / European-Style Export                                       0
+##   Double India Pale Ale                                                    0
+##   Dubbel                                                                   0
+##   Dutch-Style Kuit, Kuyt or Koyt                                           0
+##   English-Style Dark Mild Ale                                              0
+##   English-Style Pale Mild Ale                                              0
+##   English-Style Summer Ale                                                 0
+##   European-Style Dark / Münchner Dunkel                                    0
+##   Field Beer                                                               0
+##   Flavored Malt Beverage                                                   0
+##   French-Style Bière de Garde                                              0
+##   Fresh "Wet" Hop Ale                                                      0
+##   Fruit Beer                                                               0
+##   Fruit Cider                                                              0
+##   German-Style Doppelbock                                                  0
+##   German-Style Eisbock                                                     0
+##   German-Style Heller Bock/Maibock                                         0
+##   German-Style Leichtbier                                                  0
+##   German-Style Leichtes Weizen / Weissbier                                 0
+##   German-Style Märzen                                                      0
+##   German-Style Oktoberfest / Wiesen (Meadow)                               0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                  0
+##   German-Style Schwarzbier                                                 0
+##   Gluten-Free Beer                                                         0
+##   Grodziskie                                                               0
+##   Herb and Spice Beer                                                      0
+##   Historical Beer                                                          0
+##   India Pale Ale                                                           0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                            0
+##   Kölsch                                                                   0
+##   Lager                                                                    0
+##   Leipzig-Style Gose                                                       0
+##   Mixed Culture Brett Beer                                                 0
+##   Münchner (Munich)-Style Helles                                           0
+##   Old Ale                                                                  0
+##   Other Belgian-Style Ales                                                 0
+##   Pale Ale                                                                 0
+##   Pale American-Belgo-Style Ale                                            0
+##   Pilsener                                                                 0
+##   Porter                                                                   0
+##   Pumpkin Beer                                                             0
+##   Red                                                                      0
+##   Saison                                                                   0
+##   Scotch Ale                                                               0
+##   Scottish-Style Export Ale                                                0
+##   Scottish-Style Heavy Ale                                                 0
+##   Scottish-Style Light Ale                                                 0
+##   Session Beer                                                             0
+##   Sour                                                                     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                  0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                      0
+##   South German-Style Kristall Weizen / Kristall Weissbier                  0
+##   South German-Style Weizenbock / Weissbock                                0
+##   Specialty Beer                                                           0
+##   Stout                                                                    0
+##   Strong Ale                                                               0
+##   Traditional German-Style Bock                                            0
+##   Tripel                                                                   0
+##   Wheat                                                                    0
+##   Wild Beer                                                                0
+##                                                           
+##                                                            Chocolate / Cocoa-Flavored Beer
+##   Altbier                                                                                0
+##   Amber                                                                                  0
+##   American-Style Malt Liquor                                                             0
+##   American-Style Märzen / Oktoberfest                                                    0
+##   Bamberg-Style Bock Rauchbier                                                           0
+##   Bamberg-Style Märzen Rauchbier                                                         0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                               0
+##   Barley Wine                                                                            0
+##   Barrel-Aged                                                                            0
+##   Belgian-style Fruit Beer                                                               0
+##   Belgian-Style Fruit Lambic                                                             0
+##   Belgian-Style Lambic                                                                   0
+##   Belgian-Style Quadrupel                                                                0
+##   Belgian-Style Table Beer                                                               0
+##   Bitter                                                                                 0
+##   Black                                                                                  0
+##   Blonde                                                                                 0
+##   Braggot                                                                                0
+##   Brett Beer                                                                             0
+##   Brown                                                                                  0
+##   California Common Beer                                                                 0
+##   Chili Pepper Beer                                                                      0
+##   Chocolate / Cocoa-Flavored Beer                                                        0
+##   Coffee-Flavored Beer                                                                   0
+##   Contemporary Gose                                                                      0
+##   Dark American-Belgo-Style Ale                                                          0
+##   Dortmunder / European-Style Export                                                     0
+##   Double India Pale Ale                                                                  0
+##   Dubbel                                                                                 0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                         0
+##   English-Style Dark Mild Ale                                                            0
+##   English-Style Pale Mild Ale                                                            0
+##   English-Style Summer Ale                                                               0
+##   European-Style Dark / Münchner Dunkel                                                  0
+##   Field Beer                                                                             0
+##   Flavored Malt Beverage                                                                 0
+##   French-Style Bière de Garde                                                            0
+##   Fresh "Wet" Hop Ale                                                                    0
+##   Fruit Beer                                                                             0
+##   Fruit Cider                                                                            0
+##   German-Style Doppelbock                                                                0
+##   German-Style Eisbock                                                                   0
+##   German-Style Heller Bock/Maibock                                                       0
+##   German-Style Leichtbier                                                                0
+##   German-Style Leichtes Weizen / Weissbier                                               0
+##   German-Style Märzen                                                                    0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                             0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                0
+##   German-Style Schwarzbier                                                               0
+##   Gluten-Free Beer                                                                       0
+##   Grodziskie                                                                             0
+##   Herb and Spice Beer                                                                    0
+##   Historical Beer                                                                        0
+##   India Pale Ale                                                                         0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                          0
+##   Kölsch                                                                                 0
+##   Lager                                                                                  0
+##   Leipzig-Style Gose                                                                     0
+##   Mixed Culture Brett Beer                                                               0
+##   Münchner (Munich)-Style Helles                                                         0
+##   Old Ale                                                                                0
+##   Other Belgian-Style Ales                                                               0
+##   Pale Ale                                                                               0
+##   Pale American-Belgo-Style Ale                                                          0
+##   Pilsener                                                                               0
+##   Porter                                                                                 0
+##   Pumpkin Beer                                                                           0
+##   Red                                                                                    0
+##   Saison                                                                                 0
+##   Scotch Ale                                                                             0
+##   Scottish-Style Export Ale                                                              0
+##   Scottish-Style Heavy Ale                                                               0
+##   Scottish-Style Light Ale                                                               0
+##   Session Beer                                                                           0
+##   Sour                                                                                   0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                    0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                0
+##   South German-Style Weizenbock / Weissbock                                              0
+##   Specialty Beer                                                                         0
+##   Stout                                                                                  0
+##   Strong Ale                                                                             0
+##   Traditional German-Style Bock                                                          0
+##   Tripel                                                                                 0
+##   Wheat                                                                                  0
+##   Wild Beer                                                                              0
+##                                                           
+##                                                            Coffee-Flavored Beer
+##   Altbier                                                                     0
+##   Amber                                                                       0
+##   American-Style Malt Liquor                                                  0
+##   American-Style Märzen / Oktoberfest                                         0
+##   Bamberg-Style Bock Rauchbier                                                0
+##   Bamberg-Style Märzen Rauchbier                                              0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                    0
+##   Barley Wine                                                                 0
+##   Barrel-Aged                                                                 0
+##   Belgian-style Fruit Beer                                                    0
+##   Belgian-Style Fruit Lambic                                                  0
+##   Belgian-Style Lambic                                                        0
+##   Belgian-Style Quadrupel                                                     0
+##   Belgian-Style Table Beer                                                    0
+##   Bitter                                                                      0
+##   Black                                                                       0
+##   Blonde                                                                      0
+##   Braggot                                                                     0
+##   Brett Beer                                                                  0
+##   Brown                                                                       0
+##   California Common Beer                                                      0
+##   Chili Pepper Beer                                                           0
+##   Chocolate / Cocoa-Flavored Beer                                             0
+##   Coffee-Flavored Beer                                                        0
+##   Contemporary Gose                                                           0
+##   Dark American-Belgo-Style Ale                                               0
+##   Dortmunder / European-Style Export                                          0
+##   Double India Pale Ale                                                       0
+##   Dubbel                                                                      0
+##   Dutch-Style Kuit, Kuyt or Koyt                                              0
+##   English-Style Dark Mild Ale                                                 0
+##   English-Style Pale Mild Ale                                                 0
+##   English-Style Summer Ale                                                    0
+##   European-Style Dark / Münchner Dunkel                                       0
+##   Field Beer                                                                  0
+##   Flavored Malt Beverage                                                      0
+##   French-Style Bière de Garde                                                 0
+##   Fresh "Wet" Hop Ale                                                         0
+##   Fruit Beer                                                                  0
+##   Fruit Cider                                                                 0
+##   German-Style Doppelbock                                                     0
+##   German-Style Eisbock                                                        0
+##   German-Style Heller Bock/Maibock                                            0
+##   German-Style Leichtbier                                                     0
+##   German-Style Leichtes Weizen / Weissbier                                    0
+##   German-Style Märzen                                                         0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                  0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                     0
+##   German-Style Schwarzbier                                                    0
+##   Gluten-Free Beer                                                            0
+##   Grodziskie                                                                  0
+##   Herb and Spice Beer                                                         0
+##   Historical Beer                                                             0
+##   India Pale Ale                                                              0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                               0
+##   Kölsch                                                                      0
+##   Lager                                                                       0
+##   Leipzig-Style Gose                                                          0
+##   Mixed Culture Brett Beer                                                    0
+##   Münchner (Munich)-Style Helles                                              0
+##   Old Ale                                                                     0
+##   Other Belgian-Style Ales                                                    0
+##   Pale Ale                                                                    0
+##   Pale American-Belgo-Style Ale                                               0
+##   Pilsener                                                                    0
+##   Porter                                                                      0
+##   Pumpkin Beer                                                                0
+##   Red                                                                         0
+##   Saison                                                                      0
+##   Scotch Ale                                                                  0
+##   Scottish-Style Export Ale                                                   0
+##   Scottish-Style Heavy Ale                                                    0
+##   Scottish-Style Light Ale                                                    0
+##   Session Beer                                                                0
+##   Sour                                                                        0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                         0
+##   South German-Style Kristall Weizen / Kristall Weissbier                     0
+##   South German-Style Weizenbock / Weissbock                                   0
+##   Specialty Beer                                                              0
+##   Stout                                                                       0
+##   Strong Ale                                                                  0
+##   Traditional German-Style Bock                                               0
+##   Tripel                                                                      0
+##   Wheat                                                                       0
+##   Wild Beer                                                                   0
+##                                                           
+##                                                            Contemporary Gose
+##   Altbier                                                                  0
+##   Amber                                                                    0
+##   American-Style Malt Liquor                                               0
+##   American-Style Märzen / Oktoberfest                                      0
+##   Bamberg-Style Bock Rauchbier                                             0
+##   Bamberg-Style Märzen Rauchbier                                           0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                 0
+##   Barley Wine                                                              0
+##   Barrel-Aged                                                              0
+##   Belgian-style Fruit Beer                                                 0
+##   Belgian-Style Fruit Lambic                                               0
+##   Belgian-Style Lambic                                                     0
+##   Belgian-Style Quadrupel                                                  0
+##   Belgian-Style Table Beer                                                 0
+##   Bitter                                                                   0
+##   Black                                                                    0
+##   Blonde                                                                   0
+##   Braggot                                                                  0
+##   Brett Beer                                                               0
+##   Brown                                                                    0
+##   California Common Beer                                                   0
+##   Chili Pepper Beer                                                        0
+##   Chocolate / Cocoa-Flavored Beer                                          0
+##   Coffee-Flavored Beer                                                     0
+##   Contemporary Gose                                                        0
+##   Dark American-Belgo-Style Ale                                            0
+##   Dortmunder / European-Style Export                                       0
+##   Double India Pale Ale                                                    0
+##   Dubbel                                                                   0
+##   Dutch-Style Kuit, Kuyt or Koyt                                           0
+##   English-Style Dark Mild Ale                                              0
+##   English-Style Pale Mild Ale                                              0
+##   English-Style Summer Ale                                                 0
+##   European-Style Dark / Münchner Dunkel                                    0
+##   Field Beer                                                               0
+##   Flavored Malt Beverage                                                   0
+##   French-Style Bière de Garde                                              0
+##   Fresh "Wet" Hop Ale                                                      0
+##   Fruit Beer                                                               0
+##   Fruit Cider                                                              0
+##   German-Style Doppelbock                                                  0
+##   German-Style Eisbock                                                     0
+##   German-Style Heller Bock/Maibock                                         0
+##   German-Style Leichtbier                                                  0
+##   German-Style Leichtes Weizen / Weissbier                                 0
+##   German-Style Märzen                                                      0
+##   German-Style Oktoberfest / Wiesen (Meadow)                               0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                  0
+##   German-Style Schwarzbier                                                 0
+##   Gluten-Free Beer                                                         0
+##   Grodziskie                                                               0
+##   Herb and Spice Beer                                                      0
+##   Historical Beer                                                          0
+##   India Pale Ale                                                           0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                            0
+##   Kölsch                                                                   0
+##   Lager                                                                    0
+##   Leipzig-Style Gose                                                       0
+##   Mixed Culture Brett Beer                                                 0
+##   Münchner (Munich)-Style Helles                                           0
+##   Old Ale                                                                  0
+##   Other Belgian-Style Ales                                                 0
+##   Pale Ale                                                                 0
+##   Pale American-Belgo-Style Ale                                            0
+##   Pilsener                                                                 0
+##   Porter                                                                   0
+##   Pumpkin Beer                                                             0
+##   Red                                                                      0
+##   Saison                                                                   0
+##   Scotch Ale                                                               0
+##   Scottish-Style Export Ale                                                0
+##   Scottish-Style Heavy Ale                                                 0
+##   Scottish-Style Light Ale                                                 0
+##   Session Beer                                                             0
+##   Sour                                                                     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                  0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                      0
+##   South German-Style Kristall Weizen / Kristall Weissbier                  0
+##   South German-Style Weizenbock / Weissbock                                0
+##   Specialty Beer                                                           0
+##   Stout                                                                    0
+##   Strong Ale                                                               0
+##   Traditional German-Style Bock                                            0
+##   Tripel                                                                   0
+##   Wheat                                                                    0
+##   Wild Beer                                                                0
+##                                                           
+##                                                            Dark American-Belgo-Style Ale
+##   Altbier                                                                              0
+##   Amber                                                                                0
+##   American-Style Malt Liquor                                                           0
+##   American-Style Märzen / Oktoberfest                                                  0
+##   Bamberg-Style Bock Rauchbier                                                         0
+##   Bamberg-Style Märzen Rauchbier                                                       0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                             0
+##   Barley Wine                                                                          0
+##   Barrel-Aged                                                                          0
+##   Belgian-style Fruit Beer                                                             0
+##   Belgian-Style Fruit Lambic                                                           0
+##   Belgian-Style Lambic                                                                 0
+##   Belgian-Style Quadrupel                                                              0
+##   Belgian-Style Table Beer                                                             0
+##   Bitter                                                                               0
+##   Black                                                                                0
+##   Blonde                                                                               0
+##   Braggot                                                                              0
+##   Brett Beer                                                                           0
+##   Brown                                                                                0
+##   California Common Beer                                                               0
+##   Chili Pepper Beer                                                                    0
+##   Chocolate / Cocoa-Flavored Beer                                                      0
+##   Coffee-Flavored Beer                                                                 0
+##   Contemporary Gose                                                                    0
+##   Dark American-Belgo-Style Ale                                                        0
+##   Dortmunder / European-Style Export                                                   0
+##   Double India Pale Ale                                                                0
+##   Dubbel                                                                               0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                       0
+##   English-Style Dark Mild Ale                                                          0
+##   English-Style Pale Mild Ale                                                          0
+##   English-Style Summer Ale                                                             0
+##   European-Style Dark / Münchner Dunkel                                                0
+##   Field Beer                                                                           0
+##   Flavored Malt Beverage                                                               0
+##   French-Style Bière de Garde                                                          0
+##   Fresh "Wet" Hop Ale                                                                  0
+##   Fruit Beer                                                                           0
+##   Fruit Cider                                                                          0
+##   German-Style Doppelbock                                                              0
+##   German-Style Eisbock                                                                 0
+##   German-Style Heller Bock/Maibock                                                     0
+##   German-Style Leichtbier                                                              0
+##   German-Style Leichtes Weizen / Weissbier                                             0
+##   German-Style Märzen                                                                  0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                           0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                              0
+##   German-Style Schwarzbier                                                             0
+##   Gluten-Free Beer                                                                     0
+##   Grodziskie                                                                           0
+##   Herb and Spice Beer                                                                  0
+##   Historical Beer                                                                      0
+##   India Pale Ale                                                                       0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                        0
+##   Kölsch                                                                               0
+##   Lager                                                                                0
+##   Leipzig-Style Gose                                                                   0
+##   Mixed Culture Brett Beer                                                             0
+##   Münchner (Munich)-Style Helles                                                       0
+##   Old Ale                                                                              0
+##   Other Belgian-Style Ales                                                             0
+##   Pale Ale                                                                             0
+##   Pale American-Belgo-Style Ale                                                        0
+##   Pilsener                                                                             0
+##   Porter                                                                               0
+##   Pumpkin Beer                                                                         0
+##   Red                                                                                  0
+##   Saison                                                                               0
+##   Scotch Ale                                                                           0
+##   Scottish-Style Export Ale                                                            0
+##   Scottish-Style Heavy Ale                                                             0
+##   Scottish-Style Light Ale                                                             0
+##   Session Beer                                                                         0
+##   Sour                                                                                 0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                              0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                  0
+##   South German-Style Kristall Weizen / Kristall Weissbier                              0
+##   South German-Style Weizenbock / Weissbock                                            0
+##   Specialty Beer                                                                       0
+##   Stout                                                                                0
+##   Strong Ale                                                                           0
+##   Traditional German-Style Bock                                                        0
+##   Tripel                                                                               0
+##   Wheat                                                                                0
+##   Wild Beer                                                                            0
+##                                                           
+##                                                            Dortmunder / European-Style Export
+##   Altbier                                                                                   0
+##   Amber                                                                                     0
+##   American-Style Malt Liquor                                                                0
+##   American-Style Märzen / Oktoberfest                                                       0
+##   Bamberg-Style Bock Rauchbier                                                              0
+##   Bamberg-Style Märzen Rauchbier                                                            0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                  0
+##   Barley Wine                                                                               0
+##   Barrel-Aged                                                                               0
+##   Belgian-style Fruit Beer                                                                  0
+##   Belgian-Style Fruit Lambic                                                                0
+##   Belgian-Style Lambic                                                                      0
+##   Belgian-Style Quadrupel                                                                   0
+##   Belgian-Style Table Beer                                                                  0
+##   Bitter                                                                                    0
+##   Black                                                                                     0
+##   Blonde                                                                                    0
+##   Braggot                                                                                   0
+##   Brett Beer                                                                                0
+##   Brown                                                                                     0
+##   California Common Beer                                                                    0
+##   Chili Pepper Beer                                                                         0
+##   Chocolate / Cocoa-Flavored Beer                                                           0
+##   Coffee-Flavored Beer                                                                      0
+##   Contemporary Gose                                                                         0
+##   Dark American-Belgo-Style Ale                                                             0
+##   Dortmunder / European-Style Export                                                        0
+##   Double India Pale Ale                                                                     0
+##   Dubbel                                                                                    0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                            0
+##   English-Style Dark Mild Ale                                                               0
+##   English-Style Pale Mild Ale                                                               0
+##   English-Style Summer Ale                                                                  0
+##   European-Style Dark / Münchner Dunkel                                                     0
+##   Field Beer                                                                                0
+##   Flavored Malt Beverage                                                                    0
+##   French-Style Bière de Garde                                                               0
+##   Fresh "Wet" Hop Ale                                                                       0
+##   Fruit Beer                                                                                0
+##   Fruit Cider                                                                               0
+##   German-Style Doppelbock                                                                   0
+##   German-Style Eisbock                                                                      0
+##   German-Style Heller Bock/Maibock                                                          0
+##   German-Style Leichtbier                                                                   0
+##   German-Style Leichtes Weizen / Weissbier                                                  0
+##   German-Style Märzen                                                                       0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                   0
+##   German-Style Schwarzbier                                                                  0
+##   Gluten-Free Beer                                                                          0
+##   Grodziskie                                                                                0
+##   Herb and Spice Beer                                                                       0
+##   Historical Beer                                                                           0
+##   India Pale Ale                                                                            0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                             0
+##   Kölsch                                                                                    0
+##   Lager                                                                                     0
+##   Leipzig-Style Gose                                                                        0
+##   Mixed Culture Brett Beer                                                                  0
+##   Münchner (Munich)-Style Helles                                                            0
+##   Old Ale                                                                                   0
+##   Other Belgian-Style Ales                                                                  0
+##   Pale Ale                                                                                  0
+##   Pale American-Belgo-Style Ale                                                             0
+##   Pilsener                                                                                  0
+##   Porter                                                                                    0
+##   Pumpkin Beer                                                                              0
+##   Red                                                                                       0
+##   Saison                                                                                    0
+##   Scotch Ale                                                                                0
+##   Scottish-Style Export Ale                                                                 0
+##   Scottish-Style Heavy Ale                                                                  0
+##   Scottish-Style Light Ale                                                                  0
+##   Session Beer                                                                              0
+##   Sour                                                                                      0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                   0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                       0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                   0
+##   South German-Style Weizenbock / Weissbock                                                 0
+##   Specialty Beer                                                                            0
+##   Stout                                                                                     0
+##   Strong Ale                                                                                0
+##   Traditional German-Style Bock                                                             0
+##   Tripel                                                                                    0
+##   Wheat                                                                                     0
+##   Wild Beer                                                                                 0
+##                                                           
+##                                                            Double India Pale Ale
+##   Altbier                                                                      1
+##   Amber                                                                        0
+##   American-Style Malt Liquor                                                   0
+##   American-Style Märzen / Oktoberfest                                          0
+##   Bamberg-Style Bock Rauchbier                                                 0
+##   Bamberg-Style Märzen Rauchbier                                               0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                     0
+##   Barley Wine                                                                  9
+##   Barrel-Aged                                                                  6
+##   Belgian-style Fruit Beer                                                     0
+##   Belgian-Style Fruit Lambic                                                   0
+##   Belgian-Style Lambic                                                         0
+##   Belgian-Style Quadrupel                                                      0
+##   Belgian-Style Table Beer                                                     0
+##   Bitter                                                                       0
+##   Black                                                                        0
+##   Blonde                                                                       2
+##   Braggot                                                                      0
+##   Brett Beer                                                                   0
+##   Brown                                                                        0
+##   California Common Beer                                                       0
+##   Chili Pepper Beer                                                            0
+##   Chocolate / Cocoa-Flavored Beer                                              0
+##   Coffee-Flavored Beer                                                         0
+##   Contemporary Gose                                                            0
+##   Dark American-Belgo-Style Ale                                                0
+##   Dortmunder / European-Style Export                                           0
+##   Double India Pale Ale                                                       43
+##   Dubbel                                                                       0
+##   Dutch-Style Kuit, Kuyt or Koyt                                               0
+##   English-Style Dark Mild Ale                                                  0
+##   English-Style Pale Mild Ale                                                  0
+##   English-Style Summer Ale                                                     0
+##   European-Style Dark / Münchner Dunkel                                        0
+##   Field Beer                                                                   0
+##   Flavored Malt Beverage                                                       0
+##   French-Style Bière de Garde                                                  0
+##   Fresh "Wet" Hop Ale                                                          0
+##   Fruit Beer                                                                   0
+##   Fruit Cider                                                                  0
+##   German-Style Doppelbock                                                      2
+##   German-Style Eisbock                                                         0
+##   German-Style Heller Bock/Maibock                                             0
+##   German-Style Leichtbier                                                      0
+##   German-Style Leichtes Weizen / Weissbier                                     0
+##   German-Style Märzen                                                          0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                   0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                      0
+##   German-Style Schwarzbier                                                     0
+##   Gluten-Free Beer                                                             0
+##   Grodziskie                                                                   0
+##   Herb and Spice Beer                                                          1
+##   Historical Beer                                                              0
+##   India Pale Ale                                                               6
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                0
+##   Kölsch                                                                       0
+##   Lager                                                                        2
+##   Leipzig-Style Gose                                                           0
+##   Mixed Culture Brett Beer                                                     1
+##   Münchner (Munich)-Style Helles                                               0
+##   Old Ale                                                                      0
+##   Other Belgian-Style Ales                                                     1
+##   Pale Ale                                                                     2
+##   Pale American-Belgo-Style Ale                                                0
+##   Pilsener                                                                     1
+##   Porter                                                                       1
+##   Pumpkin Beer                                                                 1
+##   Red                                                                          3
+##   Saison                                                                       1
+##   Scotch Ale                                                                   2
+##   Scottish-Style Export Ale                                                    0
+##   Scottish-Style Heavy Ale                                                     0
+##   Scottish-Style Light Ale                                                     0
+##   Session Beer                                                                 0
+##   Sour                                                                         0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                          0
+##   South German-Style Kristall Weizen / Kristall Weissbier                      0
+##   South German-Style Weizenbock / Weissbock                                    0
+##   Specialty Beer                                                               4
+##   Stout                                                                        1
+##   Strong Ale                                                                  10
+##   Traditional German-Style Bock                                                1
+##   Tripel                                                                       9
+##   Wheat                                                                        2
+##   Wild Beer                                                                    0
+##                                                           
+##                                                            Dubbel
+##   Altbier                                                       0
+##   Amber                                                         0
+##   American-Style Malt Liquor                                    0
+##   American-Style Märzen / Oktoberfest                           0
+##   Bamberg-Style Bock Rauchbier                                  0
+##   Bamberg-Style Märzen Rauchbier                                0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)      0
+##   Barley Wine                                                   0
+##   Barrel-Aged                                                   0
+##   Belgian-style Fruit Beer                                      0
+##   Belgian-Style Fruit Lambic                                    0
+##   Belgian-Style Lambic                                          0
+##   Belgian-Style Quadrupel                                       0
+##   Belgian-Style Table Beer                                      0
+##   Bitter                                                        0
+##   Black                                                         0
+##   Blonde                                                        0
+##   Braggot                                                       0
+##   Brett Beer                                                    0
+##   Brown                                                         0
+##   California Common Beer                                        0
+##   Chili Pepper Beer                                             0
+##   Chocolate / Cocoa-Flavored Beer                               0
+##   Coffee-Flavored Beer                                          0
+##   Contemporary Gose                                             0
+##   Dark American-Belgo-Style Ale                                 0
+##   Dortmunder / European-Style Export                            0
+##   Double India Pale Ale                                         0
+##   Dubbel                                                        0
+##   Dutch-Style Kuit, Kuyt or Koyt                                0
+##   English-Style Dark Mild Ale                                   0
+##   English-Style Pale Mild Ale                                   0
+##   English-Style Summer Ale                                      0
+##   European-Style Dark / Münchner Dunkel                         0
+##   Field Beer                                                    0
+##   Flavored Malt Beverage                                        0
+##   French-Style Bière de Garde                                   0
+##   Fresh "Wet" Hop Ale                                           0
+##   Fruit Beer                                                    0
+##   Fruit Cider                                                   0
+##   German-Style Doppelbock                                       0
+##   German-Style Eisbock                                          0
+##   German-Style Heller Bock/Maibock                              0
+##   German-Style Leichtbier                                       0
+##   German-Style Leichtes Weizen / Weissbier                      0
+##   German-Style Märzen                                           0
+##   German-Style Oktoberfest / Wiesen (Meadow)                    0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast       0
+##   German-Style Schwarzbier                                      0
+##   Gluten-Free Beer                                              0
+##   Grodziskie                                                    0
+##   Herb and Spice Beer                                           0
+##   Historical Beer                                               0
+##   India Pale Ale                                                0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                 0
+##   Kölsch                                                        0
+##   Lager                                                         0
+##   Leipzig-Style Gose                                            0
+##   Mixed Culture Brett Beer                                      0
+##   Münchner (Munich)-Style Helles                                0
+##   Old Ale                                                       0
+##   Other Belgian-Style Ales                                      0
+##   Pale Ale                                                      0
+##   Pale American-Belgo-Style Ale                                 0
+##   Pilsener                                                      0
+##   Porter                                                        0
+##   Pumpkin Beer                                                  0
+##   Red                                                           0
+##   Saison                                                        0
+##   Scotch Ale                                                    0
+##   Scottish-Style Export Ale                                     0
+##   Scottish-Style Heavy Ale                                      0
+##   Scottish-Style Light Ale                                      0
+##   Session Beer                                                  0
+##   Sour                                                          0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier       0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier           0
+##   South German-Style Kristall Weizen / Kristall Weissbier       0
+##   South German-Style Weizenbock / Weissbock                     0
+##   Specialty Beer                                                0
+##   Stout                                                         0
+##   Strong Ale                                                    0
+##   Traditional German-Style Bock                                 0
+##   Tripel                                                        0
+##   Wheat                                                         0
+##   Wild Beer                                                     0
+##                                                           
+##                                                            Dutch-Style Kuit, Kuyt or Koyt
+##   Altbier                                                                               0
+##   Amber                                                                                 0
+##   American-Style Malt Liquor                                                            0
+##   American-Style Märzen / Oktoberfest                                                   0
+##   Bamberg-Style Bock Rauchbier                                                          0
+##   Bamberg-Style Märzen Rauchbier                                                        0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                              0
+##   Barley Wine                                                                           0
+##   Barrel-Aged                                                                           0
+##   Belgian-style Fruit Beer                                                              0
+##   Belgian-Style Fruit Lambic                                                            0
+##   Belgian-Style Lambic                                                                  0
+##   Belgian-Style Quadrupel                                                               0
+##   Belgian-Style Table Beer                                                              0
+##   Bitter                                                                                0
+##   Black                                                                                 0
+##   Blonde                                                                                0
+##   Braggot                                                                               0
+##   Brett Beer                                                                            0
+##   Brown                                                                                 0
+##   California Common Beer                                                                0
+##   Chili Pepper Beer                                                                     0
+##   Chocolate / Cocoa-Flavored Beer                                                       0
+##   Coffee-Flavored Beer                                                                  0
+##   Contemporary Gose                                                                     0
+##   Dark American-Belgo-Style Ale                                                         0
+##   Dortmunder / European-Style Export                                                    0
+##   Double India Pale Ale                                                                 0
+##   Dubbel                                                                                0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                        0
+##   English-Style Dark Mild Ale                                                           0
+##   English-Style Pale Mild Ale                                                           0
+##   English-Style Summer Ale                                                              0
+##   European-Style Dark / Münchner Dunkel                                                 0
+##   Field Beer                                                                            0
+##   Flavored Malt Beverage                                                                0
+##   French-Style Bière de Garde                                                           0
+##   Fresh "Wet" Hop Ale                                                                   0
+##   Fruit Beer                                                                            0
+##   Fruit Cider                                                                           0
+##   German-Style Doppelbock                                                               0
+##   German-Style Eisbock                                                                  0
+##   German-Style Heller Bock/Maibock                                                      0
+##   German-Style Leichtbier                                                               0
+##   German-Style Leichtes Weizen / Weissbier                                              0
+##   German-Style Märzen                                                                   0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                            0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                               0
+##   German-Style Schwarzbier                                                              0
+##   Gluten-Free Beer                                                                      0
+##   Grodziskie                                                                            0
+##   Herb and Spice Beer                                                                   0
+##   Historical Beer                                                                       0
+##   India Pale Ale                                                                        0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                         0
+##   Kölsch                                                                                0
+##   Lager                                                                                 0
+##   Leipzig-Style Gose                                                                    0
+##   Mixed Culture Brett Beer                                                              0
+##   Münchner (Munich)-Style Helles                                                        0
+##   Old Ale                                                                               0
+##   Other Belgian-Style Ales                                                              0
+##   Pale Ale                                                                              0
+##   Pale American-Belgo-Style Ale                                                         0
+##   Pilsener                                                                              0
+##   Porter                                                                                0
+##   Pumpkin Beer                                                                          0
+##   Red                                                                                   0
+##   Saison                                                                                0
+##   Scotch Ale                                                                            0
+##   Scottish-Style Export Ale                                                             0
+##   Scottish-Style Heavy Ale                                                              0
+##   Scottish-Style Light Ale                                                              0
+##   Session Beer                                                                          0
+##   Sour                                                                                  0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                               0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                   0
+##   South German-Style Kristall Weizen / Kristall Weissbier                               0
+##   South German-Style Weizenbock / Weissbock                                             0
+##   Specialty Beer                                                                        0
+##   Stout                                                                                 0
+##   Strong Ale                                                                            0
+##   Traditional German-Style Bock                                                         0
+##   Tripel                                                                                0
+##   Wheat                                                                                 0
+##   Wild Beer                                                                             0
+##                                                           
+##                                                            English-Style Dark Mild Ale
+##   Altbier                                                                            0
+##   Amber                                                                              0
+##   American-Style Malt Liquor                                                         0
+##   American-Style Märzen / Oktoberfest                                                0
+##   Bamberg-Style Bock Rauchbier                                                       0
+##   Bamberg-Style Märzen Rauchbier                                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                           0
+##   Barley Wine                                                                        0
+##   Barrel-Aged                                                                        0
+##   Belgian-style Fruit Beer                                                           0
+##   Belgian-Style Fruit Lambic                                                         0
+##   Belgian-Style Lambic                                                               0
+##   Belgian-Style Quadrupel                                                            0
+##   Belgian-Style Table Beer                                                           0
+##   Bitter                                                                             0
+##   Black                                                                              0
+##   Blonde                                                                             0
+##   Braggot                                                                            0
+##   Brett Beer                                                                         0
+##   Brown                                                                              0
+##   California Common Beer                                                             0
+##   Chili Pepper Beer                                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                                    0
+##   Coffee-Flavored Beer                                                               0
+##   Contemporary Gose                                                                  0
+##   Dark American-Belgo-Style Ale                                                      0
+##   Dortmunder / European-Style Export                                                 0
+##   Double India Pale Ale                                                              0
+##   Dubbel                                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                     0
+##   English-Style Dark Mild Ale                                                        0
+##   English-Style Pale Mild Ale                                                        0
+##   English-Style Summer Ale                                                           0
+##   European-Style Dark / Münchner Dunkel                                              0
+##   Field Beer                                                                         0
+##   Flavored Malt Beverage                                                             0
+##   French-Style Bière de Garde                                                        0
+##   Fresh "Wet" Hop Ale                                                                0
+##   Fruit Beer                                                                         0
+##   Fruit Cider                                                                        0
+##   German-Style Doppelbock                                                            0
+##   German-Style Eisbock                                                               0
+##   German-Style Heller Bock/Maibock                                                   0
+##   German-Style Leichtbier                                                            0
+##   German-Style Leichtes Weizen / Weissbier                                           0
+##   German-Style Märzen                                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                            0
+##   German-Style Schwarzbier                                                           0
+##   Gluten-Free Beer                                                                   0
+##   Grodziskie                                                                         0
+##   Herb and Spice Beer                                                                0
+##   Historical Beer                                                                    0
+##   India Pale Ale                                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                      0
+##   Kölsch                                                                             0
+##   Lager                                                                              0
+##   Leipzig-Style Gose                                                                 0
+##   Mixed Culture Brett Beer                                                           0
+##   Münchner (Munich)-Style Helles                                                     0
+##   Old Ale                                                                            0
+##   Other Belgian-Style Ales                                                           0
+##   Pale Ale                                                                           0
+##   Pale American-Belgo-Style Ale                                                      0
+##   Pilsener                                                                           0
+##   Porter                                                                             0
+##   Pumpkin Beer                                                                       0
+##   Red                                                                                0
+##   Saison                                                                             0
+##   Scotch Ale                                                                         0
+##   Scottish-Style Export Ale                                                          0
+##   Scottish-Style Heavy Ale                                                           0
+##   Scottish-Style Light Ale                                                           0
+##   Session Beer                                                                       0
+##   Sour                                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                0
+##   South German-Style Kristall Weizen / Kristall Weissbier                            0
+##   South German-Style Weizenbock / Weissbock                                          0
+##   Specialty Beer                                                                     0
+##   Stout                                                                              0
+##   Strong Ale                                                                         0
+##   Traditional German-Style Bock                                                      0
+##   Tripel                                                                             0
+##   Wheat                                                                              0
+##   Wild Beer                                                                          0
+##                                                           
+##                                                            English-Style Pale Mild Ale
+##   Altbier                                                                            0
+##   Amber                                                                              0
+##   American-Style Malt Liquor                                                         0
+##   American-Style Märzen / Oktoberfest                                                0
+##   Bamberg-Style Bock Rauchbier                                                       0
+##   Bamberg-Style Märzen Rauchbier                                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                           0
+##   Barley Wine                                                                        0
+##   Barrel-Aged                                                                        0
+##   Belgian-style Fruit Beer                                                           0
+##   Belgian-Style Fruit Lambic                                                         0
+##   Belgian-Style Lambic                                                               0
+##   Belgian-Style Quadrupel                                                            0
+##   Belgian-Style Table Beer                                                           0
+##   Bitter                                                                             0
+##   Black                                                                              0
+##   Blonde                                                                             0
+##   Braggot                                                                            0
+##   Brett Beer                                                                         0
+##   Brown                                                                              0
+##   California Common Beer                                                             0
+##   Chili Pepper Beer                                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                                    0
+##   Coffee-Flavored Beer                                                               0
+##   Contemporary Gose                                                                  0
+##   Dark American-Belgo-Style Ale                                                      0
+##   Dortmunder / European-Style Export                                                 0
+##   Double India Pale Ale                                                              0
+##   Dubbel                                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                     0
+##   English-Style Dark Mild Ale                                                        0
+##   English-Style Pale Mild Ale                                                        0
+##   English-Style Summer Ale                                                           0
+##   European-Style Dark / Münchner Dunkel                                              0
+##   Field Beer                                                                         0
+##   Flavored Malt Beverage                                                             0
+##   French-Style Bière de Garde                                                        0
+##   Fresh "Wet" Hop Ale                                                                0
+##   Fruit Beer                                                                         0
+##   Fruit Cider                                                                        0
+##   German-Style Doppelbock                                                            0
+##   German-Style Eisbock                                                               0
+##   German-Style Heller Bock/Maibock                                                   0
+##   German-Style Leichtbier                                                            0
+##   German-Style Leichtes Weizen / Weissbier                                           0
+##   German-Style Märzen                                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                            0
+##   German-Style Schwarzbier                                                           0
+##   Gluten-Free Beer                                                                   0
+##   Grodziskie                                                                         0
+##   Herb and Spice Beer                                                                0
+##   Historical Beer                                                                    0
+##   India Pale Ale                                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                      0
+##   Kölsch                                                                             0
+##   Lager                                                                              0
+##   Leipzig-Style Gose                                                                 0
+##   Mixed Culture Brett Beer                                                           0
+##   Münchner (Munich)-Style Helles                                                     0
+##   Old Ale                                                                            0
+##   Other Belgian-Style Ales                                                           0
+##   Pale Ale                                                                           0
+##   Pale American-Belgo-Style Ale                                                      0
+##   Pilsener                                                                           0
+##   Porter                                                                             0
+##   Pumpkin Beer                                                                       0
+##   Red                                                                                0
+##   Saison                                                                             0
+##   Scotch Ale                                                                         0
+##   Scottish-Style Export Ale                                                          0
+##   Scottish-Style Heavy Ale                                                           0
+##   Scottish-Style Light Ale                                                           0
+##   Session Beer                                                                       0
+##   Sour                                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                0
+##   South German-Style Kristall Weizen / Kristall Weissbier                            0
+##   South German-Style Weizenbock / Weissbock                                          0
+##   Specialty Beer                                                                     0
+##   Stout                                                                              0
+##   Strong Ale                                                                         0
+##   Traditional German-Style Bock                                                      0
+##   Tripel                                                                             0
+##   Wheat                                                                              0
+##   Wild Beer                                                                          0
+##                                                           
+##                                                            English-Style Summer Ale
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            European-Style Dark / Münchner Dunkel
+##   Altbier                                                                                      0
+##   Amber                                                                                        0
+##   American-Style Malt Liquor                                                                   0
+##   American-Style Märzen / Oktoberfest                                                          0
+##   Bamberg-Style Bock Rauchbier                                                                 0
+##   Bamberg-Style Märzen Rauchbier                                                               0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                     0
+##   Barley Wine                                                                                  0
+##   Barrel-Aged                                                                                  0
+##   Belgian-style Fruit Beer                                                                     0
+##   Belgian-Style Fruit Lambic                                                                   0
+##   Belgian-Style Lambic                                                                         0
+##   Belgian-Style Quadrupel                                                                      0
+##   Belgian-Style Table Beer                                                                     0
+##   Bitter                                                                                       0
+##   Black                                                                                        0
+##   Blonde                                                                                       0
+##   Braggot                                                                                      0
+##   Brett Beer                                                                                   0
+##   Brown                                                                                        0
+##   California Common Beer                                                                       0
+##   Chili Pepper Beer                                                                            0
+##   Chocolate / Cocoa-Flavored Beer                                                              0
+##   Coffee-Flavored Beer                                                                         0
+##   Contemporary Gose                                                                            0
+##   Dark American-Belgo-Style Ale                                                                0
+##   Dortmunder / European-Style Export                                                           0
+##   Double India Pale Ale                                                                        0
+##   Dubbel                                                                                       0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                               0
+##   English-Style Dark Mild Ale                                                                  0
+##   English-Style Pale Mild Ale                                                                  0
+##   English-Style Summer Ale                                                                     0
+##   European-Style Dark / Münchner Dunkel                                                        0
+##   Field Beer                                                                                   0
+##   Flavored Malt Beverage                                                                       0
+##   French-Style Bière de Garde                                                                  0
+##   Fresh "Wet" Hop Ale                                                                          0
+##   Fruit Beer                                                                                   0
+##   Fruit Cider                                                                                  0
+##   German-Style Doppelbock                                                                      0
+##   German-Style Eisbock                                                                         0
+##   German-Style Heller Bock/Maibock                                                             0
+##   German-Style Leichtbier                                                                      0
+##   German-Style Leichtes Weizen / Weissbier                                                     0
+##   German-Style Märzen                                                                          0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                   0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                      0
+##   German-Style Schwarzbier                                                                     0
+##   Gluten-Free Beer                                                                             0
+##   Grodziskie                                                                                   0
+##   Herb and Spice Beer                                                                          0
+##   Historical Beer                                                                              0
+##   India Pale Ale                                                                               0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                0
+##   Kölsch                                                                                       0
+##   Lager                                                                                        0
+##   Leipzig-Style Gose                                                                           0
+##   Mixed Culture Brett Beer                                                                     0
+##   Münchner (Munich)-Style Helles                                                               0
+##   Old Ale                                                                                      0
+##   Other Belgian-Style Ales                                                                     0
+##   Pale Ale                                                                                     0
+##   Pale American-Belgo-Style Ale                                                                0
+##   Pilsener                                                                                     0
+##   Porter                                                                                       0
+##   Pumpkin Beer                                                                                 0
+##   Red                                                                                          0
+##   Saison                                                                                       0
+##   Scotch Ale                                                                                   0
+##   Scottish-Style Export Ale                                                                    0
+##   Scottish-Style Heavy Ale                                                                     0
+##   Scottish-Style Light Ale                                                                     0
+##   Session Beer                                                                                 0
+##   Sour                                                                                         0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                          0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                      0
+##   South German-Style Weizenbock / Weissbock                                                    0
+##   Specialty Beer                                                                               0
+##   Stout                                                                                        0
+##   Strong Ale                                                                                   0
+##   Traditional German-Style Bock                                                                0
+##   Tripel                                                                                       0
+##   Wheat                                                                                        0
+##   Wild Beer                                                                                    0
+##                                                           
+##                                                            Field Beer
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       0
+##   Barrel-Aged                                                       0
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           0
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             0
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              0
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           0
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          0
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               0
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             0
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          0
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                            0
+##   Pumpkin Beer                                                      0
+##   Red                                                               0
+##   Saison                                                            0
+##   Scotch Ale                                                        0
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    0
+##   Stout                                                             0
+##   Strong Ale                                                        0
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             0
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Flavored Malt Beverage
+##   Altbier                                                                       0
+##   Amber                                                                         0
+##   American-Style Malt Liquor                                                    0
+##   American-Style Märzen / Oktoberfest                                           0
+##   Bamberg-Style Bock Rauchbier                                                  0
+##   Bamberg-Style Märzen Rauchbier                                                0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                      0
+##   Barley Wine                                                                   0
+##   Barrel-Aged                                                                   0
+##   Belgian-style Fruit Beer                                                      0
+##   Belgian-Style Fruit Lambic                                                    0
+##   Belgian-Style Lambic                                                          0
+##   Belgian-Style Quadrupel                                                       0
+##   Belgian-Style Table Beer                                                      0
+##   Bitter                                                                        0
+##   Black                                                                         0
+##   Blonde                                                                        0
+##   Braggot                                                                       0
+##   Brett Beer                                                                    0
+##   Brown                                                                         0
+##   California Common Beer                                                        0
+##   Chili Pepper Beer                                                             0
+##   Chocolate / Cocoa-Flavored Beer                                               0
+##   Coffee-Flavored Beer                                                          0
+##   Contemporary Gose                                                             0
+##   Dark American-Belgo-Style Ale                                                 0
+##   Dortmunder / European-Style Export                                            0
+##   Double India Pale Ale                                                         0
+##   Dubbel                                                                        0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                0
+##   English-Style Dark Mild Ale                                                   0
+##   English-Style Pale Mild Ale                                                   0
+##   English-Style Summer Ale                                                      0
+##   European-Style Dark / Münchner Dunkel                                         0
+##   Field Beer                                                                    0
+##   Flavored Malt Beverage                                                        0
+##   French-Style Bière de Garde                                                   0
+##   Fresh "Wet" Hop Ale                                                           0
+##   Fruit Beer                                                                    0
+##   Fruit Cider                                                                   0
+##   German-Style Doppelbock                                                       0
+##   German-Style Eisbock                                                          0
+##   German-Style Heller Bock/Maibock                                              0
+##   German-Style Leichtbier                                                       0
+##   German-Style Leichtes Weizen / Weissbier                                      0
+##   German-Style Märzen                                                           0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                    0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                       0
+##   German-Style Schwarzbier                                                      0
+##   Gluten-Free Beer                                                              0
+##   Grodziskie                                                                    0
+##   Herb and Spice Beer                                                           0
+##   Historical Beer                                                               0
+##   India Pale Ale                                                                0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                 0
+##   Kölsch                                                                        0
+##   Lager                                                                         0
+##   Leipzig-Style Gose                                                            0
+##   Mixed Culture Brett Beer                                                      0
+##   Münchner (Munich)-Style Helles                                                0
+##   Old Ale                                                                       0
+##   Other Belgian-Style Ales                                                      0
+##   Pale Ale                                                                      0
+##   Pale American-Belgo-Style Ale                                                 0
+##   Pilsener                                                                      0
+##   Porter                                                                        0
+##   Pumpkin Beer                                                                  0
+##   Red                                                                           0
+##   Saison                                                                        0
+##   Scotch Ale                                                                    0
+##   Scottish-Style Export Ale                                                     0
+##   Scottish-Style Heavy Ale                                                      0
+##   Scottish-Style Light Ale                                                      0
+##   Session Beer                                                                  0
+##   Sour                                                                          0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                       0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                           0
+##   South German-Style Kristall Weizen / Kristall Weissbier                       0
+##   South German-Style Weizenbock / Weissbock                                     0
+##   Specialty Beer                                                                0
+##   Stout                                                                         0
+##   Strong Ale                                                                    0
+##   Traditional German-Style Bock                                                 0
+##   Tripel                                                                        0
+##   Wheat                                                                         0
+##   Wild Beer                                                                     0
+##                                                           
+##                                                            French-Style Bière de Garde
+##   Altbier                                                                            0
+##   Amber                                                                              0
+##   American-Style Malt Liquor                                                         0
+##   American-Style Märzen / Oktoberfest                                                0
+##   Bamberg-Style Bock Rauchbier                                                       0
+##   Bamberg-Style Märzen Rauchbier                                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                           0
+##   Barley Wine                                                                        0
+##   Barrel-Aged                                                                        0
+##   Belgian-style Fruit Beer                                                           0
+##   Belgian-Style Fruit Lambic                                                         0
+##   Belgian-Style Lambic                                                               0
+##   Belgian-Style Quadrupel                                                            0
+##   Belgian-Style Table Beer                                                           0
+##   Bitter                                                                             0
+##   Black                                                                              0
+##   Blonde                                                                             0
+##   Braggot                                                                            0
+##   Brett Beer                                                                         0
+##   Brown                                                                              0
+##   California Common Beer                                                             0
+##   Chili Pepper Beer                                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                                    0
+##   Coffee-Flavored Beer                                                               0
+##   Contemporary Gose                                                                  0
+##   Dark American-Belgo-Style Ale                                                      0
+##   Dortmunder / European-Style Export                                                 0
+##   Double India Pale Ale                                                              0
+##   Dubbel                                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                     0
+##   English-Style Dark Mild Ale                                                        0
+##   English-Style Pale Mild Ale                                                        0
+##   English-Style Summer Ale                                                           0
+##   European-Style Dark / Münchner Dunkel                                              0
+##   Field Beer                                                                         0
+##   Flavored Malt Beverage                                                             0
+##   French-Style Bière de Garde                                                        0
+##   Fresh "Wet" Hop Ale                                                                0
+##   Fruit Beer                                                                         0
+##   Fruit Cider                                                                        0
+##   German-Style Doppelbock                                                            0
+##   German-Style Eisbock                                                               0
+##   German-Style Heller Bock/Maibock                                                   0
+##   German-Style Leichtbier                                                            0
+##   German-Style Leichtes Weizen / Weissbier                                           0
+##   German-Style Märzen                                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                            0
+##   German-Style Schwarzbier                                                           0
+##   Gluten-Free Beer                                                                   0
+##   Grodziskie                                                                         0
+##   Herb and Spice Beer                                                                0
+##   Historical Beer                                                                    0
+##   India Pale Ale                                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                      0
+##   Kölsch                                                                             0
+##   Lager                                                                              0
+##   Leipzig-Style Gose                                                                 0
+##   Mixed Culture Brett Beer                                                           0
+##   Münchner (Munich)-Style Helles                                                     0
+##   Old Ale                                                                            0
+##   Other Belgian-Style Ales                                                           0
+##   Pale Ale                                                                           0
+##   Pale American-Belgo-Style Ale                                                      0
+##   Pilsener                                                                           0
+##   Porter                                                                             0
+##   Pumpkin Beer                                                                       0
+##   Red                                                                                0
+##   Saison                                                                             0
+##   Scotch Ale                                                                         0
+##   Scottish-Style Export Ale                                                          0
+##   Scottish-Style Heavy Ale                                                           0
+##   Scottish-Style Light Ale                                                           0
+##   Session Beer                                                                       0
+##   Sour                                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                0
+##   South German-Style Kristall Weizen / Kristall Weissbier                            0
+##   South German-Style Weizenbock / Weissbock                                          0
+##   Specialty Beer                                                                     0
+##   Stout                                                                              0
+##   Strong Ale                                                                         0
+##   Traditional German-Style Bock                                                      0
+##   Tripel                                                                             0
+##   Wheat                                                                              0
+##   Wild Beer                                                                          0
+##                                                           
+##                                                            Fresh "Wet" Hop Ale
+##   Altbier                                                                    0
+##   Amber                                                                      0
+##   American-Style Malt Liquor                                                 0
+##   American-Style Märzen / Oktoberfest                                        0
+##   Bamberg-Style Bock Rauchbier                                               0
+##   Bamberg-Style Märzen Rauchbier                                             0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                   0
+##   Barley Wine                                                                0
+##   Barrel-Aged                                                                0
+##   Belgian-style Fruit Beer                                                   0
+##   Belgian-Style Fruit Lambic                                                 0
+##   Belgian-Style Lambic                                                       0
+##   Belgian-Style Quadrupel                                                    0
+##   Belgian-Style Table Beer                                                   0
+##   Bitter                                                                     0
+##   Black                                                                      0
+##   Blonde                                                                     0
+##   Braggot                                                                    0
+##   Brett Beer                                                                 0
+##   Brown                                                                      0
+##   California Common Beer                                                     0
+##   Chili Pepper Beer                                                          0
+##   Chocolate / Cocoa-Flavored Beer                                            0
+##   Coffee-Flavored Beer                                                       0
+##   Contemporary Gose                                                          0
+##   Dark American-Belgo-Style Ale                                              0
+##   Dortmunder / European-Style Export                                         0
+##   Double India Pale Ale                                                      0
+##   Dubbel                                                                     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                             0
+##   English-Style Dark Mild Ale                                                0
+##   English-Style Pale Mild Ale                                                0
+##   English-Style Summer Ale                                                   0
+##   European-Style Dark / Münchner Dunkel                                      0
+##   Field Beer                                                                 0
+##   Flavored Malt Beverage                                                     0
+##   French-Style Bière de Garde                                                0
+##   Fresh "Wet" Hop Ale                                                        0
+##   Fruit Beer                                                                 0
+##   Fruit Cider                                                                0
+##   German-Style Doppelbock                                                    0
+##   German-Style Eisbock                                                       0
+##   German-Style Heller Bock/Maibock                                           0
+##   German-Style Leichtbier                                                    0
+##   German-Style Leichtes Weizen / Weissbier                                   0
+##   German-Style Märzen                                                        0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                 0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                    0
+##   German-Style Schwarzbier                                                   0
+##   Gluten-Free Beer                                                           0
+##   Grodziskie                                                                 0
+##   Herb and Spice Beer                                                        0
+##   Historical Beer                                                            0
+##   India Pale Ale                                                             0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                              0
+##   Kölsch                                                                     0
+##   Lager                                                                      0
+##   Leipzig-Style Gose                                                         0
+##   Mixed Culture Brett Beer                                                   0
+##   Münchner (Munich)-Style Helles                                             0
+##   Old Ale                                                                    0
+##   Other Belgian-Style Ales                                                   0
+##   Pale Ale                                                                   0
+##   Pale American-Belgo-Style Ale                                              0
+##   Pilsener                                                                   0
+##   Porter                                                                     0
+##   Pumpkin Beer                                                               0
+##   Red                                                                        0
+##   Saison                                                                     0
+##   Scotch Ale                                                                 0
+##   Scottish-Style Export Ale                                                  0
+##   Scottish-Style Heavy Ale                                                   0
+##   Scottish-Style Light Ale                                                   0
+##   Session Beer                                                               0
+##   Sour                                                                       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                    0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                        0
+##   South German-Style Kristall Weizen / Kristall Weissbier                    0
+##   South German-Style Weizenbock / Weissbock                                  0
+##   Specialty Beer                                                             0
+##   Stout                                                                      0
+##   Strong Ale                                                                 0
+##   Traditional German-Style Bock                                              0
+##   Tripel                                                                     0
+##   Wheat                                                                      0
+##   Wild Beer                                                                  0
+##                                                           
+##                                                            Fruit Beer
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       0
+##   Barrel-Aged                                                       0
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           0
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             0
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              0
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           0
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          0
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               0
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             0
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          0
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                            0
+##   Pumpkin Beer                                                      0
+##   Red                                                               0
+##   Saison                                                            0
+##   Scotch Ale                                                        0
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    0
+##   Stout                                                             0
+##   Strong Ale                                                        0
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             0
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Fruit Cider
+##   Altbier                                                            0
+##   Amber                                                              0
+##   American-Style Malt Liquor                                         0
+##   American-Style Märzen / Oktoberfest                                0
+##   Bamberg-Style Bock Rauchbier                                       0
+##   Bamberg-Style Märzen Rauchbier                                     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)           0
+##   Barley Wine                                                        0
+##   Barrel-Aged                                                        0
+##   Belgian-style Fruit Beer                                           0
+##   Belgian-Style Fruit Lambic                                         0
+##   Belgian-Style Lambic                                               0
+##   Belgian-Style Quadrupel                                            0
+##   Belgian-Style Table Beer                                           0
+##   Bitter                                                             0
+##   Black                                                              0
+##   Blonde                                                             0
+##   Braggot                                                            0
+##   Brett Beer                                                         0
+##   Brown                                                              0
+##   California Common Beer                                             0
+##   Chili Pepper Beer                                                  0
+##   Chocolate / Cocoa-Flavored Beer                                    0
+##   Coffee-Flavored Beer                                               0
+##   Contemporary Gose                                                  0
+##   Dark American-Belgo-Style Ale                                      0
+##   Dortmunder / European-Style Export                                 0
+##   Double India Pale Ale                                              0
+##   Dubbel                                                             0
+##   Dutch-Style Kuit, Kuyt or Koyt                                     0
+##   English-Style Dark Mild Ale                                        0
+##   English-Style Pale Mild Ale                                        0
+##   English-Style Summer Ale                                           0
+##   European-Style Dark / Münchner Dunkel                              0
+##   Field Beer                                                         0
+##   Flavored Malt Beverage                                             0
+##   French-Style Bière de Garde                                        0
+##   Fresh "Wet" Hop Ale                                                0
+##   Fruit Beer                                                         0
+##   Fruit Cider                                                        0
+##   German-Style Doppelbock                                            0
+##   German-Style Eisbock                                               0
+##   German-Style Heller Bock/Maibock                                   0
+##   German-Style Leichtbier                                            0
+##   German-Style Leichtes Weizen / Weissbier                           0
+##   German-Style Märzen                                                0
+##   German-Style Oktoberfest / Wiesen (Meadow)                         0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast            0
+##   German-Style Schwarzbier                                           0
+##   Gluten-Free Beer                                                   0
+##   Grodziskie                                                         0
+##   Herb and Spice Beer                                                0
+##   Historical Beer                                                    0
+##   India Pale Ale                                                     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                      0
+##   Kölsch                                                             0
+##   Lager                                                              0
+##   Leipzig-Style Gose                                                 0
+##   Mixed Culture Brett Beer                                           0
+##   Münchner (Munich)-Style Helles                                     0
+##   Old Ale                                                            0
+##   Other Belgian-Style Ales                                           0
+##   Pale Ale                                                           0
+##   Pale American-Belgo-Style Ale                                      0
+##   Pilsener                                                           0
+##   Porter                                                             0
+##   Pumpkin Beer                                                       0
+##   Red                                                                0
+##   Saison                                                             0
+##   Scotch Ale                                                         0
+##   Scottish-Style Export Ale                                          0
+##   Scottish-Style Heavy Ale                                           0
+##   Scottish-Style Light Ale                                           0
+##   Session Beer                                                       0
+##   Sour                                                               0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier            0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                0
+##   South German-Style Kristall Weizen / Kristall Weissbier            0
+##   South German-Style Weizenbock / Weissbock                          0
+##   Specialty Beer                                                     0
+##   Stout                                                              0
+##   Strong Ale                                                         0
+##   Traditional German-Style Bock                                      0
+##   Tripel                                                             0
+##   Wheat                                                              0
+##   Wild Beer                                                          0
+##                                                           
+##                                                            German-Style Doppelbock
+##   Altbier                                                                        0
+##   Amber                                                                          0
+##   American-Style Malt Liquor                                                     0
+##   American-Style Märzen / Oktoberfest                                            0
+##   Bamberg-Style Bock Rauchbier                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                       0
+##   Barley Wine                                                                    0
+##   Barrel-Aged                                                                    0
+##   Belgian-style Fruit Beer                                                       0
+##   Belgian-Style Fruit Lambic                                                     0
+##   Belgian-Style Lambic                                                           0
+##   Belgian-Style Quadrupel                                                        0
+##   Belgian-Style Table Beer                                                       0
+##   Bitter                                                                         0
+##   Black                                                                          0
+##   Blonde                                                                         0
+##   Braggot                                                                        0
+##   Brett Beer                                                                     0
+##   Brown                                                                          0
+##   California Common Beer                                                         0
+##   Chili Pepper Beer                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                0
+##   Coffee-Flavored Beer                                                           0
+##   Contemporary Gose                                                              0
+##   Dark American-Belgo-Style Ale                                                  0
+##   Dortmunder / European-Style Export                                             0
+##   Double India Pale Ale                                                          0
+##   Dubbel                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                 0
+##   English-Style Dark Mild Ale                                                    0
+##   English-Style Pale Mild Ale                                                    0
+##   English-Style Summer Ale                                                       0
+##   European-Style Dark / Münchner Dunkel                                          0
+##   Field Beer                                                                     0
+##   Flavored Malt Beverage                                                         0
+##   French-Style Bière de Garde                                                    0
+##   Fresh "Wet" Hop Ale                                                            0
+##   Fruit Beer                                                                     0
+##   Fruit Cider                                                                    0
+##   German-Style Doppelbock                                                        1
+##   German-Style Eisbock                                                           0
+##   German-Style Heller Bock/Maibock                                               0
+##   German-Style Leichtbier                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                       0
+##   German-Style Märzen                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                        0
+##   German-Style Schwarzbier                                                       0
+##   Gluten-Free Beer                                                               0
+##   Grodziskie                                                                     0
+##   Herb and Spice Beer                                                            0
+##   Historical Beer                                                                0
+##   India Pale Ale                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                  0
+##   Kölsch                                                                         0
+##   Lager                                                                          0
+##   Leipzig-Style Gose                                                             0
+##   Mixed Culture Brett Beer                                                       0
+##   Münchner (Munich)-Style Helles                                                 0
+##   Old Ale                                                                        0
+##   Other Belgian-Style Ales                                                       0
+##   Pale Ale                                                                       0
+##   Pale American-Belgo-Style Ale                                                  0
+##   Pilsener                                                                       0
+##   Porter                                                                         0
+##   Pumpkin Beer                                                                   0
+##   Red                                                                            0
+##   Saison                                                                         0
+##   Scotch Ale                                                                     0
+##   Scottish-Style Export Ale                                                      0
+##   Scottish-Style Heavy Ale                                                       0
+##   Scottish-Style Light Ale                                                       0
+##   Session Beer                                                                   0
+##   Sour                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                        0
+##   South German-Style Weizenbock / Weissbock                                      0
+##   Specialty Beer                                                                 0
+##   Stout                                                                          0
+##   Strong Ale                                                                     0
+##   Traditional German-Style Bock                                                  0
+##   Tripel                                                                         0
+##   Wheat                                                                          0
+##   Wild Beer                                                                      0
+##                                                           
+##                                                            German-Style Eisbock
+##   Altbier                                                                     0
+##   Amber                                                                       0
+##   American-Style Malt Liquor                                                  0
+##   American-Style Märzen / Oktoberfest                                         0
+##   Bamberg-Style Bock Rauchbier                                                0
+##   Bamberg-Style Märzen Rauchbier                                              0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                    0
+##   Barley Wine                                                                 0
+##   Barrel-Aged                                                                 0
+##   Belgian-style Fruit Beer                                                    0
+##   Belgian-Style Fruit Lambic                                                  0
+##   Belgian-Style Lambic                                                        0
+##   Belgian-Style Quadrupel                                                     0
+##   Belgian-Style Table Beer                                                    0
+##   Bitter                                                                      0
+##   Black                                                                       0
+##   Blonde                                                                      0
+##   Braggot                                                                     0
+##   Brett Beer                                                                  0
+##   Brown                                                                       0
+##   California Common Beer                                                      0
+##   Chili Pepper Beer                                                           0
+##   Chocolate / Cocoa-Flavored Beer                                             0
+##   Coffee-Flavored Beer                                                        0
+##   Contemporary Gose                                                           0
+##   Dark American-Belgo-Style Ale                                               0
+##   Dortmunder / European-Style Export                                          0
+##   Double India Pale Ale                                                       0
+##   Dubbel                                                                      0
+##   Dutch-Style Kuit, Kuyt or Koyt                                              0
+##   English-Style Dark Mild Ale                                                 0
+##   English-Style Pale Mild Ale                                                 0
+##   English-Style Summer Ale                                                    0
+##   European-Style Dark / Münchner Dunkel                                       0
+##   Field Beer                                                                  0
+##   Flavored Malt Beverage                                                      0
+##   French-Style Bière de Garde                                                 0
+##   Fresh "Wet" Hop Ale                                                         0
+##   Fruit Beer                                                                  0
+##   Fruit Cider                                                                 0
+##   German-Style Doppelbock                                                     0
+##   German-Style Eisbock                                                        0
+##   German-Style Heller Bock/Maibock                                            0
+##   German-Style Leichtbier                                                     0
+##   German-Style Leichtes Weizen / Weissbier                                    0
+##   German-Style Märzen                                                         0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                  0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                     0
+##   German-Style Schwarzbier                                                    0
+##   Gluten-Free Beer                                                            0
+##   Grodziskie                                                                  0
+##   Herb and Spice Beer                                                         0
+##   Historical Beer                                                             0
+##   India Pale Ale                                                              0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                               0
+##   Kölsch                                                                      0
+##   Lager                                                                       0
+##   Leipzig-Style Gose                                                          0
+##   Mixed Culture Brett Beer                                                    0
+##   Münchner (Munich)-Style Helles                                              0
+##   Old Ale                                                                     0
+##   Other Belgian-Style Ales                                                    0
+##   Pale Ale                                                                    0
+##   Pale American-Belgo-Style Ale                                               0
+##   Pilsener                                                                    0
+##   Porter                                                                      0
+##   Pumpkin Beer                                                                0
+##   Red                                                                         0
+##   Saison                                                                      0
+##   Scotch Ale                                                                  0
+##   Scottish-Style Export Ale                                                   0
+##   Scottish-Style Heavy Ale                                                    0
+##   Scottish-Style Light Ale                                                    0
+##   Session Beer                                                                0
+##   Sour                                                                        0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                         0
+##   South German-Style Kristall Weizen / Kristall Weissbier                     0
+##   South German-Style Weizenbock / Weissbock                                   0
+##   Specialty Beer                                                              0
+##   Stout                                                                       0
+##   Strong Ale                                                                  0
+##   Traditional German-Style Bock                                               0
+##   Tripel                                                                      0
+##   Wheat                                                                       0
+##   Wild Beer                                                                   0
+##                                                           
+##                                                            German-Style Heller Bock/Maibock
+##   Altbier                                                                                 0
+##   Amber                                                                                   0
+##   American-Style Malt Liquor                                                              0
+##   American-Style Märzen / Oktoberfest                                                     0
+##   Bamberg-Style Bock Rauchbier                                                            0
+##   Bamberg-Style Märzen Rauchbier                                                          0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                0
+##   Barley Wine                                                                             0
+##   Barrel-Aged                                                                             0
+##   Belgian-style Fruit Beer                                                                0
+##   Belgian-Style Fruit Lambic                                                              0
+##   Belgian-Style Lambic                                                                    0
+##   Belgian-Style Quadrupel                                                                 0
+##   Belgian-Style Table Beer                                                                0
+##   Bitter                                                                                  0
+##   Black                                                                                   0
+##   Blonde                                                                                  0
+##   Braggot                                                                                 0
+##   Brett Beer                                                                              0
+##   Brown                                                                                   0
+##   California Common Beer                                                                  0
+##   Chili Pepper Beer                                                                       0
+##   Chocolate / Cocoa-Flavored Beer                                                         0
+##   Coffee-Flavored Beer                                                                    0
+##   Contemporary Gose                                                                       0
+##   Dark American-Belgo-Style Ale                                                           0
+##   Dortmunder / European-Style Export                                                      0
+##   Double India Pale Ale                                                                   0
+##   Dubbel                                                                                  0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                          0
+##   English-Style Dark Mild Ale                                                             0
+##   English-Style Pale Mild Ale                                                             0
+##   English-Style Summer Ale                                                                0
+##   European-Style Dark / Münchner Dunkel                                                   0
+##   Field Beer                                                                              0
+##   Flavored Malt Beverage                                                                  0
+##   French-Style Bière de Garde                                                             0
+##   Fresh "Wet" Hop Ale                                                                     0
+##   Fruit Beer                                                                              0
+##   Fruit Cider                                                                             0
+##   German-Style Doppelbock                                                                 0
+##   German-Style Eisbock                                                                    0
+##   German-Style Heller Bock/Maibock                                                        1
+##   German-Style Leichtbier                                                                 0
+##   German-Style Leichtes Weizen / Weissbier                                                0
+##   German-Style Märzen                                                                     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                              0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                 0
+##   German-Style Schwarzbier                                                                0
+##   Gluten-Free Beer                                                                        0
+##   Grodziskie                                                                              0
+##   Herb and Spice Beer                                                                     0
+##   Historical Beer                                                                         0
+##   India Pale Ale                                                                          0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                           0
+##   Kölsch                                                                                  0
+##   Lager                                                                                   0
+##   Leipzig-Style Gose                                                                      0
+##   Mixed Culture Brett Beer                                                                0
+##   Münchner (Munich)-Style Helles                                                          0
+##   Old Ale                                                                                 0
+##   Other Belgian-Style Ales                                                                0
+##   Pale Ale                                                                                0
+##   Pale American-Belgo-Style Ale                                                           0
+##   Pilsener                                                                                0
+##   Porter                                                                                  0
+##   Pumpkin Beer                                                                            0
+##   Red                                                                                     0
+##   Saison                                                                                  0
+##   Scotch Ale                                                                              0
+##   Scottish-Style Export Ale                                                               0
+##   Scottish-Style Heavy Ale                                                                0
+##   Scottish-Style Light Ale                                                                0
+##   Session Beer                                                                            0
+##   Sour                                                                                    0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                 0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                     0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                 0
+##   South German-Style Weizenbock / Weissbock                                               0
+##   Specialty Beer                                                                          0
+##   Stout                                                                                   0
+##   Strong Ale                                                                              0
+##   Traditional German-Style Bock                                                           0
+##   Tripel                                                                                  0
+##   Wheat                                                                                   0
+##   Wild Beer                                                                               0
+##                                                           
+##                                                            German-Style Leichtbier
+##   Altbier                                                                        0
+##   Amber                                                                          0
+##   American-Style Malt Liquor                                                     0
+##   American-Style Märzen / Oktoberfest                                            0
+##   Bamberg-Style Bock Rauchbier                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                       0
+##   Barley Wine                                                                    0
+##   Barrel-Aged                                                                    0
+##   Belgian-style Fruit Beer                                                       0
+##   Belgian-Style Fruit Lambic                                                     0
+##   Belgian-Style Lambic                                                           0
+##   Belgian-Style Quadrupel                                                        0
+##   Belgian-Style Table Beer                                                       0
+##   Bitter                                                                         0
+##   Black                                                                          0
+##   Blonde                                                                         0
+##   Braggot                                                                        0
+##   Brett Beer                                                                     0
+##   Brown                                                                          0
+##   California Common Beer                                                         0
+##   Chili Pepper Beer                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                0
+##   Coffee-Flavored Beer                                                           0
+##   Contemporary Gose                                                              0
+##   Dark American-Belgo-Style Ale                                                  0
+##   Dortmunder / European-Style Export                                             0
+##   Double India Pale Ale                                                          0
+##   Dubbel                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                 0
+##   English-Style Dark Mild Ale                                                    0
+##   English-Style Pale Mild Ale                                                    0
+##   English-Style Summer Ale                                                       0
+##   European-Style Dark / Münchner Dunkel                                          0
+##   Field Beer                                                                     0
+##   Flavored Malt Beverage                                                         0
+##   French-Style Bière de Garde                                                    0
+##   Fresh "Wet" Hop Ale                                                            0
+##   Fruit Beer                                                                     0
+##   Fruit Cider                                                                    0
+##   German-Style Doppelbock                                                        0
+##   German-Style Eisbock                                                           0
+##   German-Style Heller Bock/Maibock                                               0
+##   German-Style Leichtbier                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                       0
+##   German-Style Märzen                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                        0
+##   German-Style Schwarzbier                                                       0
+##   Gluten-Free Beer                                                               0
+##   Grodziskie                                                                     0
+##   Herb and Spice Beer                                                            0
+##   Historical Beer                                                                0
+##   India Pale Ale                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                  0
+##   Kölsch                                                                         0
+##   Lager                                                                          0
+##   Leipzig-Style Gose                                                             0
+##   Mixed Culture Brett Beer                                                       0
+##   Münchner (Munich)-Style Helles                                                 0
+##   Old Ale                                                                        0
+##   Other Belgian-Style Ales                                                       0
+##   Pale Ale                                                                       0
+##   Pale American-Belgo-Style Ale                                                  0
+##   Pilsener                                                                       0
+##   Porter                                                                         0
+##   Pumpkin Beer                                                                   0
+##   Red                                                                            0
+##   Saison                                                                         0
+##   Scotch Ale                                                                     0
+##   Scottish-Style Export Ale                                                      0
+##   Scottish-Style Heavy Ale                                                       0
+##   Scottish-Style Light Ale                                                       0
+##   Session Beer                                                                   0
+##   Sour                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                        0
+##   South German-Style Weizenbock / Weissbock                                      0
+##   Specialty Beer                                                                 0
+##   Stout                                                                          0
+##   Strong Ale                                                                     0
+##   Traditional German-Style Bock                                                  0
+##   Tripel                                                                         0
+##   Wheat                                                                          0
+##   Wild Beer                                                                      0
+##                                                           
+##                                                            German-Style Leichtes Weizen / Weissbier
+##   Altbier                                                                                         0
+##   Amber                                                                                           0
+##   American-Style Malt Liquor                                                                      0
+##   American-Style Märzen / Oktoberfest                                                             0
+##   Bamberg-Style Bock Rauchbier                                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                        0
+##   Barley Wine                                                                                     0
+##   Barrel-Aged                                                                                     0
+##   Belgian-style Fruit Beer                                                                        0
+##   Belgian-Style Fruit Lambic                                                                      0
+##   Belgian-Style Lambic                                                                            0
+##   Belgian-Style Quadrupel                                                                         0
+##   Belgian-Style Table Beer                                                                        0
+##   Bitter                                                                                          0
+##   Black                                                                                           0
+##   Blonde                                                                                          0
+##   Braggot                                                                                         0
+##   Brett Beer                                                                                      0
+##   Brown                                                                                           0
+##   California Common Beer                                                                          0
+##   Chili Pepper Beer                                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                                 0
+##   Coffee-Flavored Beer                                                                            0
+##   Contemporary Gose                                                                               0
+##   Dark American-Belgo-Style Ale                                                                   0
+##   Dortmunder / European-Style Export                                                              0
+##   Double India Pale Ale                                                                           0
+##   Dubbel                                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                  0
+##   English-Style Dark Mild Ale                                                                     0
+##   English-Style Pale Mild Ale                                                                     0
+##   English-Style Summer Ale                                                                        0
+##   European-Style Dark / Münchner Dunkel                                                           0
+##   Field Beer                                                                                      0
+##   Flavored Malt Beverage                                                                          0
+##   French-Style Bière de Garde                                                                     0
+##   Fresh "Wet" Hop Ale                                                                             0
+##   Fruit Beer                                                                                      0
+##   Fruit Cider                                                                                     0
+##   German-Style Doppelbock                                                                         0
+##   German-Style Eisbock                                                                            0
+##   German-Style Heller Bock/Maibock                                                                0
+##   German-Style Leichtbier                                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                                        0
+##   German-Style Märzen                                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                         0
+##   German-Style Schwarzbier                                                                        0
+##   Gluten-Free Beer                                                                                0
+##   Grodziskie                                                                                      0
+##   Herb and Spice Beer                                                                             0
+##   Historical Beer                                                                                 0
+##   India Pale Ale                                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                   0
+##   Kölsch                                                                                          0
+##   Lager                                                                                           0
+##   Leipzig-Style Gose                                                                              0
+##   Mixed Culture Brett Beer                                                                        0
+##   Münchner (Munich)-Style Helles                                                                  0
+##   Old Ale                                                                                         0
+##   Other Belgian-Style Ales                                                                        0
+##   Pale Ale                                                                                        0
+##   Pale American-Belgo-Style Ale                                                                   0
+##   Pilsener                                                                                        0
+##   Porter                                                                                          0
+##   Pumpkin Beer                                                                                    0
+##   Red                                                                                             0
+##   Saison                                                                                          0
+##   Scotch Ale                                                                                      0
+##   Scottish-Style Export Ale                                                                       0
+##   Scottish-Style Heavy Ale                                                                        0
+##   Scottish-Style Light Ale                                                                        0
+##   Session Beer                                                                                    0
+##   Sour                                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                         0
+##   South German-Style Weizenbock / Weissbock                                                       0
+##   Specialty Beer                                                                                  0
+##   Stout                                                                                           0
+##   Strong Ale                                                                                      0
+##   Traditional German-Style Bock                                                                   0
+##   Tripel                                                                                          0
+##   Wheat                                                                                           0
+##   Wild Beer                                                                                       0
+##                                                           
+##                                                            German-Style Märzen
+##   Altbier                                                                    0
+##   Amber                                                                      0
+##   American-Style Malt Liquor                                                 0
+##   American-Style Märzen / Oktoberfest                                        5
+##   Bamberg-Style Bock Rauchbier                                               0
+##   Bamberg-Style Märzen Rauchbier                                             0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                   0
+##   Barley Wine                                                                0
+##   Barrel-Aged                                                                0
+##   Belgian-style Fruit Beer                                                   0
+##   Belgian-Style Fruit Lambic                                                 0
+##   Belgian-Style Lambic                                                       0
+##   Belgian-Style Quadrupel                                                    0
+##   Belgian-Style Table Beer                                                   0
+##   Bitter                                                                     0
+##   Black                                                                      0
+##   Blonde                                                                     0
+##   Braggot                                                                    0
+##   Brett Beer                                                                 0
+##   Brown                                                                      0
+##   California Common Beer                                                     0
+##   Chili Pepper Beer                                                          0
+##   Chocolate / Cocoa-Flavored Beer                                            0
+##   Coffee-Flavored Beer                                                       0
+##   Contemporary Gose                                                          0
+##   Dark American-Belgo-Style Ale                                              0
+##   Dortmunder / European-Style Export                                         0
+##   Double India Pale Ale                                                      0
+##   Dubbel                                                                     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                             0
+##   English-Style Dark Mild Ale                                                0
+##   English-Style Pale Mild Ale                                                0
+##   English-Style Summer Ale                                                   0
+##   European-Style Dark / Münchner Dunkel                                      0
+##   Field Beer                                                                 0
+##   Flavored Malt Beverage                                                     0
+##   French-Style Bière de Garde                                                0
+##   Fresh "Wet" Hop Ale                                                        0
+##   Fruit Beer                                                                 0
+##   Fruit Cider                                                                0
+##   German-Style Doppelbock                                                    0
+##   German-Style Eisbock                                                       0
+##   German-Style Heller Bock/Maibock                                           0
+##   German-Style Leichtbier                                                    0
+##   German-Style Leichtes Weizen / Weissbier                                   0
+##   German-Style Märzen                                                        1
+##   German-Style Oktoberfest / Wiesen (Meadow)                                 1
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                    0
+##   German-Style Schwarzbier                                                   0
+##   Gluten-Free Beer                                                           0
+##   Grodziskie                                                                 0
+##   Herb and Spice Beer                                                        0
+##   Historical Beer                                                            0
+##   India Pale Ale                                                             0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                              0
+##   Kölsch                                                                     0
+##   Lager                                                                      0
+##   Leipzig-Style Gose                                                         0
+##   Mixed Culture Brett Beer                                                   0
+##   Münchner (Munich)-Style Helles                                             0
+##   Old Ale                                                                    0
+##   Other Belgian-Style Ales                                                   0
+##   Pale Ale                                                                   0
+##   Pale American-Belgo-Style Ale                                              0
+##   Pilsener                                                                   0
+##   Porter                                                                     0
+##   Pumpkin Beer                                                               0
+##   Red                                                                        0
+##   Saison                                                                     0
+##   Scotch Ale                                                                 0
+##   Scottish-Style Export Ale                                                  0
+##   Scottish-Style Heavy Ale                                                   0
+##   Scottish-Style Light Ale                                                   0
+##   Session Beer                                                               0
+##   Sour                                                                       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                    0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                        0
+##   South German-Style Kristall Weizen / Kristall Weissbier                    0
+##   South German-Style Weizenbock / Weissbock                                  0
+##   Specialty Beer                                                             0
+##   Stout                                                                      0
+##   Strong Ale                                                                 0
+##   Traditional German-Style Bock                                              0
+##   Tripel                                                                     0
+##   Wheat                                                                      0
+##   Wild Beer                                                                  0
+##                                                           
+##                                                            German-Style Oktoberfest / Wiesen (Meadow)
+##   Altbier                                                                                           0
+##   Amber                                                                                             0
+##   American-Style Malt Liquor                                                                        0
+##   American-Style Märzen / Oktoberfest                                                               0
+##   Bamberg-Style Bock Rauchbier                                                                      0
+##   Bamberg-Style Märzen Rauchbier                                                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                          0
+##   Barley Wine                                                                                       0
+##   Barrel-Aged                                                                                       0
+##   Belgian-style Fruit Beer                                                                          0
+##   Belgian-Style Fruit Lambic                                                                        0
+##   Belgian-Style Lambic                                                                              0
+##   Belgian-Style Quadrupel                                                                           0
+##   Belgian-Style Table Beer                                                                          0
+##   Bitter                                                                                            0
+##   Black                                                                                             0
+##   Blonde                                                                                            0
+##   Braggot                                                                                           0
+##   Brett Beer                                                                                        0
+##   Brown                                                                                             0
+##   California Common Beer                                                                            0
+##   Chili Pepper Beer                                                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                                                   0
+##   Coffee-Flavored Beer                                                                              0
+##   Contemporary Gose                                                                                 0
+##   Dark American-Belgo-Style Ale                                                                     0
+##   Dortmunder / European-Style Export                                                                0
+##   Double India Pale Ale                                                                             0
+##   Dubbel                                                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                    0
+##   English-Style Dark Mild Ale                                                                       0
+##   English-Style Pale Mild Ale                                                                       0
+##   English-Style Summer Ale                                                                          0
+##   European-Style Dark / Münchner Dunkel                                                             0
+##   Field Beer                                                                                        0
+##   Flavored Malt Beverage                                                                            0
+##   French-Style Bière de Garde                                                                       0
+##   Fresh "Wet" Hop Ale                                                                               0
+##   Fruit Beer                                                                                        0
+##   Fruit Cider                                                                                       0
+##   German-Style Doppelbock                                                                           0
+##   German-Style Eisbock                                                                              0
+##   German-Style Heller Bock/Maibock                                                                  0
+##   German-Style Leichtbier                                                                           0
+##   German-Style Leichtes Weizen / Weissbier                                                          0
+##   German-Style Märzen                                                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                           0
+##   German-Style Schwarzbier                                                                          0
+##   Gluten-Free Beer                                                                                  0
+##   Grodziskie                                                                                        0
+##   Herb and Spice Beer                                                                               0
+##   Historical Beer                                                                                   0
+##   India Pale Ale                                                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                     0
+##   Kölsch                                                                                            0
+##   Lager                                                                                             0
+##   Leipzig-Style Gose                                                                                0
+##   Mixed Culture Brett Beer                                                                          0
+##   Münchner (Munich)-Style Helles                                                                    0
+##   Old Ale                                                                                           0
+##   Other Belgian-Style Ales                                                                          0
+##   Pale Ale                                                                                          0
+##   Pale American-Belgo-Style Ale                                                                     0
+##   Pilsener                                                                                          0
+##   Porter                                                                                            0
+##   Pumpkin Beer                                                                                      0
+##   Red                                                                                               0
+##   Saison                                                                                            0
+##   Scotch Ale                                                                                        0
+##   Scottish-Style Export Ale                                                                         0
+##   Scottish-Style Heavy Ale                                                                          0
+##   Scottish-Style Light Ale                                                                          0
+##   Session Beer                                                                                      0
+##   Sour                                                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                               0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                           0
+##   South German-Style Weizenbock / Weissbock                                                         0
+##   Specialty Beer                                                                                    0
+##   Stout                                                                                             0
+##   Strong Ale                                                                                        0
+##   Traditional German-Style Bock                                                                     0
+##   Tripel                                                                                            0
+##   Wheat                                                                                             0
+##   Wild Beer                                                                                         0
+##                                                           
+##                                                            German-Style Rye Ale (Roggenbier) with or without Yeast
+##   Altbier                                                                                                        0
+##   Amber                                                                                                          0
+##   American-Style Malt Liquor                                                                                     0
+##   American-Style Märzen / Oktoberfest                                                                            0
+##   Bamberg-Style Bock Rauchbier                                                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                                       0
+##   Barley Wine                                                                                                    0
+##   Barrel-Aged                                                                                                    0
+##   Belgian-style Fruit Beer                                                                                       0
+##   Belgian-Style Fruit Lambic                                                                                     0
+##   Belgian-Style Lambic                                                                                           0
+##   Belgian-Style Quadrupel                                                                                        0
+##   Belgian-Style Table Beer                                                                                       0
+##   Bitter                                                                                                         0
+##   Black                                                                                                          0
+##   Blonde                                                                                                         0
+##   Braggot                                                                                                        0
+##   Brett Beer                                                                                                     0
+##   Brown                                                                                                          0
+##   California Common Beer                                                                                         0
+##   Chili Pepper Beer                                                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                                                0
+##   Coffee-Flavored Beer                                                                                           0
+##   Contemporary Gose                                                                                              0
+##   Dark American-Belgo-Style Ale                                                                                  0
+##   Dortmunder / European-Style Export                                                                             0
+##   Double India Pale Ale                                                                                          0
+##   Dubbel                                                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                                 0
+##   English-Style Dark Mild Ale                                                                                    0
+##   English-Style Pale Mild Ale                                                                                    0
+##   English-Style Summer Ale                                                                                       0
+##   European-Style Dark / Münchner Dunkel                                                                          0
+##   Field Beer                                                                                                     0
+##   Flavored Malt Beverage                                                                                         0
+##   French-Style Bière de Garde                                                                                    0
+##   Fresh "Wet" Hop Ale                                                                                            0
+##   Fruit Beer                                                                                                     0
+##   Fruit Cider                                                                                                    0
+##   German-Style Doppelbock                                                                                        0
+##   German-Style Eisbock                                                                                           0
+##   German-Style Heller Bock/Maibock                                                                               0
+##   German-Style Leichtbier                                                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                                                       0
+##   German-Style Märzen                                                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                                        0
+##   German-Style Schwarzbier                                                                                       0
+##   Gluten-Free Beer                                                                                               0
+##   Grodziskie                                                                                                     0
+##   Herb and Spice Beer                                                                                            0
+##   Historical Beer                                                                                                0
+##   India Pale Ale                                                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                                  0
+##   Kölsch                                                                                                         0
+##   Lager                                                                                                          0
+##   Leipzig-Style Gose                                                                                             0
+##   Mixed Culture Brett Beer                                                                                       0
+##   Münchner (Munich)-Style Helles                                                                                 0
+##   Old Ale                                                                                                        0
+##   Other Belgian-Style Ales                                                                                       0
+##   Pale Ale                                                                                                       0
+##   Pale American-Belgo-Style Ale                                                                                  0
+##   Pilsener                                                                                                       0
+##   Porter                                                                                                         0
+##   Pumpkin Beer                                                                                                   0
+##   Red                                                                                                            0
+##   Saison                                                                                                         0
+##   Scotch Ale                                                                                                     0
+##   Scottish-Style Export Ale                                                                                      0
+##   Scottish-Style Heavy Ale                                                                                       0
+##   Scottish-Style Light Ale                                                                                       0
+##   Session Beer                                                                                                   0
+##   Sour                                                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                                        0
+##   South German-Style Weizenbock / Weissbock                                                                      0
+##   Specialty Beer                                                                                                 0
+##   Stout                                                                                                          0
+##   Strong Ale                                                                                                     0
+##   Traditional German-Style Bock                                                                                  0
+##   Tripel                                                                                                         0
+##   Wheat                                                                                                          0
+##   Wild Beer                                                                                                      0
+##                                                           
+##                                                            German-Style Schwarzbier
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Gluten-Free Beer
+##   Altbier                                                                 0
+##   Amber                                                                   0
+##   American-Style Malt Liquor                                              0
+##   American-Style Märzen / Oktoberfest                                     0
+##   Bamberg-Style Bock Rauchbier                                            0
+##   Bamberg-Style Märzen Rauchbier                                          0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                0
+##   Barley Wine                                                             0
+##   Barrel-Aged                                                             0
+##   Belgian-style Fruit Beer                                                0
+##   Belgian-Style Fruit Lambic                                              0
+##   Belgian-Style Lambic                                                    0
+##   Belgian-Style Quadrupel                                                 0
+##   Belgian-Style Table Beer                                                0
+##   Bitter                                                                  0
+##   Black                                                                   0
+##   Blonde                                                                  0
+##   Braggot                                                                 0
+##   Brett Beer                                                              0
+##   Brown                                                                   0
+##   California Common Beer                                                  0
+##   Chili Pepper Beer                                                       0
+##   Chocolate / Cocoa-Flavored Beer                                         0
+##   Coffee-Flavored Beer                                                    0
+##   Contemporary Gose                                                       0
+##   Dark American-Belgo-Style Ale                                           0
+##   Dortmunder / European-Style Export                                      0
+##   Double India Pale Ale                                                   0
+##   Dubbel                                                                  0
+##   Dutch-Style Kuit, Kuyt or Koyt                                          0
+##   English-Style Dark Mild Ale                                             0
+##   English-Style Pale Mild Ale                                             0
+##   English-Style Summer Ale                                                0
+##   European-Style Dark / Münchner Dunkel                                   0
+##   Field Beer                                                              0
+##   Flavored Malt Beverage                                                  0
+##   French-Style Bière de Garde                                             0
+##   Fresh "Wet" Hop Ale                                                     0
+##   Fruit Beer                                                              0
+##   Fruit Cider                                                             0
+##   German-Style Doppelbock                                                 0
+##   German-Style Eisbock                                                    0
+##   German-Style Heller Bock/Maibock                                        0
+##   German-Style Leichtbier                                                 0
+##   German-Style Leichtes Weizen / Weissbier                                0
+##   German-Style Märzen                                                     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                              0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                 0
+##   German-Style Schwarzbier                                                0
+##   Gluten-Free Beer                                                        0
+##   Grodziskie                                                              0
+##   Herb and Spice Beer                                                     0
+##   Historical Beer                                                         0
+##   India Pale Ale                                                          0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                           0
+##   Kölsch                                                                  0
+##   Lager                                                                   0
+##   Leipzig-Style Gose                                                      0
+##   Mixed Culture Brett Beer                                                0
+##   Münchner (Munich)-Style Helles                                          0
+##   Old Ale                                                                 0
+##   Other Belgian-Style Ales                                                0
+##   Pale Ale                                                                0
+##   Pale American-Belgo-Style Ale                                           0
+##   Pilsener                                                                0
+##   Porter                                                                  0
+##   Pumpkin Beer                                                            0
+##   Red                                                                     0
+##   Saison                                                                  0
+##   Scotch Ale                                                              0
+##   Scottish-Style Export Ale                                               0
+##   Scottish-Style Heavy Ale                                                0
+##   Scottish-Style Light Ale                                                0
+##   Session Beer                                                            0
+##   Sour                                                                    0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                 0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                     0
+##   South German-Style Kristall Weizen / Kristall Weissbier                 0
+##   South German-Style Weizenbock / Weissbock                               0
+##   Specialty Beer                                                          0
+##   Stout                                                                   0
+##   Strong Ale                                                              0
+##   Traditional German-Style Bock                                           0
+##   Tripel                                                                  0
+##   Wheat                                                                   0
+##   Wild Beer                                                               0
+##                                                           
+##                                                            Grodziskie
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       0
+##   Barrel-Aged                                                       0
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           0
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             0
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              0
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           0
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          0
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               0
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             0
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          0
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                            0
+##   Pumpkin Beer                                                      0
+##   Red                                                               0
+##   Saison                                                            0
+##   Scotch Ale                                                        0
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    0
+##   Stout                                                             0
+##   Strong Ale                                                        0
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             0
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Herb and Spice Beer
+##   Altbier                                                                    0
+##   Amber                                                                      0
+##   American-Style Malt Liquor                                                 0
+##   American-Style Märzen / Oktoberfest                                        0
+##   Bamberg-Style Bock Rauchbier                                               0
+##   Bamberg-Style Märzen Rauchbier                                             0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                   0
+##   Barley Wine                                                                0
+##   Barrel-Aged                                                                0
+##   Belgian-style Fruit Beer                                                   0
+##   Belgian-Style Fruit Lambic                                                 0
+##   Belgian-Style Lambic                                                       0
+##   Belgian-Style Quadrupel                                                    0
+##   Belgian-Style Table Beer                                                   0
+##   Bitter                                                                     0
+##   Black                                                                      0
+##   Blonde                                                                     0
+##   Braggot                                                                    0
+##   Brett Beer                                                                 0
+##   Brown                                                                      0
+##   California Common Beer                                                     0
+##   Chili Pepper Beer                                                          0
+##   Chocolate / Cocoa-Flavored Beer                                            0
+##   Coffee-Flavored Beer                                                       0
+##   Contemporary Gose                                                          0
+##   Dark American-Belgo-Style Ale                                              0
+##   Dortmunder / European-Style Export                                         0
+##   Double India Pale Ale                                                      0
+##   Dubbel                                                                     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                             0
+##   English-Style Dark Mild Ale                                                0
+##   English-Style Pale Mild Ale                                                0
+##   English-Style Summer Ale                                                   0
+##   European-Style Dark / Münchner Dunkel                                      0
+##   Field Beer                                                                 0
+##   Flavored Malt Beverage                                                     0
+##   French-Style Bière de Garde                                                0
+##   Fresh "Wet" Hop Ale                                                        0
+##   Fruit Beer                                                                 0
+##   Fruit Cider                                                                0
+##   German-Style Doppelbock                                                    0
+##   German-Style Eisbock                                                       0
+##   German-Style Heller Bock/Maibock                                           0
+##   German-Style Leichtbier                                                    0
+##   German-Style Leichtes Weizen / Weissbier                                   0
+##   German-Style Märzen                                                        0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                 0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                    0
+##   German-Style Schwarzbier                                                   0
+##   Gluten-Free Beer                                                           0
+##   Grodziskie                                                                 0
+##   Herb and Spice Beer                                                        0
+##   Historical Beer                                                            0
+##   India Pale Ale                                                             0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                              0
+##   Kölsch                                                                     0
+##   Lager                                                                      0
+##   Leipzig-Style Gose                                                         0
+##   Mixed Culture Brett Beer                                                   0
+##   Münchner (Munich)-Style Helles                                             0
+##   Old Ale                                                                    0
+##   Other Belgian-Style Ales                                                   0
+##   Pale Ale                                                                   0
+##   Pale American-Belgo-Style Ale                                              0
+##   Pilsener                                                                   0
+##   Porter                                                                     0
+##   Pumpkin Beer                                                               0
+##   Red                                                                        0
+##   Saison                                                                     0
+##   Scotch Ale                                                                 0
+##   Scottish-Style Export Ale                                                  0
+##   Scottish-Style Heavy Ale                                                   0
+##   Scottish-Style Light Ale                                                   0
+##   Session Beer                                                               0
+##   Sour                                                                       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                    0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                        0
+##   South German-Style Kristall Weizen / Kristall Weissbier                    0
+##   South German-Style Weizenbock / Weissbock                                  0
+##   Specialty Beer                                                             0
+##   Stout                                                                      0
+##   Strong Ale                                                                 1
+##   Traditional German-Style Bock                                              0
+##   Tripel                                                                     0
+##   Wheat                                                                      0
+##   Wild Beer                                                                  0
+##                                                           
+##                                                            Historical Beer
+##   Altbier                                                                0
+##   Amber                                                                  0
+##   American-Style Malt Liquor                                             0
+##   American-Style Märzen / Oktoberfest                                    0
+##   Bamberg-Style Bock Rauchbier                                           0
+##   Bamberg-Style Märzen Rauchbier                                         0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)               0
+##   Barley Wine                                                            0
+##   Barrel-Aged                                                            0
+##   Belgian-style Fruit Beer                                               0
+##   Belgian-Style Fruit Lambic                                             0
+##   Belgian-Style Lambic                                                   0
+##   Belgian-Style Quadrupel                                                0
+##   Belgian-Style Table Beer                                               0
+##   Bitter                                                                 0
+##   Black                                                                  0
+##   Blonde                                                                 0
+##   Braggot                                                                0
+##   Brett Beer                                                             0
+##   Brown                                                                  0
+##   California Common Beer                                                 0
+##   Chili Pepper Beer                                                      0
+##   Chocolate / Cocoa-Flavored Beer                                        0
+##   Coffee-Flavored Beer                                                   0
+##   Contemporary Gose                                                      0
+##   Dark American-Belgo-Style Ale                                          0
+##   Dortmunder / European-Style Export                                     0
+##   Double India Pale Ale                                                  0
+##   Dubbel                                                                 0
+##   Dutch-Style Kuit, Kuyt or Koyt                                         0
+##   English-Style Dark Mild Ale                                            0
+##   English-Style Pale Mild Ale                                            0
+##   English-Style Summer Ale                                               0
+##   European-Style Dark / Münchner Dunkel                                  0
+##   Field Beer                                                             0
+##   Flavored Malt Beverage                                                 0
+##   French-Style Bière de Garde                                            0
+##   Fresh "Wet" Hop Ale                                                    0
+##   Fruit Beer                                                             0
+##   Fruit Cider                                                            0
+##   German-Style Doppelbock                                                0
+##   German-Style Eisbock                                                   0
+##   German-Style Heller Bock/Maibock                                       0
+##   German-Style Leichtbier                                                0
+##   German-Style Leichtes Weizen / Weissbier                               0
+##   German-Style Märzen                                                    0
+##   German-Style Oktoberfest / Wiesen (Meadow)                             0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                0
+##   German-Style Schwarzbier                                               0
+##   Gluten-Free Beer                                                       0
+##   Grodziskie                                                             0
+##   Herb and Spice Beer                                                    0
+##   Historical Beer                                                        0
+##   India Pale Ale                                                         0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                          0
+##   Kölsch                                                                 0
+##   Lager                                                                  0
+##   Leipzig-Style Gose                                                     0
+##   Mixed Culture Brett Beer                                               0
+##   Münchner (Munich)-Style Helles                                         0
+##   Old Ale                                                                0
+##   Other Belgian-Style Ales                                               0
+##   Pale Ale                                                               0
+##   Pale American-Belgo-Style Ale                                          0
+##   Pilsener                                                               0
+##   Porter                                                                 0
+##   Pumpkin Beer                                                           0
+##   Red                                                                    0
+##   Saison                                                                 0
+##   Scotch Ale                                                             0
+##   Scottish-Style Export Ale                                              0
+##   Scottish-Style Heavy Ale                                               0
+##   Scottish-Style Light Ale                                               0
+##   Session Beer                                                           0
+##   Sour                                                                   0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                    0
+##   South German-Style Kristall Weizen / Kristall Weissbier                0
+##   South German-Style Weizenbock / Weissbock                              0
+##   Specialty Beer                                                         0
+##   Stout                                                                  0
+##   Strong Ale                                                             0
+##   Traditional German-Style Bock                                          0
+##   Tripel                                                                 0
+##   Wheat                                                                  0
+##   Wild Beer                                                              0
+##                                                           
+##                                                            India Pale Ale
+##   Altbier                                                               3
+##   Amber                                                                 1
+##   American-Style Malt Liquor                                            0
+##   American-Style Märzen / Oktoberfest                                   1
+##   Bamberg-Style Bock Rauchbier                                          0
+##   Bamberg-Style Märzen Rauchbier                                        0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)              0
+##   Barley Wine                                                           1
+##   Barrel-Aged                                                           0
+##   Belgian-style Fruit Beer                                              0
+##   Belgian-Style Fruit Lambic                                            0
+##   Belgian-Style Lambic                                                  0
+##   Belgian-Style Quadrupel                                               0
+##   Belgian-Style Table Beer                                              0
+##   Bitter                                                                2
+##   Black                                                                 6
+##   Blonde                                                                1
+##   Braggot                                                               0
+##   Brett Beer                                                            0
+##   Brown                                                                 1
+##   California Common Beer                                                1
+##   Chili Pepper Beer                                                     0
+##   Chocolate / Cocoa-Flavored Beer                                       0
+##   Coffee-Flavored Beer                                                  0
+##   Contemporary Gose                                                     0
+##   Dark American-Belgo-Style Ale                                         1
+##   Dortmunder / European-Style Export                                    0
+##   Double India Pale Ale                                                 3
+##   Dubbel                                                                3
+##   Dutch-Style Kuit, Kuyt or Koyt                                        0
+##   English-Style Dark Mild Ale                                           0
+##   English-Style Pale Mild Ale                                           0
+##   English-Style Summer Ale                                              0
+##   European-Style Dark / Münchner Dunkel                                 0
+##   Field Beer                                                            0
+##   Flavored Malt Beverage                                                0
+##   French-Style Bière de Garde                                           2
+##   Fresh "Wet" Hop Ale                                                   1
+##   Fruit Beer                                                            3
+##   Fruit Cider                                                           0
+##   German-Style Doppelbock                                               2
+##   German-Style Eisbock                                                  0
+##   German-Style Heller Bock/Maibock                                      2
+##   German-Style Leichtbier                                               0
+##   German-Style Leichtes Weizen / Weissbier                              0
+##   German-Style Märzen                                                   0
+##   German-Style Oktoberfest / Wiesen (Meadow)                            0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast               0
+##   German-Style Schwarzbier                                              0
+##   Gluten-Free Beer                                                      0
+##   Grodziskie                                                            0
+##   Herb and Spice Beer                                                   2
+##   Historical Beer                                                       1
+##   India Pale Ale                                                      101
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                         0
+##   Kölsch                                                                0
+##   Lager                                                                11
+##   Leipzig-Style Gose                                                    0
+##   Mixed Culture Brett Beer                                              0
+##   Münchner (Munich)-Style Helles                                        0
+##   Old Ale                                                               0
+##   Other Belgian-Style Ales                                              3
+##   Pale Ale                                                             12
+##   Pale American-Belgo-Style Ale                                         1
+##   Pilsener                                                              2
+##   Porter                                                                0
+##   Pumpkin Beer                                                          2
+##   Red                                                                  14
+##   Saison                                                               11
+##   Scotch Ale                                                            2
+##   Scottish-Style Export Ale                                             0
+##   Scottish-Style Heavy Ale                                              0
+##   Scottish-Style Light Ale                                              0
+##   Session Beer                                                          1
+##   Sour                                                                  2
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier               0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                   0
+##   South German-Style Kristall Weizen / Kristall Weissbier               0
+##   South German-Style Weizenbock / Weissbock                             0
+##   Specialty Beer                                                        2
+##   Stout                                                                 4
+##   Strong Ale                                                            2
+##   Traditional German-Style Bock                                         3
+##   Tripel                                                                1
+##   Wheat                                                                 3
+##   Wild Beer                                                             0
+##                                                           
+##                                                            Kellerbier (Cellar beer) or Zwickelbier - Ale
+##   Altbier                                                                                              0
+##   Amber                                                                                                0
+##   American-Style Malt Liquor                                                                           0
+##   American-Style Märzen / Oktoberfest                                                                  0
+##   Bamberg-Style Bock Rauchbier                                                                         0
+##   Bamberg-Style Märzen Rauchbier                                                                       0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                             0
+##   Barley Wine                                                                                          0
+##   Barrel-Aged                                                                                          0
+##   Belgian-style Fruit Beer                                                                             0
+##   Belgian-Style Fruit Lambic                                                                           0
+##   Belgian-Style Lambic                                                                                 0
+##   Belgian-Style Quadrupel                                                                              0
+##   Belgian-Style Table Beer                                                                             0
+##   Bitter                                                                                               0
+##   Black                                                                                                0
+##   Blonde                                                                                               0
+##   Braggot                                                                                              0
+##   Brett Beer                                                                                           0
+##   Brown                                                                                                0
+##   California Common Beer                                                                               0
+##   Chili Pepper Beer                                                                                    0
+##   Chocolate / Cocoa-Flavored Beer                                                                      0
+##   Coffee-Flavored Beer                                                                                 0
+##   Contemporary Gose                                                                                    0
+##   Dark American-Belgo-Style Ale                                                                        0
+##   Dortmunder / European-Style Export                                                                   0
+##   Double India Pale Ale                                                                                0
+##   Dubbel                                                                                               0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                       0
+##   English-Style Dark Mild Ale                                                                          0
+##   English-Style Pale Mild Ale                                                                          0
+##   English-Style Summer Ale                                                                             0
+##   European-Style Dark / Münchner Dunkel                                                                0
+##   Field Beer                                                                                           0
+##   Flavored Malt Beverage                                                                               0
+##   French-Style Bière de Garde                                                                          0
+##   Fresh "Wet" Hop Ale                                                                                  0
+##   Fruit Beer                                                                                           0
+##   Fruit Cider                                                                                          0
+##   German-Style Doppelbock                                                                              0
+##   German-Style Eisbock                                                                                 0
+##   German-Style Heller Bock/Maibock                                                                     0
+##   German-Style Leichtbier                                                                              0
+##   German-Style Leichtes Weizen / Weissbier                                                             0
+##   German-Style Märzen                                                                                  0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                           0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                              0
+##   German-Style Schwarzbier                                                                             0
+##   Gluten-Free Beer                                                                                     0
+##   Grodziskie                                                                                           0
+##   Herb and Spice Beer                                                                                  0
+##   Historical Beer                                                                                      0
+##   India Pale Ale                                                                                       0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                        0
+##   Kölsch                                                                                               0
+##   Lager                                                                                                0
+##   Leipzig-Style Gose                                                                                   0
+##   Mixed Culture Brett Beer                                                                             0
+##   Münchner (Munich)-Style Helles                                                                       0
+##   Old Ale                                                                                              0
+##   Other Belgian-Style Ales                                                                             0
+##   Pale Ale                                                                                             0
+##   Pale American-Belgo-Style Ale                                                                        0
+##   Pilsener                                                                                             0
+##   Porter                                                                                               0
+##   Pumpkin Beer                                                                                         0
+##   Red                                                                                                  0
+##   Saison                                                                                               0
+##   Scotch Ale                                                                                           0
+##   Scottish-Style Export Ale                                                                            0
+##   Scottish-Style Heavy Ale                                                                             0
+##   Scottish-Style Light Ale                                                                             0
+##   Session Beer                                                                                         0
+##   Sour                                                                                                 0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                              0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                  0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                              0
+##   South German-Style Weizenbock / Weissbock                                                            0
+##   Specialty Beer                                                                                       0
+##   Stout                                                                                                0
+##   Strong Ale                                                                                           0
+##   Traditional German-Style Bock                                                                        0
+##   Tripel                                                                                               0
+##   Wheat                                                                                                0
+##   Wild Beer                                                                                            0
+##                                                           
+##                                                            Kölsch Lager
+##   Altbier                                                       0     0
+##   Amber                                                         0     0
+##   American-Style Malt Liquor                                    0     0
+##   American-Style Märzen / Oktoberfest                           0     0
+##   Bamberg-Style Bock Rauchbier                                  0     0
+##   Bamberg-Style Märzen Rauchbier                                0     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)      0     0
+##   Barley Wine                                                   0     0
+##   Barrel-Aged                                                   0     0
+##   Belgian-style Fruit Beer                                      0     0
+##   Belgian-Style Fruit Lambic                                    0     0
+##   Belgian-Style Lambic                                          0     0
+##   Belgian-Style Quadrupel                                       0     0
+##   Belgian-Style Table Beer                                      0     0
+##   Bitter                                                        0     0
+##   Black                                                         0     0
+##   Blonde                                                        0     1
+##   Braggot                                                       0     0
+##   Brett Beer                                                    0     0
+##   Brown                                                         0     0
+##   California Common Beer                                        0     0
+##   Chili Pepper Beer                                             0     0
+##   Chocolate / Cocoa-Flavored Beer                               0     0
+##   Coffee-Flavored Beer                                          0     0
+##   Contemporary Gose                                             0     0
+##   Dark American-Belgo-Style Ale                                 0     0
+##   Dortmunder / European-Style Export                            0     0
+##   Double India Pale Ale                                         0     0
+##   Dubbel                                                        0     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                0     0
+##   English-Style Dark Mild Ale                                   0     0
+##   English-Style Pale Mild Ale                                   0     0
+##   English-Style Summer Ale                                      0     0
+##   European-Style Dark / Münchner Dunkel                         0     0
+##   Field Beer                                                    0     0
+##   Flavored Malt Beverage                                        0     0
+##   French-Style Bière de Garde                                   0     0
+##   Fresh "Wet" Hop Ale                                           0     0
+##   Fruit Beer                                                    0     0
+##   Fruit Cider                                                   0     0
+##   German-Style Doppelbock                                       0     0
+##   German-Style Eisbock                                          0     0
+##   German-Style Heller Bock/Maibock                              0     0
+##   German-Style Leichtbier                                       0     0
+##   German-Style Leichtes Weizen / Weissbier                      0     0
+##   German-Style Märzen                                           0     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                    0     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast       0     0
+##   German-Style Schwarzbier                                      0     0
+##   Gluten-Free Beer                                              0     0
+##   Grodziskie                                                    0     0
+##   Herb and Spice Beer                                           0     0
+##   Historical Beer                                               0     0
+##   India Pale Ale                                                0     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                 0     0
+##   Kölsch                                                        1     0
+##   Lager                                                         0     0
+##   Leipzig-Style Gose                                            0     0
+##   Mixed Culture Brett Beer                                      0     0
+##   Münchner (Munich)-Style Helles                                0     0
+##   Old Ale                                                       0     0
+##   Other Belgian-Style Ales                                      0     0
+##   Pale Ale                                                      0     0
+##   Pale American-Belgo-Style Ale                                 0     0
+##   Pilsener                                                      0     0
+##   Porter                                                        0     0
+##   Pumpkin Beer                                                  0     0
+##   Red                                                           0     1
+##   Saison                                                        0     0
+##   Scotch Ale                                                    0     0
+##   Scottish-Style Export Ale                                     0     0
+##   Scottish-Style Heavy Ale                                      0     0
+##   Scottish-Style Light Ale                                      0     0
+##   Session Beer                                                  0     0
+##   Sour                                                          0     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier       0     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier           0     0
+##   South German-Style Kristall Weizen / Kristall Weissbier       0     0
+##   South German-Style Weizenbock / Weissbock                     0     0
+##   Specialty Beer                                                0     0
+##   Stout                                                         0     0
+##   Strong Ale                                                    0     0
+##   Traditional German-Style Bock                                 0     0
+##   Tripel                                                        0     0
+##   Wheat                                                         0     0
+##   Wild Beer                                                     0     0
+##                                                           
+##                                                            Leipzig-Style Gose
+##   Altbier                                                                   0
+##   Amber                                                                     0
+##   American-Style Malt Liquor                                                0
+##   American-Style Märzen / Oktoberfest                                       0
+##   Bamberg-Style Bock Rauchbier                                              0
+##   Bamberg-Style Märzen Rauchbier                                            0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                  0
+##   Barley Wine                                                               0
+##   Barrel-Aged                                                               0
+##   Belgian-style Fruit Beer                                                  0
+##   Belgian-Style Fruit Lambic                                                0
+##   Belgian-Style Lambic                                                      0
+##   Belgian-Style Quadrupel                                                   0
+##   Belgian-Style Table Beer                                                  0
+##   Bitter                                                                    0
+##   Black                                                                     0
+##   Blonde                                                                    0
+##   Braggot                                                                   0
+##   Brett Beer                                                                0
+##   Brown                                                                     0
+##   California Common Beer                                                    0
+##   Chili Pepper Beer                                                         0
+##   Chocolate / Cocoa-Flavored Beer                                           0
+##   Coffee-Flavored Beer                                                      0
+##   Contemporary Gose                                                         0
+##   Dark American-Belgo-Style Ale                                             0
+##   Dortmunder / European-Style Export                                        0
+##   Double India Pale Ale                                                     0
+##   Dubbel                                                                    0
+##   Dutch-Style Kuit, Kuyt or Koyt                                            0
+##   English-Style Dark Mild Ale                                               0
+##   English-Style Pale Mild Ale                                               0
+##   English-Style Summer Ale                                                  0
+##   European-Style Dark / Münchner Dunkel                                     0
+##   Field Beer                                                                0
+##   Flavored Malt Beverage                                                    0
+##   French-Style Bière de Garde                                               0
+##   Fresh "Wet" Hop Ale                                                       0
+##   Fruit Beer                                                                0
+##   Fruit Cider                                                               0
+##   German-Style Doppelbock                                                   0
+##   German-Style Eisbock                                                      0
+##   German-Style Heller Bock/Maibock                                          0
+##   German-Style Leichtbier                                                   0
+##   German-Style Leichtes Weizen / Weissbier                                  0
+##   German-Style Märzen                                                       0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                   0
+##   German-Style Schwarzbier                                                  0
+##   Gluten-Free Beer                                                          0
+##   Grodziskie                                                                0
+##   Herb and Spice Beer                                                       0
+##   Historical Beer                                                           0
+##   India Pale Ale                                                            0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                             0
+##   Kölsch                                                                    0
+##   Lager                                                                     0
+##   Leipzig-Style Gose                                                        0
+##   Mixed Culture Brett Beer                                                  0
+##   Münchner (Munich)-Style Helles                                            0
+##   Old Ale                                                                   0
+##   Other Belgian-Style Ales                                                  0
+##   Pale Ale                                                                  0
+##   Pale American-Belgo-Style Ale                                             0
+##   Pilsener                                                                  0
+##   Porter                                                                    0
+##   Pumpkin Beer                                                              0
+##   Red                                                                       0
+##   Saison                                                                    0
+##   Scotch Ale                                                                0
+##   Scottish-Style Export Ale                                                 0
+##   Scottish-Style Heavy Ale                                                  0
+##   Scottish-Style Light Ale                                                  0
+##   Session Beer                                                              0
+##   Sour                                                                      0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                   0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                       0
+##   South German-Style Kristall Weizen / Kristall Weissbier                   0
+##   South German-Style Weizenbock / Weissbock                                 0
+##   Specialty Beer                                                            0
+##   Stout                                                                     0
+##   Strong Ale                                                                0
+##   Traditional German-Style Bock                                             0
+##   Tripel                                                                    0
+##   Wheat                                                                     0
+##   Wild Beer                                                                 0
+##                                                           
+##                                                            Münchner (Munich)-Style Helles
+##   Altbier                                                                               0
+##   Amber                                                                                 0
+##   American-Style Malt Liquor                                                            0
+##   American-Style Märzen / Oktoberfest                                                   0
+##   Bamberg-Style Bock Rauchbier                                                          0
+##   Bamberg-Style Märzen Rauchbier                                                        0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                              0
+##   Barley Wine                                                                           0
+##   Barrel-Aged                                                                           0
+##   Belgian-style Fruit Beer                                                              0
+##   Belgian-Style Fruit Lambic                                                            0
+##   Belgian-Style Lambic                                                                  0
+##   Belgian-Style Quadrupel                                                               0
+##   Belgian-Style Table Beer                                                              0
+##   Bitter                                                                                0
+##   Black                                                                                 0
+##   Blonde                                                                                0
+##   Braggot                                                                               0
+##   Brett Beer                                                                            0
+##   Brown                                                                                 0
+##   California Common Beer                                                                0
+##   Chili Pepper Beer                                                                     0
+##   Chocolate / Cocoa-Flavored Beer                                                       0
+##   Coffee-Flavored Beer                                                                  0
+##   Contemporary Gose                                                                     0
+##   Dark American-Belgo-Style Ale                                                         0
+##   Dortmunder / European-Style Export                                                    0
+##   Double India Pale Ale                                                                 0
+##   Dubbel                                                                                0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                        0
+##   English-Style Dark Mild Ale                                                           0
+##   English-Style Pale Mild Ale                                                           0
+##   English-Style Summer Ale                                                              0
+##   European-Style Dark / Münchner Dunkel                                                 0
+##   Field Beer                                                                            0
+##   Flavored Malt Beverage                                                                0
+##   French-Style Bière de Garde                                                           0
+##   Fresh "Wet" Hop Ale                                                                   0
+##   Fruit Beer                                                                            0
+##   Fruit Cider                                                                           0
+##   German-Style Doppelbock                                                               0
+##   German-Style Eisbock                                                                  0
+##   German-Style Heller Bock/Maibock                                                      0
+##   German-Style Leichtbier                                                               0
+##   German-Style Leichtes Weizen / Weissbier                                              0
+##   German-Style Märzen                                                                   0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                            0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                               0
+##   German-Style Schwarzbier                                                              0
+##   Gluten-Free Beer                                                                      0
+##   Grodziskie                                                                            0
+##   Herb and Spice Beer                                                                   0
+##   Historical Beer                                                                       0
+##   India Pale Ale                                                                        0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                         0
+##   Kölsch                                                                                0
+##   Lager                                                                                 0
+##   Leipzig-Style Gose                                                                    0
+##   Mixed Culture Brett Beer                                                              0
+##   Münchner (Munich)-Style Helles                                                        0
+##   Old Ale                                                                               0
+##   Other Belgian-Style Ales                                                              0
+##   Pale Ale                                                                              0
+##   Pale American-Belgo-Style Ale                                                         0
+##   Pilsener                                                                              0
+##   Porter                                                                                0
+##   Pumpkin Beer                                                                          0
+##   Red                                                                                   0
+##   Saison                                                                                0
+##   Scotch Ale                                                                            0
+##   Scottish-Style Export Ale                                                             0
+##   Scottish-Style Heavy Ale                                                              0
+##   Scottish-Style Light Ale                                                              0
+##   Session Beer                                                                          0
+##   Sour                                                                                  0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                               0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                   0
+##   South German-Style Kristall Weizen / Kristall Weissbier                               0
+##   South German-Style Weizenbock / Weissbock                                             0
+##   Specialty Beer                                                                        0
+##   Stout                                                                                 0
+##   Strong Ale                                                                            0
+##   Traditional German-Style Bock                                                         0
+##   Tripel                                                                                0
+##   Wheat                                                                                 0
+##   Wild Beer                                                                             0
+##                                                           
+##                                                            Old Ale
+##   Altbier                                                        0
+##   Amber                                                          0
+##   American-Style Malt Liquor                                     0
+##   American-Style Märzen / Oktoberfest                            0
+##   Bamberg-Style Bock Rauchbier                                   0
+##   Bamberg-Style Märzen Rauchbier                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)       0
+##   Barley Wine                                                    0
+##   Barrel-Aged                                                    0
+##   Belgian-style Fruit Beer                                       0
+##   Belgian-Style Fruit Lambic                                     0
+##   Belgian-Style Lambic                                           0
+##   Belgian-Style Quadrupel                                        0
+##   Belgian-Style Table Beer                                       0
+##   Bitter                                                         0
+##   Black                                                          0
+##   Blonde                                                         0
+##   Braggot                                                        0
+##   Brett Beer                                                     0
+##   Brown                                                          0
+##   California Common Beer                                         0
+##   Chili Pepper Beer                                              0
+##   Chocolate / Cocoa-Flavored Beer                                0
+##   Coffee-Flavored Beer                                           0
+##   Contemporary Gose                                              0
+##   Dark American-Belgo-Style Ale                                  0
+##   Dortmunder / European-Style Export                             0
+##   Double India Pale Ale                                          0
+##   Dubbel                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                 0
+##   English-Style Dark Mild Ale                                    0
+##   English-Style Pale Mild Ale                                    0
+##   English-Style Summer Ale                                       0
+##   European-Style Dark / Münchner Dunkel                          0
+##   Field Beer                                                     0
+##   Flavored Malt Beverage                                         0
+##   French-Style Bière de Garde                                    0
+##   Fresh "Wet" Hop Ale                                            0
+##   Fruit Beer                                                     0
+##   Fruit Cider                                                    0
+##   German-Style Doppelbock                                        0
+##   German-Style Eisbock                                           0
+##   German-Style Heller Bock/Maibock                               0
+##   German-Style Leichtbier                                        0
+##   German-Style Leichtes Weizen / Weissbier                       0
+##   German-Style Märzen                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast        0
+##   German-Style Schwarzbier                                       0
+##   Gluten-Free Beer                                               0
+##   Grodziskie                                                     0
+##   Herb and Spice Beer                                            0
+##   Historical Beer                                                0
+##   India Pale Ale                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                  0
+##   Kölsch                                                         0
+##   Lager                                                          0
+##   Leipzig-Style Gose                                             0
+##   Mixed Culture Brett Beer                                       0
+##   Münchner (Munich)-Style Helles                                 0
+##   Old Ale                                                        0
+##   Other Belgian-Style Ales                                       0
+##   Pale Ale                                                       0
+##   Pale American-Belgo-Style Ale                                  0
+##   Pilsener                                                       0
+##   Porter                                                         0
+##   Pumpkin Beer                                                   0
+##   Red                                                            0
+##   Saison                                                         0
+##   Scotch Ale                                                     0
+##   Scottish-Style Export Ale                                      0
+##   Scottish-Style Heavy Ale                                       0
+##   Scottish-Style Light Ale                                       0
+##   Session Beer                                                   0
+##   Sour                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier            0
+##   South German-Style Kristall Weizen / Kristall Weissbier        0
+##   South German-Style Weizenbock / Weissbock                      0
+##   Specialty Beer                                                 0
+##   Stout                                                          0
+##   Strong Ale                                                     0
+##   Traditional German-Style Bock                                  0
+##   Tripel                                                         0
+##   Wheat                                                          0
+##   Wild Beer                                                      0
+##                                                           
+##                                                            Other Belgian-Style Ales
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Pale Ale
+##   Altbier                                                         0
+##   Amber                                                           0
+##   American-Style Malt Liquor                                      0
+##   American-Style Märzen / Oktoberfest                             0
+##   Bamberg-Style Bock Rauchbier                                    0
+##   Bamberg-Style Märzen Rauchbier                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)        0
+##   Barley Wine                                                     0
+##   Barrel-Aged                                                     0
+##   Belgian-style Fruit Beer                                        0
+##   Belgian-Style Fruit Lambic                                      0
+##   Belgian-Style Lambic                                            0
+##   Belgian-Style Quadrupel                                         0
+##   Belgian-Style Table Beer                                        0
+##   Bitter                                                          0
+##   Black                                                           0
+##   Blonde                                                          0
+##   Braggot                                                         0
+##   Brett Beer                                                      0
+##   Brown                                                           0
+##   California Common Beer                                          0
+##   Chili Pepper Beer                                               0
+##   Chocolate / Cocoa-Flavored Beer                                 0
+##   Coffee-Flavored Beer                                            0
+##   Contemporary Gose                                               0
+##   Dark American-Belgo-Style Ale                                   0
+##   Dortmunder / European-Style Export                              0
+##   Double India Pale Ale                                           0
+##   Dubbel                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                  0
+##   English-Style Dark Mild Ale                                     0
+##   English-Style Pale Mild Ale                                     0
+##   English-Style Summer Ale                                        0
+##   European-Style Dark / Münchner Dunkel                           0
+##   Field Beer                                                      0
+##   Flavored Malt Beverage                                          0
+##   French-Style Bière de Garde                                     0
+##   Fresh "Wet" Hop Ale                                             0
+##   Fruit Beer                                                      0
+##   Fruit Cider                                                     0
+##   German-Style Doppelbock                                         0
+##   German-Style Eisbock                                            0
+##   German-Style Heller Bock/Maibock                                0
+##   German-Style Leichtbier                                         0
+##   German-Style Leichtes Weizen / Weissbier                        0
+##   German-Style Märzen                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast         0
+##   German-Style Schwarzbier                                        0
+##   Gluten-Free Beer                                                0
+##   Grodziskie                                                      0
+##   Herb and Spice Beer                                             0
+##   Historical Beer                                                 0
+##   India Pale Ale                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                   0
+##   Kölsch                                                          0
+##   Lager                                                           0
+##   Leipzig-Style Gose                                              0
+##   Mixed Culture Brett Beer                                        0
+##   Münchner (Munich)-Style Helles                                  0
+##   Old Ale                                                         0
+##   Other Belgian-Style Ales                                        0
+##   Pale Ale                                                        0
+##   Pale American-Belgo-Style Ale                                   0
+##   Pilsener                                                        0
+##   Porter                                                          0
+##   Pumpkin Beer                                                    0
+##   Red                                                             0
+##   Saison                                                          0
+##   Scotch Ale                                                      0
+##   Scottish-Style Export Ale                                       0
+##   Scottish-Style Heavy Ale                                        0
+##   Scottish-Style Light Ale                                        0
+##   Session Beer                                                    0
+##   Sour                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier             0
+##   South German-Style Kristall Weizen / Kristall Weissbier         0
+##   South German-Style Weizenbock / Weissbock                       0
+##   Specialty Beer                                                  0
+##   Stout                                                           0
+##   Strong Ale                                                      0
+##   Traditional German-Style Bock                                   0
+##   Tripel                                                          0
+##   Wheat                                                           0
+##   Wild Beer                                                       0
+##                                                           
+##                                                            Pale American-Belgo-Style Ale
+##   Altbier                                                                              0
+##   Amber                                                                                2
+##   American-Style Malt Liquor                                                           0
+##   American-Style Märzen / Oktoberfest                                                  1
+##   Bamberg-Style Bock Rauchbier                                                         0
+##   Bamberg-Style Märzen Rauchbier                                                       0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                             1
+##   Barley Wine                                                                          0
+##   Barrel-Aged                                                                          1
+##   Belgian-style Fruit Beer                                                             0
+##   Belgian-Style Fruit Lambic                                                           1
+##   Belgian-Style Lambic                                                                 0
+##   Belgian-Style Quadrupel                                                              1
+##   Belgian-Style Table Beer                                                             0
+##   Bitter                                                                               8
+##   Black                                                                                0
+##   Blonde                                                                               5
+##   Braggot                                                                              0
+##   Brett Beer                                                                           0
+##   Brown                                                                               12
+##   California Common Beer                                                               1
+##   Chili Pepper Beer                                                                    2
+##   Chocolate / Cocoa-Flavored Beer                                                      2
+##   Coffee-Flavored Beer                                                                 0
+##   Contemporary Gose                                                                    0
+##   Dark American-Belgo-Style Ale                                                        0
+##   Dortmunder / European-Style Export                                                   1
+##   Double India Pale Ale                                                                0
+##   Dubbel                                                                               0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                       0
+##   English-Style Dark Mild Ale                                                          0
+##   English-Style Pale Mild Ale                                                          2
+##   English-Style Summer Ale                                                             1
+##   European-Style Dark / Münchner Dunkel                                                1
+##   Field Beer                                                                           1
+##   Flavored Malt Beverage                                                               0
+##   French-Style Bière de Garde                                                          0
+##   Fresh "Wet" Hop Ale                                                                  1
+##   Fruit Beer                                                                           1
+##   Fruit Cider                                                                          0
+##   German-Style Doppelbock                                                              0
+##   German-Style Eisbock                                                                 0
+##   German-Style Heller Bock/Maibock                                                     2
+##   German-Style Leichtbier                                                              0
+##   German-Style Leichtes Weizen / Weissbier                                             0
+##   German-Style Märzen                                                                  4
+##   German-Style Oktoberfest / Wiesen (Meadow)                                           0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                              0
+##   German-Style Schwarzbier                                                             0
+##   Gluten-Free Beer                                                                     1
+##   Grodziskie                                                                           0
+##   Herb and Spice Beer                                                                  1
+##   Historical Beer                                                                      2
+##   India Pale Ale                                                                      11
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                        0
+##   Kölsch                                                                               3
+##   Lager                                                                               14
+##   Leipzig-Style Gose                                                                   0
+##   Mixed Culture Brett Beer                                                             0
+##   Münchner (Munich)-Style Helles                                                       1
+##   Old Ale                                                                              1
+##   Other Belgian-Style Ales                                                             1
+##   Pale Ale                                                                            53
+##   Pale American-Belgo-Style Ale                                                        0
+##   Pilsener                                                                            19
+##   Porter                                                                               3
+##   Pumpkin Beer                                                                         3
+##   Red                                                                                 31
+##   Saison                                                                              11
+##   Scotch Ale                                                                           1
+##   Scottish-Style Export Ale                                                            0
+##   Scottish-Style Heavy Ale                                                             0
+##   Scottish-Style Light Ale                                                             0
+##   Session Beer                                                                         4
+##   Sour                                                                                 0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                              0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                  0
+##   South German-Style Kristall Weizen / Kristall Weissbier                              0
+##   South German-Style Weizenbock / Weissbock                                            0
+##   Specialty Beer                                                                       4
+##   Stout                                                                                0
+##   Strong Ale                                                                           0
+##   Traditional German-Style Bock                                                        1
+##   Tripel                                                                               0
+##   Wheat                                                                               15
+##   Wild Beer                                                                            0
+##                                                           
+##                                                            Pilsener Porter
+##   Altbier                                                         0      0
+##   Amber                                                           0      0
+##   American-Style Malt Liquor                                      0      0
+##   American-Style Märzen / Oktoberfest                             0      0
+##   Bamberg-Style Bock Rauchbier                                    0      0
+##   Bamberg-Style Märzen Rauchbier                                  0      0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)        0      0
+##   Barley Wine                                                     0      0
+##   Barrel-Aged                                                     0      0
+##   Belgian-style Fruit Beer                                        0      0
+##   Belgian-Style Fruit Lambic                                      0      0
+##   Belgian-Style Lambic                                            0      0
+##   Belgian-Style Quadrupel                                         0      0
+##   Belgian-Style Table Beer                                        0      0
+##   Bitter                                                          0      0
+##   Black                                                           0      0
+##   Blonde                                                          0      0
+##   Braggot                                                         0      0
+##   Brett Beer                                                      0      0
+##   Brown                                                           0      0
+##   California Common Beer                                          0      0
+##   Chili Pepper Beer                                               0      0
+##   Chocolate / Cocoa-Flavored Beer                                 0      0
+##   Coffee-Flavored Beer                                            0      0
+##   Contemporary Gose                                               0      0
+##   Dark American-Belgo-Style Ale                                   0      0
+##   Dortmunder / European-Style Export                              0      0
+##   Double India Pale Ale                                           0      0
+##   Dubbel                                                          0      0
+##   Dutch-Style Kuit, Kuyt or Koyt                                  0      0
+##   English-Style Dark Mild Ale                                     0      0
+##   English-Style Pale Mild Ale                                     0      0
+##   English-Style Summer Ale                                        0      0
+##   European-Style Dark / Münchner Dunkel                           0      0
+##   Field Beer                                                      0      0
+##   Flavored Malt Beverage                                          0      0
+##   French-Style Bière de Garde                                     0      0
+##   Fresh "Wet" Hop Ale                                             0      0
+##   Fruit Beer                                                      0      0
+##   Fruit Cider                                                     0      0
+##   German-Style Doppelbock                                         0      0
+##   German-Style Eisbock                                            0      0
+##   German-Style Heller Bock/Maibock                                0      0
+##   German-Style Leichtbier                                         0      0
+##   German-Style Leichtes Weizen / Weissbier                        0      0
+##   German-Style Märzen                                             0      0
+##   German-Style Oktoberfest / Wiesen (Meadow)                      0      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast         0      0
+##   German-Style Schwarzbier                                        0      0
+##   Gluten-Free Beer                                                0      0
+##   Grodziskie                                                      0      0
+##   Herb and Spice Beer                                             0      0
+##   Historical Beer                                                 0      0
+##   India Pale Ale                                                  0      0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                   0      0
+##   Kölsch                                                          0      0
+##   Lager                                                           0      0
+##   Leipzig-Style Gose                                              0      0
+##   Mixed Culture Brett Beer                                        0      0
+##   Münchner (Munich)-Style Helles                                  0      0
+##   Old Ale                                                         0      0
+##   Other Belgian-Style Ales                                        0      0
+##   Pale Ale                                                        0      0
+##   Pale American-Belgo-Style Ale                                   0      0
+##   Pilsener                                                        0      1
+##   Porter                                                          0      0
+##   Pumpkin Beer                                                    0      0
+##   Red                                                             0      0
+##   Saison                                                          0      0
+##   Scotch Ale                                                      0      0
+##   Scottish-Style Export Ale                                       0      0
+##   Scottish-Style Heavy Ale                                        0      0
+##   Scottish-Style Light Ale                                        0      0
+##   Session Beer                                                    0      0
+##   Sour                                                            0      0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier         0      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier             0      0
+##   South German-Style Kristall Weizen / Kristall Weissbier         0      0
+##   South German-Style Weizenbock / Weissbock                       0      0
+##   Specialty Beer                                                  0      0
+##   Stout                                                           0      0
+##   Strong Ale                                                      0      0
+##   Traditional German-Style Bock                                   0      0
+##   Tripel                                                          0      0
+##   Wheat                                                           0      0
+##   Wild Beer                                                       0      0
+##                                                           
+##                                                            Pumpkin Beer
+##   Altbier                                                             0
+##   Amber                                                               0
+##   American-Style Malt Liquor                                          0
+##   American-Style Märzen / Oktoberfest                                 0
+##   Bamberg-Style Bock Rauchbier                                        0
+##   Bamberg-Style Märzen Rauchbier                                      0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)            0
+##   Barley Wine                                                         0
+##   Barrel-Aged                                                         2
+##   Belgian-style Fruit Beer                                            0
+##   Belgian-Style Fruit Lambic                                          0
+##   Belgian-Style Lambic                                                0
+##   Belgian-Style Quadrupel                                             0
+##   Belgian-Style Table Beer                                            0
+##   Bitter                                                              0
+##   Black                                                               1
+##   Blonde                                                              0
+##   Braggot                                                             0
+##   Brett Beer                                                          0
+##   Brown                                                               7
+##   California Common Beer                                              0
+##   Chili Pepper Beer                                                   0
+##   Chocolate / Cocoa-Flavored Beer                                     1
+##   Coffee-Flavored Beer                                                2
+##   Contemporary Gose                                                   0
+##   Dark American-Belgo-Style Ale                                       0
+##   Dortmunder / European-Style Export                                  0
+##   Double India Pale Ale                                               0
+##   Dubbel                                                              1
+##   Dutch-Style Kuit, Kuyt or Koyt                                      0
+##   English-Style Dark Mild Ale                                         1
+##   English-Style Pale Mild Ale                                         0
+##   English-Style Summer Ale                                            0
+##   European-Style Dark / Münchner Dunkel                               0
+##   Field Beer                                                          0
+##   Flavored Malt Beverage                                              0
+##   French-Style Bière de Garde                                         0
+##   Fresh "Wet" Hop Ale                                                 0
+##   Fruit Beer                                                          0
+##   Fruit Cider                                                         0
+##   German-Style Doppelbock                                             1
+##   German-Style Eisbock                                                0
+##   German-Style Heller Bock/Maibock                                    0
+##   German-Style Leichtbier                                             0
+##   German-Style Leichtes Weizen / Weissbier                            0
+##   German-Style Märzen                                                 0
+##   German-Style Oktoberfest / Wiesen (Meadow)                          0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast             0
+##   German-Style Schwarzbier                                            6
+##   Gluten-Free Beer                                                    0
+##   Grodziskie                                                          0
+##   Herb and Spice Beer                                                 1
+##   Historical Beer                                                     0
+##   India Pale Ale                                                      0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                       0
+##   Kölsch                                                              0
+##   Lager                                                               0
+##   Leipzig-Style Gose                                                  0
+##   Mixed Culture Brett Beer                                            0
+##   Münchner (Munich)-Style Helles                                      0
+##   Old Ale                                                             0
+##   Other Belgian-Style Ales                                            1
+##   Pale Ale                                                            0
+##   Pale American-Belgo-Style Ale                                       0
+##   Pilsener                                                            0
+##   Porter                                                             21
+##   Pumpkin Beer                                                        2
+##   Red                                                                 4
+##   Saison                                                              0
+##   Scotch Ale                                                          1
+##   Scottish-Style Export Ale                                           0
+##   Scottish-Style Heavy Ale                                            0
+##   Scottish-Style Light Ale                                            0
+##   Session Beer                                                        0
+##   Sour                                                                1
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier             0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                 1
+##   South German-Style Kristall Weizen / Kristall Weissbier             0
+##   South German-Style Weizenbock / Weissbock                           0
+##   Specialty Beer                                                      2
+##   Stout                                                               8
+##   Strong Ale                                                          2
+##   Traditional German-Style Bock                                       1
+##   Tripel                                                              0
+##   Wheat                                                               0
+##   Wild Beer                                                           0
+##                                                           
+##                                                            Red Saison
+##   Altbier                                                    0      1
+##   Amber                                                      0      0
+##   American-Style Malt Liquor                                 0      0
+##   American-Style Märzen / Oktoberfest                        0      0
+##   Bamberg-Style Bock Rauchbier                               0      0
+##   Bamberg-Style Märzen Rauchbier                             0      0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)   0      0
+##   Barley Wine                                                0      0
+##   Barrel-Aged                                                0      0
+##   Belgian-style Fruit Beer                                   0      0
+##   Belgian-Style Fruit Lambic                                 0      0
+##   Belgian-Style Lambic                                       0      0
+##   Belgian-Style Quadrupel                                    0      0
+##   Belgian-Style Table Beer                                   0      0
+##   Bitter                                                     0      0
+##   Black                                                      0      0
+##   Blonde                                                     0      0
+##   Braggot                                                    0      0
+##   Brett Beer                                                 0      0
+##   Brown                                                      0      4
+##   California Common Beer                                     0      0
+##   Chili Pepper Beer                                          0      0
+##   Chocolate / Cocoa-Flavored Beer                            0      0
+##   Coffee-Flavored Beer                                       0      0
+##   Contemporary Gose                                          0      0
+##   Dark American-Belgo-Style Ale                              0      0
+##   Dortmunder / European-Style Export                         0      0
+##   Double India Pale Ale                                      0      0
+##   Dubbel                                                     0      0
+##   Dutch-Style Kuit, Kuyt or Koyt                             0      0
+##   English-Style Dark Mild Ale                                0      1
+##   English-Style Pale Mild Ale                                0      0
+##   English-Style Summer Ale                                   0      0
+##   European-Style Dark / Münchner Dunkel                      0      1
+##   Field Beer                                                 0      0
+##   Flavored Malt Beverage                                     0      0
+##   French-Style Bière de Garde                                0      0
+##   Fresh "Wet" Hop Ale                                        0      0
+##   Fruit Beer                                                 0      0
+##   Fruit Cider                                                0      0
+##   German-Style Doppelbock                                    0      0
+##   German-Style Eisbock                                       0      0
+##   German-Style Heller Bock/Maibock                           0      0
+##   German-Style Leichtbier                                    0      0
+##   German-Style Leichtes Weizen / Weissbier                   0      0
+##   German-Style Märzen                                        0      0
+##   German-Style Oktoberfest / Wiesen (Meadow)                 0      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast    0      0
+##   German-Style Schwarzbier                                   0      0
+##   Gluten-Free Beer                                           0      0
+##   Grodziskie                                                 0      0
+##   Herb and Spice Beer                                        0      0
+##   Historical Beer                                            0      0
+##   India Pale Ale                                             0      0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale              0      0
+##   Kölsch                                                     0      0
+##   Lager                                                      0      1
+##   Leipzig-Style Gose                                         0      0
+##   Mixed Culture Brett Beer                                   0      0
+##   Münchner (Munich)-Style Helles                             0      0
+##   Old Ale                                                    0      0
+##   Other Belgian-Style Ales                                   0      1
+##   Pale Ale                                                   0      0
+##   Pale American-Belgo-Style Ale                              0      0
+##   Pilsener                                                   0      0
+##   Porter                                                     0      1
+##   Pumpkin Beer                                               0      2
+##   Red                                                        0     11
+##   Saison                                                     0      0
+##   Scotch Ale                                                 0      0
+##   Scottish-Style Export Ale                                  0      0
+##   Scottish-Style Heavy Ale                                   0      0
+##   Scottish-Style Light Ale                                   0      1
+##   Session Beer                                               0      0
+##   Sour                                                       0      0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier    0      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier        0      0
+##   South German-Style Kristall Weizen / Kristall Weissbier    0      0
+##   South German-Style Weizenbock / Weissbock                  0      0
+##   Specialty Beer                                             0      3
+##   Stout                                                      0      1
+##   Strong Ale                                                 0      0
+##   Traditional German-Style Bock                              0      0
+##   Tripel                                                     0      0
+##   Wheat                                                      0      1
+##   Wild Beer                                                  0      0
+##                                                           
+##                                                            Scotch Ale
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       0
+##   Barrel-Aged                                                       0
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           0
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             0
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              0
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            0
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           0
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          0
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               0
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             0
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          0
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                            0
+##   Pumpkin Beer                                                      0
+##   Red                                                               0
+##   Saison                                                            1
+##   Scotch Ale                                                        0
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    0
+##   Stout                                                             0
+##   Strong Ale                                                        0
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             0
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Scottish-Style Export Ale
+##   Altbier                                                                          0
+##   Amber                                                                            0
+##   American-Style Malt Liquor                                                       0
+##   American-Style Märzen / Oktoberfest                                              0
+##   Bamberg-Style Bock Rauchbier                                                     0
+##   Bamberg-Style Märzen Rauchbier                                                   0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                         0
+##   Barley Wine                                                                      0
+##   Barrel-Aged                                                                      0
+##   Belgian-style Fruit Beer                                                         0
+##   Belgian-Style Fruit Lambic                                                       0
+##   Belgian-Style Lambic                                                             0
+##   Belgian-Style Quadrupel                                                          0
+##   Belgian-Style Table Beer                                                         0
+##   Bitter                                                                           0
+##   Black                                                                            0
+##   Blonde                                                                           0
+##   Braggot                                                                          0
+##   Brett Beer                                                                       0
+##   Brown                                                                            0
+##   California Common Beer                                                           0
+##   Chili Pepper Beer                                                                0
+##   Chocolate / Cocoa-Flavored Beer                                                  0
+##   Coffee-Flavored Beer                                                             0
+##   Contemporary Gose                                                                0
+##   Dark American-Belgo-Style Ale                                                    0
+##   Dortmunder / European-Style Export                                               0
+##   Double India Pale Ale                                                            0
+##   Dubbel                                                                           0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                   0
+##   English-Style Dark Mild Ale                                                      0
+##   English-Style Pale Mild Ale                                                      0
+##   English-Style Summer Ale                                                         0
+##   European-Style Dark / Münchner Dunkel                                            0
+##   Field Beer                                                                       0
+##   Flavored Malt Beverage                                                           0
+##   French-Style Bière de Garde                                                      0
+##   Fresh "Wet" Hop Ale                                                              0
+##   Fruit Beer                                                                       0
+##   Fruit Cider                                                                      0
+##   German-Style Doppelbock                                                          0
+##   German-Style Eisbock                                                             0
+##   German-Style Heller Bock/Maibock                                                 0
+##   German-Style Leichtbier                                                          0
+##   German-Style Leichtes Weizen / Weissbier                                         0
+##   German-Style Märzen                                                              0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                       0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                          0
+##   German-Style Schwarzbier                                                         0
+##   Gluten-Free Beer                                                                 0
+##   Grodziskie                                                                       0
+##   Herb and Spice Beer                                                              0
+##   Historical Beer                                                                  0
+##   India Pale Ale                                                                   0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                    0
+##   Kölsch                                                                           0
+##   Lager                                                                            0
+##   Leipzig-Style Gose                                                               0
+##   Mixed Culture Brett Beer                                                         0
+##   Münchner (Munich)-Style Helles                                                   0
+##   Old Ale                                                                          0
+##   Other Belgian-Style Ales                                                         0
+##   Pale Ale                                                                         0
+##   Pale American-Belgo-Style Ale                                                    0
+##   Pilsener                                                                         0
+##   Porter                                                                           0
+##   Pumpkin Beer                                                                     0
+##   Red                                                                              0
+##   Saison                                                                           0
+##   Scotch Ale                                                                       0
+##   Scottish-Style Export Ale                                                        0
+##   Scottish-Style Heavy Ale                                                         0
+##   Scottish-Style Light Ale                                                         0
+##   Session Beer                                                                     0
+##   Sour                                                                             0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                          0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                              0
+##   South German-Style Kristall Weizen / Kristall Weissbier                          0
+##   South German-Style Weizenbock / Weissbock                                        0
+##   Specialty Beer                                                                   0
+##   Stout                                                                            0
+##   Strong Ale                                                                       0
+##   Traditional German-Style Bock                                                    0
+##   Tripel                                                                           0
+##   Wheat                                                                            0
+##   Wild Beer                                                                        0
+##                                                           
+##                                                            Scottish-Style Heavy Ale
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Scottish-Style Light Ale
+##   Altbier                                                                         0
+##   Amber                                                                           0
+##   American-Style Malt Liquor                                                      0
+##   American-Style Märzen / Oktoberfest                                             0
+##   Bamberg-Style Bock Rauchbier                                                    0
+##   Bamberg-Style Märzen Rauchbier                                                  0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                        0
+##   Barley Wine                                                                     0
+##   Barrel-Aged                                                                     0
+##   Belgian-style Fruit Beer                                                        0
+##   Belgian-Style Fruit Lambic                                                      0
+##   Belgian-Style Lambic                                                            0
+##   Belgian-Style Quadrupel                                                         0
+##   Belgian-Style Table Beer                                                        0
+##   Bitter                                                                          0
+##   Black                                                                           0
+##   Blonde                                                                          0
+##   Braggot                                                                         0
+##   Brett Beer                                                                      0
+##   Brown                                                                           0
+##   California Common Beer                                                          0
+##   Chili Pepper Beer                                                               0
+##   Chocolate / Cocoa-Flavored Beer                                                 0
+##   Coffee-Flavored Beer                                                            0
+##   Contemporary Gose                                                               0
+##   Dark American-Belgo-Style Ale                                                   0
+##   Dortmunder / European-Style Export                                              0
+##   Double India Pale Ale                                                           0
+##   Dubbel                                                                          0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                  0
+##   English-Style Dark Mild Ale                                                     0
+##   English-Style Pale Mild Ale                                                     0
+##   English-Style Summer Ale                                                        0
+##   European-Style Dark / Münchner Dunkel                                           0
+##   Field Beer                                                                      0
+##   Flavored Malt Beverage                                                          0
+##   French-Style Bière de Garde                                                     0
+##   Fresh "Wet" Hop Ale                                                             0
+##   Fruit Beer                                                                      0
+##   Fruit Cider                                                                     0
+##   German-Style Doppelbock                                                         0
+##   German-Style Eisbock                                                            0
+##   German-Style Heller Bock/Maibock                                                0
+##   German-Style Leichtbier                                                         0
+##   German-Style Leichtes Weizen / Weissbier                                        0
+##   German-Style Märzen                                                             0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                      0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                         0
+##   German-Style Schwarzbier                                                        0
+##   Gluten-Free Beer                                                                0
+##   Grodziskie                                                                      0
+##   Herb and Spice Beer                                                             0
+##   Historical Beer                                                                 0
+##   India Pale Ale                                                                  0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                   0
+##   Kölsch                                                                          0
+##   Lager                                                                           0
+##   Leipzig-Style Gose                                                              0
+##   Mixed Culture Brett Beer                                                        0
+##   Münchner (Munich)-Style Helles                                                  0
+##   Old Ale                                                                         0
+##   Other Belgian-Style Ales                                                        0
+##   Pale Ale                                                                        0
+##   Pale American-Belgo-Style Ale                                                   0
+##   Pilsener                                                                        0
+##   Porter                                                                          0
+##   Pumpkin Beer                                                                    0
+##   Red                                                                             0
+##   Saison                                                                          0
+##   Scotch Ale                                                                      0
+##   Scottish-Style Export Ale                                                       0
+##   Scottish-Style Heavy Ale                                                        0
+##   Scottish-Style Light Ale                                                        0
+##   Session Beer                                                                    0
+##   Sour                                                                            0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                         0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                             0
+##   South German-Style Kristall Weizen / Kristall Weissbier                         0
+##   South German-Style Weizenbock / Weissbock                                       0
+##   Specialty Beer                                                                  0
+##   Stout                                                                           0
+##   Strong Ale                                                                      0
+##   Traditional German-Style Bock                                                   0
+##   Tripel                                                                          0
+##   Wheat                                                                           0
+##   Wild Beer                                                                       0
+##                                                           
+##                                                            Session Beer
+##   Altbier                                                             0
+##   Amber                                                               0
+##   American-Style Malt Liquor                                          0
+##   American-Style Märzen / Oktoberfest                                 0
+##   Bamberg-Style Bock Rauchbier                                        0
+##   Bamberg-Style Märzen Rauchbier                                      0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)            0
+##   Barley Wine                                                         0
+##   Barrel-Aged                                                         0
+##   Belgian-style Fruit Beer                                            0
+##   Belgian-Style Fruit Lambic                                          0
+##   Belgian-Style Lambic                                                0
+##   Belgian-Style Quadrupel                                             0
+##   Belgian-Style Table Beer                                            0
+##   Bitter                                                              0
+##   Black                                                               0
+##   Blonde                                                              0
+##   Braggot                                                             0
+##   Brett Beer                                                          0
+##   Brown                                                               0
+##   California Common Beer                                              0
+##   Chili Pepper Beer                                                   0
+##   Chocolate / Cocoa-Flavored Beer                                     0
+##   Coffee-Flavored Beer                                                0
+##   Contemporary Gose                                                   0
+##   Dark American-Belgo-Style Ale                                       0
+##   Dortmunder / European-Style Export                                  0
+##   Double India Pale Ale                                               0
+##   Dubbel                                                              0
+##   Dutch-Style Kuit, Kuyt or Koyt                                      0
+##   English-Style Dark Mild Ale                                         0
+##   English-Style Pale Mild Ale                                         0
+##   English-Style Summer Ale                                            0
+##   European-Style Dark / Münchner Dunkel                               0
+##   Field Beer                                                          0
+##   Flavored Malt Beverage                                              0
+##   French-Style Bière de Garde                                         0
+##   Fresh "Wet" Hop Ale                                                 0
+##   Fruit Beer                                                          0
+##   Fruit Cider                                                         0
+##   German-Style Doppelbock                                             0
+##   German-Style Eisbock                                                0
+##   German-Style Heller Bock/Maibock                                    0
+##   German-Style Leichtbier                                             0
+##   German-Style Leichtes Weizen / Weissbier                            0
+##   German-Style Märzen                                                 0
+##   German-Style Oktoberfest / Wiesen (Meadow)                          0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast             0
+##   German-Style Schwarzbier                                            0
+##   Gluten-Free Beer                                                    0
+##   Grodziskie                                                          0
+##   Herb and Spice Beer                                                 0
+##   Historical Beer                                                     0
+##   India Pale Ale                                                      0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                       0
+##   Kölsch                                                              0
+##   Lager                                                               0
+##   Leipzig-Style Gose                                                  0
+##   Mixed Culture Brett Beer                                            0
+##   Münchner (Munich)-Style Helles                                      0
+##   Old Ale                                                             0
+##   Other Belgian-Style Ales                                            0
+##   Pale Ale                                                            0
+##   Pale American-Belgo-Style Ale                                       0
+##   Pilsener                                                            0
+##   Porter                                                              0
+##   Pumpkin Beer                                                        0
+##   Red                                                                 0
+##   Saison                                                              0
+##   Scotch Ale                                                          0
+##   Scottish-Style Export Ale                                           0
+##   Scottish-Style Heavy Ale                                            0
+##   Scottish-Style Light Ale                                            0
+##   Session Beer                                                        0
+##   Sour                                                                0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier             0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                 0
+##   South German-Style Kristall Weizen / Kristall Weissbier             0
+##   South German-Style Weizenbock / Weissbock                           0
+##   Specialty Beer                                                      0
+##   Stout                                                               0
+##   Strong Ale                                                          0
+##   Traditional German-Style Bock                                       0
+##   Tripel                                                              0
+##   Wheat                                                               0
+##   Wild Beer                                                           0
+##                                                           
+##                                                            Sour
+##   Altbier                                                     0
+##   Amber                                                       0
+##   American-Style Malt Liquor                                  0
+##   American-Style Märzen / Oktoberfest                         0
+##   Bamberg-Style Bock Rauchbier                                0
+##   Bamberg-Style Märzen Rauchbier                              0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)    0
+##   Barley Wine                                                 0
+##   Barrel-Aged                                                 0
+##   Belgian-style Fruit Beer                                    0
+##   Belgian-Style Fruit Lambic                                  0
+##   Belgian-Style Lambic                                        0
+##   Belgian-Style Quadrupel                                     0
+##   Belgian-Style Table Beer                                    0
+##   Bitter                                                      0
+##   Black                                                       0
+##   Blonde                                                      0
+##   Braggot                                                     0
+##   Brett Beer                                                  0
+##   Brown                                                       0
+##   California Common Beer                                      0
+##   Chili Pepper Beer                                           0
+##   Chocolate / Cocoa-Flavored Beer                             0
+##   Coffee-Flavored Beer                                        0
+##   Contemporary Gose                                           0
+##   Dark American-Belgo-Style Ale                               0
+##   Dortmunder / European-Style Export                          0
+##   Double India Pale Ale                                       0
+##   Dubbel                                                      0
+##   Dutch-Style Kuit, Kuyt or Koyt                              0
+##   English-Style Dark Mild Ale                                 0
+##   English-Style Pale Mild Ale                                 0
+##   English-Style Summer Ale                                    0
+##   European-Style Dark / Münchner Dunkel                       0
+##   Field Beer                                                  0
+##   Flavored Malt Beverage                                      0
+##   French-Style Bière de Garde                                 0
+##   Fresh "Wet" Hop Ale                                         0
+##   Fruit Beer                                                  0
+##   Fruit Cider                                                 0
+##   German-Style Doppelbock                                     0
+##   German-Style Eisbock                                        0
+##   German-Style Heller Bock/Maibock                            0
+##   German-Style Leichtbier                                     0
+##   German-Style Leichtes Weizen / Weissbier                    0
+##   German-Style Märzen                                         0
+##   German-Style Oktoberfest / Wiesen (Meadow)                  0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast     0
+##   German-Style Schwarzbier                                    0
+##   Gluten-Free Beer                                            0
+##   Grodziskie                                                  0
+##   Herb and Spice Beer                                         0
+##   Historical Beer                                             0
+##   India Pale Ale                                              0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale               0
+##   Kölsch                                                      0
+##   Lager                                                       0
+##   Leipzig-Style Gose                                          0
+##   Mixed Culture Brett Beer                                    0
+##   Münchner (Munich)-Style Helles                              0
+##   Old Ale                                                     0
+##   Other Belgian-Style Ales                                    0
+##   Pale Ale                                                    0
+##   Pale American-Belgo-Style Ale                               0
+##   Pilsener                                                    0
+##   Porter                                                      0
+##   Pumpkin Beer                                                0
+##   Red                                                         0
+##   Saison                                                      0
+##   Scotch Ale                                                  0
+##   Scottish-Style Export Ale                                   0
+##   Scottish-Style Heavy Ale                                    0
+##   Scottish-Style Light Ale                                    0
+##   Session Beer                                                0
+##   Sour                                                        0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier         0
+##   South German-Style Kristall Weizen / Kristall Weissbier     0
+##   South German-Style Weizenbock / Weissbock                   0
+##   Specialty Beer                                              0
+##   Stout                                                       0
+##   Strong Ale                                                  0
+##   Traditional German-Style Bock                               0
+##   Tripel                                                      0
+##   Wheat                                                       0
+##   Wild Beer                                                   0
+##                                                           
+##                                                            South German-Style Bernsteinfarbenes Weizen / Weissbier
+##   Altbier                                                                                                        0
+##   Amber                                                                                                          0
+##   American-Style Malt Liquor                                                                                     0
+##   American-Style Märzen / Oktoberfest                                                                            0
+##   Bamberg-Style Bock Rauchbier                                                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                                       0
+##   Barley Wine                                                                                                    0
+##   Barrel-Aged                                                                                                    0
+##   Belgian-style Fruit Beer                                                                                       0
+##   Belgian-Style Fruit Lambic                                                                                     0
+##   Belgian-Style Lambic                                                                                           0
+##   Belgian-Style Quadrupel                                                                                        0
+##   Belgian-Style Table Beer                                                                                       0
+##   Bitter                                                                                                         0
+##   Black                                                                                                          0
+##   Blonde                                                                                                         0
+##   Braggot                                                                                                        0
+##   Brett Beer                                                                                                     0
+##   Brown                                                                                                          0
+##   California Common Beer                                                                                         0
+##   Chili Pepper Beer                                                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                                                0
+##   Coffee-Flavored Beer                                                                                           0
+##   Contemporary Gose                                                                                              0
+##   Dark American-Belgo-Style Ale                                                                                  0
+##   Dortmunder / European-Style Export                                                                             0
+##   Double India Pale Ale                                                                                          0
+##   Dubbel                                                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                                 0
+##   English-Style Dark Mild Ale                                                                                    0
+##   English-Style Pale Mild Ale                                                                                    0
+##   English-Style Summer Ale                                                                                       0
+##   European-Style Dark / Münchner Dunkel                                                                          0
+##   Field Beer                                                                                                     0
+##   Flavored Malt Beverage                                                                                         0
+##   French-Style Bière de Garde                                                                                    0
+##   Fresh "Wet" Hop Ale                                                                                            0
+##   Fruit Beer                                                                                                     0
+##   Fruit Cider                                                                                                    0
+##   German-Style Doppelbock                                                                                        0
+##   German-Style Eisbock                                                                                           0
+##   German-Style Heller Bock/Maibock                                                                               0
+##   German-Style Leichtbier                                                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                                                       0
+##   German-Style Märzen                                                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                                        0
+##   German-Style Schwarzbier                                                                                       0
+##   Gluten-Free Beer                                                                                               0
+##   Grodziskie                                                                                                     0
+##   Herb and Spice Beer                                                                                            0
+##   Historical Beer                                                                                                0
+##   India Pale Ale                                                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                                  0
+##   Kölsch                                                                                                         0
+##   Lager                                                                                                          0
+##   Leipzig-Style Gose                                                                                             0
+##   Mixed Culture Brett Beer                                                                                       0
+##   Münchner (Munich)-Style Helles                                                                                 0
+##   Old Ale                                                                                                        0
+##   Other Belgian-Style Ales                                                                                       0
+##   Pale Ale                                                                                                       0
+##   Pale American-Belgo-Style Ale                                                                                  0
+##   Pilsener                                                                                                       0
+##   Porter                                                                                                         0
+##   Pumpkin Beer                                                                                                   0
+##   Red                                                                                                            0
+##   Saison                                                                                                         0
+##   Scotch Ale                                                                                                     0
+##   Scottish-Style Export Ale                                                                                      0
+##   Scottish-Style Heavy Ale                                                                                       0
+##   Scottish-Style Light Ale                                                                                       0
+##   Session Beer                                                                                                   0
+##   Sour                                                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                                        0
+##   South German-Style Weizenbock / Weissbock                                                                      0
+##   Specialty Beer                                                                                                 0
+##   Stout                                                                                                          0
+##   Strong Ale                                                                                                     0
+##   Traditional German-Style Bock                                                                                  0
+##   Tripel                                                                                                         0
+##   Wheat                                                                                                          0
+##   Wild Beer                                                                                                      0
+##                                                           
+##                                                            South German-Style Dunkel Weizen / Dunkel Weissbier
+##   Altbier                                                                                                    0
+##   Amber                                                                                                      0
+##   American-Style Malt Liquor                                                                                 0
+##   American-Style Märzen / Oktoberfest                                                                        0
+##   Bamberg-Style Bock Rauchbier                                                                               0
+##   Bamberg-Style Märzen Rauchbier                                                                             0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                                   0
+##   Barley Wine                                                                                                0
+##   Barrel-Aged                                                                                                0
+##   Belgian-style Fruit Beer                                                                                   0
+##   Belgian-Style Fruit Lambic                                                                                 0
+##   Belgian-Style Lambic                                                                                       0
+##   Belgian-Style Quadrupel                                                                                    0
+##   Belgian-Style Table Beer                                                                                   0
+##   Bitter                                                                                                     0
+##   Black                                                                                                      0
+##   Blonde                                                                                                     0
+##   Braggot                                                                                                    0
+##   Brett Beer                                                                                                 0
+##   Brown                                                                                                      0
+##   California Common Beer                                                                                     0
+##   Chili Pepper Beer                                                                                          0
+##   Chocolate / Cocoa-Flavored Beer                                                                            0
+##   Coffee-Flavored Beer                                                                                       0
+##   Contemporary Gose                                                                                          0
+##   Dark American-Belgo-Style Ale                                                                              0
+##   Dortmunder / European-Style Export                                                                         0
+##   Double India Pale Ale                                                                                      0
+##   Dubbel                                                                                                     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                             0
+##   English-Style Dark Mild Ale                                                                                0
+##   English-Style Pale Mild Ale                                                                                0
+##   English-Style Summer Ale                                                                                   0
+##   European-Style Dark / Münchner Dunkel                                                                      0
+##   Field Beer                                                                                                 0
+##   Flavored Malt Beverage                                                                                     0
+##   French-Style Bière de Garde                                                                                0
+##   Fresh "Wet" Hop Ale                                                                                        0
+##   Fruit Beer                                                                                                 0
+##   Fruit Cider                                                                                                0
+##   German-Style Doppelbock                                                                                    0
+##   German-Style Eisbock                                                                                       0
+##   German-Style Heller Bock/Maibock                                                                           0
+##   German-Style Leichtbier                                                                                    0
+##   German-Style Leichtes Weizen / Weissbier                                                                   0
+##   German-Style Märzen                                                                                        0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                                 0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                                    0
+##   German-Style Schwarzbier                                                                                   0
+##   Gluten-Free Beer                                                                                           0
+##   Grodziskie                                                                                                 0
+##   Herb and Spice Beer                                                                                        0
+##   Historical Beer                                                                                            0
+##   India Pale Ale                                                                                             0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                              0
+##   Kölsch                                                                                                     0
+##   Lager                                                                                                      0
+##   Leipzig-Style Gose                                                                                         0
+##   Mixed Culture Brett Beer                                                                                   0
+##   Münchner (Munich)-Style Helles                                                                             0
+##   Old Ale                                                                                                    0
+##   Other Belgian-Style Ales                                                                                   0
+##   Pale Ale                                                                                                   0
+##   Pale American-Belgo-Style Ale                                                                              0
+##   Pilsener                                                                                                   0
+##   Porter                                                                                                     0
+##   Pumpkin Beer                                                                                               0
+##   Red                                                                                                        0
+##   Saison                                                                                                     0
+##   Scotch Ale                                                                                                 0
+##   Scottish-Style Export Ale                                                                                  0
+##   Scottish-Style Heavy Ale                                                                                   0
+##   Scottish-Style Light Ale                                                                                   0
+##   Session Beer                                                                                               0
+##   Sour                                                                                                       0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                                    0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                        0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                                    0
+##   South German-Style Weizenbock / Weissbock                                                                  0
+##   Specialty Beer                                                                                             0
+##   Stout                                                                                                      0
+##   Strong Ale                                                                                                 0
+##   Traditional German-Style Bock                                                                              0
+##   Tripel                                                                                                     0
+##   Wheat                                                                                                      0
+##   Wild Beer                                                                                                  0
+##                                                           
+##                                                            South German-Style Kristall Weizen / Kristall Weissbier
+##   Altbier                                                                                                        0
+##   Amber                                                                                                          0
+##   American-Style Malt Liquor                                                                                     0
+##   American-Style Märzen / Oktoberfest                                                                            0
+##   Bamberg-Style Bock Rauchbier                                                                                   0
+##   Bamberg-Style Märzen Rauchbier                                                                                 0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                                       0
+##   Barley Wine                                                                                                    0
+##   Barrel-Aged                                                                                                    0
+##   Belgian-style Fruit Beer                                                                                       0
+##   Belgian-Style Fruit Lambic                                                                                     0
+##   Belgian-Style Lambic                                                                                           0
+##   Belgian-Style Quadrupel                                                                                        0
+##   Belgian-Style Table Beer                                                                                       0
+##   Bitter                                                                                                         0
+##   Black                                                                                                          0
+##   Blonde                                                                                                         0
+##   Braggot                                                                                                        0
+##   Brett Beer                                                                                                     0
+##   Brown                                                                                                          0
+##   California Common Beer                                                                                         0
+##   Chili Pepper Beer                                                                                              0
+##   Chocolate / Cocoa-Flavored Beer                                                                                0
+##   Coffee-Flavored Beer                                                                                           0
+##   Contemporary Gose                                                                                              0
+##   Dark American-Belgo-Style Ale                                                                                  0
+##   Dortmunder / European-Style Export                                                                             0
+##   Double India Pale Ale                                                                                          0
+##   Dubbel                                                                                                         0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                                 0
+##   English-Style Dark Mild Ale                                                                                    0
+##   English-Style Pale Mild Ale                                                                                    0
+##   English-Style Summer Ale                                                                                       0
+##   European-Style Dark / Münchner Dunkel                                                                          0
+##   Field Beer                                                                                                     0
+##   Flavored Malt Beverage                                                                                         0
+##   French-Style Bière de Garde                                                                                    0
+##   Fresh "Wet" Hop Ale                                                                                            0
+##   Fruit Beer                                                                                                     0
+##   Fruit Cider                                                                                                    0
+##   German-Style Doppelbock                                                                                        0
+##   German-Style Eisbock                                                                                           0
+##   German-Style Heller Bock/Maibock                                                                               0
+##   German-Style Leichtbier                                                                                        0
+##   German-Style Leichtes Weizen / Weissbier                                                                       0
+##   German-Style Märzen                                                                                            0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                                     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                                        0
+##   German-Style Schwarzbier                                                                                       0
+##   Gluten-Free Beer                                                                                               0
+##   Grodziskie                                                                                                     0
+##   Herb and Spice Beer                                                                                            0
+##   Historical Beer                                                                                                0
+##   India Pale Ale                                                                                                 0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                                  0
+##   Kölsch                                                                                                         0
+##   Lager                                                                                                          0
+##   Leipzig-Style Gose                                                                                             0
+##   Mixed Culture Brett Beer                                                                                       0
+##   Münchner (Munich)-Style Helles                                                                                 0
+##   Old Ale                                                                                                        0
+##   Other Belgian-Style Ales                                                                                       0
+##   Pale Ale                                                                                                       0
+##   Pale American-Belgo-Style Ale                                                                                  0
+##   Pilsener                                                                                                       0
+##   Porter                                                                                                         0
+##   Pumpkin Beer                                                                                                   0
+##   Red                                                                                                            0
+##   Saison                                                                                                         0
+##   Scotch Ale                                                                                                     0
+##   Scottish-Style Export Ale                                                                                      0
+##   Scottish-Style Heavy Ale                                                                                       0
+##   Scottish-Style Light Ale                                                                                       0
+##   Session Beer                                                                                                   0
+##   Sour                                                                                                           0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                                        0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                                            0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                                        0
+##   South German-Style Weizenbock / Weissbock                                                                      0
+##   Specialty Beer                                                                                                 0
+##   Stout                                                                                                          0
+##   Strong Ale                                                                                                     0
+##   Traditional German-Style Bock                                                                                  0
+##   Tripel                                                                                                         0
+##   Wheat                                                                                                          0
+##   Wild Beer                                                                                                      0
+##                                                           
+##                                                            South German-Style Weizenbock / Weissbock
+##   Altbier                                                                                          0
+##   Amber                                                                                            0
+##   American-Style Malt Liquor                                                                       0
+##   American-Style Märzen / Oktoberfest                                                              0
+##   Bamberg-Style Bock Rauchbier                                                                     0
+##   Bamberg-Style Märzen Rauchbier                                                                   0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                                         0
+##   Barley Wine                                                                                      0
+##   Barrel-Aged                                                                                      0
+##   Belgian-style Fruit Beer                                                                         0
+##   Belgian-Style Fruit Lambic                                                                       0
+##   Belgian-Style Lambic                                                                             0
+##   Belgian-Style Quadrupel                                                                          0
+##   Belgian-Style Table Beer                                                                         0
+##   Bitter                                                                                           0
+##   Black                                                                                            0
+##   Blonde                                                                                           0
+##   Braggot                                                                                          0
+##   Brett Beer                                                                                       0
+##   Brown                                                                                            0
+##   California Common Beer                                                                           0
+##   Chili Pepper Beer                                                                                0
+##   Chocolate / Cocoa-Flavored Beer                                                                  0
+##   Coffee-Flavored Beer                                                                             0
+##   Contemporary Gose                                                                                0
+##   Dark American-Belgo-Style Ale                                                                    0
+##   Dortmunder / European-Style Export                                                               0
+##   Double India Pale Ale                                                                            0
+##   Dubbel                                                                                           0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                                   0
+##   English-Style Dark Mild Ale                                                                      0
+##   English-Style Pale Mild Ale                                                                      0
+##   English-Style Summer Ale                                                                         0
+##   European-Style Dark / Münchner Dunkel                                                            0
+##   Field Beer                                                                                       0
+##   Flavored Malt Beverage                                                                           0
+##   French-Style Bière de Garde                                                                      0
+##   Fresh "Wet" Hop Ale                                                                              0
+##   Fruit Beer                                                                                       0
+##   Fruit Cider                                                                                      0
+##   German-Style Doppelbock                                                                          0
+##   German-Style Eisbock                                                                             0
+##   German-Style Heller Bock/Maibock                                                                 0
+##   German-Style Leichtbier                                                                          0
+##   German-Style Leichtes Weizen / Weissbier                                                         0
+##   German-Style Märzen                                                                              0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                                       0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                                          0
+##   German-Style Schwarzbier                                                                         0
+##   Gluten-Free Beer                                                                                 0
+##   Grodziskie                                                                                       0
+##   Herb and Spice Beer                                                                              0
+##   Historical Beer                                                                                  0
+##   India Pale Ale                                                                                   0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                                    0
+##   Kölsch                                                                                           0
+##   Lager                                                                                            0
+##   Leipzig-Style Gose                                                                               0
+##   Mixed Culture Brett Beer                                                                         0
+##   Münchner (Munich)-Style Helles                                                                   0
+##   Old Ale                                                                                          0
+##   Other Belgian-Style Ales                                                                         0
+##   Pale Ale                                                                                         0
+##   Pale American-Belgo-Style Ale                                                                    0
+##   Pilsener                                                                                         0
+##   Porter                                                                                           0
+##   Pumpkin Beer                                                                                     0
+##   Red                                                                                              0
+##   Saison                                                                                           0
+##   Scotch Ale                                                                                       0
+##   Scottish-Style Export Ale                                                                        0
+##   Scottish-Style Heavy Ale                                                                         0
+##   Scottish-Style Light Ale                                                                         0
+##   Session Beer                                                                                     0
+##   Sour                                                                                             0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                                          0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                              0
+##   South German-Style Kristall Weizen / Kristall Weissbier                                          0
+##   South German-Style Weizenbock / Weissbock                                                        0
+##   Specialty Beer                                                                                   0
+##   Stout                                                                                            0
+##   Strong Ale                                                                                       0
+##   Traditional German-Style Bock                                                                    0
+##   Tripel                                                                                           0
+##   Wheat                                                                                            0
+##   Wild Beer                                                                                        0
+##                                                           
+##                                                            Specialty Beer
+##   Altbier                                                               0
+##   Amber                                                                 0
+##   American-Style Malt Liquor                                            0
+##   American-Style Märzen / Oktoberfest                                   0
+##   Bamberg-Style Bock Rauchbier                                          0
+##   Bamberg-Style Märzen Rauchbier                                        0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)              0
+##   Barley Wine                                                           0
+##   Barrel-Aged                                                           0
+##   Belgian-style Fruit Beer                                              0
+##   Belgian-Style Fruit Lambic                                            0
+##   Belgian-Style Lambic                                                  0
+##   Belgian-Style Quadrupel                                               0
+##   Belgian-Style Table Beer                                              0
+##   Bitter                                                                0
+##   Black                                                                 0
+##   Blonde                                                                0
+##   Braggot                                                               0
+##   Brett Beer                                                            0
+##   Brown                                                                 0
+##   California Common Beer                                                0
+##   Chili Pepper Beer                                                     0
+##   Chocolate / Cocoa-Flavored Beer                                       0
+##   Coffee-Flavored Beer                                                  0
+##   Contemporary Gose                                                     0
+##   Dark American-Belgo-Style Ale                                         0
+##   Dortmunder / European-Style Export                                    0
+##   Double India Pale Ale                                                 0
+##   Dubbel                                                                0
+##   Dutch-Style Kuit, Kuyt or Koyt                                        0
+##   English-Style Dark Mild Ale                                           0
+##   English-Style Pale Mild Ale                                           0
+##   English-Style Summer Ale                                              0
+##   European-Style Dark / Münchner Dunkel                                 0
+##   Field Beer                                                            0
+##   Flavored Malt Beverage                                                0
+##   French-Style Bière de Garde                                           0
+##   Fresh "Wet" Hop Ale                                                   0
+##   Fruit Beer                                                            0
+##   Fruit Cider                                                           0
+##   German-Style Doppelbock                                               0
+##   German-Style Eisbock                                                  0
+##   German-Style Heller Bock/Maibock                                      0
+##   German-Style Leichtbier                                               0
+##   German-Style Leichtes Weizen / Weissbier                              0
+##   German-Style Märzen                                                   0
+##   German-Style Oktoberfest / Wiesen (Meadow)                            0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast               0
+##   German-Style Schwarzbier                                              0
+##   Gluten-Free Beer                                                      0
+##   Grodziskie                                                            0
+##   Herb and Spice Beer                                                   0
+##   Historical Beer                                                       0
+##   India Pale Ale                                                        0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                         0
+##   Kölsch                                                                0
+##   Lager                                                                 0
+##   Leipzig-Style Gose                                                    0
+##   Mixed Culture Brett Beer                                              0
+##   Münchner (Munich)-Style Helles                                        0
+##   Old Ale                                                               0
+##   Other Belgian-Style Ales                                              0
+##   Pale Ale                                                              0
+##   Pale American-Belgo-Style Ale                                         0
+##   Pilsener                                                              0
+##   Porter                                                                0
+##   Pumpkin Beer                                                          0
+##   Red                                                                   0
+##   Saison                                                                0
+##   Scotch Ale                                                            0
+##   Scottish-Style Export Ale                                             0
+##   Scottish-Style Heavy Ale                                              0
+##   Scottish-Style Light Ale                                              0
+##   Session Beer                                                          0
+##   Sour                                                                  0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier               0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                   0
+##   South German-Style Kristall Weizen / Kristall Weissbier               0
+##   South German-Style Weizenbock / Weissbock                             0
+##   Specialty Beer                                                        0
+##   Stout                                                                 0
+##   Strong Ale                                                            0
+##   Traditional German-Style Bock                                         0
+##   Tripel                                                                0
+##   Wheat                                                                 0
+##   Wild Beer                                                             0
+##                                                           
+##                                                            Stout
+##   Altbier                                                      0
+##   Amber                                                        0
+##   American-Style Malt Liquor                                   0
+##   American-Style Märzen / Oktoberfest                          0
+##   Bamberg-Style Bock Rauchbier                                 0
+##   Bamberg-Style Märzen Rauchbier                               0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)     0
+##   Barley Wine                                                  0
+##   Barrel-Aged                                                  0
+##   Belgian-style Fruit Beer                                     0
+##   Belgian-Style Fruit Lambic                                   0
+##   Belgian-Style Lambic                                         0
+##   Belgian-Style Quadrupel                                      0
+##   Belgian-Style Table Beer                                     0
+##   Bitter                                                       0
+##   Black                                                        0
+##   Blonde                                                       0
+##   Braggot                                                      0
+##   Brett Beer                                                   0
+##   Brown                                                        0
+##   California Common Beer                                       0
+##   Chili Pepper Beer                                            0
+##   Chocolate / Cocoa-Flavored Beer                              0
+##   Coffee-Flavored Beer                                         0
+##   Contemporary Gose                                            0
+##   Dark American-Belgo-Style Ale                                0
+##   Dortmunder / European-Style Export                           0
+##   Double India Pale Ale                                        0
+##   Dubbel                                                       0
+##   Dutch-Style Kuit, Kuyt or Koyt                               0
+##   English-Style Dark Mild Ale                                  0
+##   English-Style Pale Mild Ale                                  0
+##   English-Style Summer Ale                                     0
+##   European-Style Dark / Münchner Dunkel                        0
+##   Field Beer                                                   0
+##   Flavored Malt Beverage                                       0
+##   French-Style Bière de Garde                                  0
+##   Fresh "Wet" Hop Ale                                          0
+##   Fruit Beer                                                   0
+##   Fruit Cider                                                  0
+##   German-Style Doppelbock                                      0
+##   German-Style Eisbock                                         0
+##   German-Style Heller Bock/Maibock                             0
+##   German-Style Leichtbier                                      0
+##   German-Style Leichtes Weizen / Weissbier                     0
+##   German-Style Märzen                                          0
+##   German-Style Oktoberfest / Wiesen (Meadow)                   0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast      0
+##   German-Style Schwarzbier                                     0
+##   Gluten-Free Beer                                             0
+##   Grodziskie                                                   0
+##   Herb and Spice Beer                                          0
+##   Historical Beer                                              0
+##   India Pale Ale                                               0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                0
+##   Kölsch                                                       0
+##   Lager                                                        0
+##   Leipzig-Style Gose                                           0
+##   Mixed Culture Brett Beer                                     0
+##   Münchner (Munich)-Style Helles                               0
+##   Old Ale                                                      0
+##   Other Belgian-Style Ales                                     0
+##   Pale Ale                                                     0
+##   Pale American-Belgo-Style Ale                                0
+##   Pilsener                                                     0
+##   Porter                                                       0
+##   Pumpkin Beer                                                 0
+##   Red                                                          0
+##   Saison                                                       0
+##   Scotch Ale                                                   0
+##   Scottish-Style Export Ale                                    0
+##   Scottish-Style Heavy Ale                                     0
+##   Scottish-Style Light Ale                                     0
+##   Session Beer                                                 0
+##   Sour                                                         0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier      0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier          0
+##   South German-Style Kristall Weizen / Kristall Weissbier      0
+##   South German-Style Weizenbock / Weissbock                    0
+##   Specialty Beer                                               0
+##   Stout                                                        0
+##   Strong Ale                                                   0
+##   Traditional German-Style Bock                                0
+##   Tripel                                                       0
+##   Wheat                                                        0
+##   Wild Beer                                                    0
+##                                                           
+##                                                            Strong Ale
+##   Altbier                                                           0
+##   Amber                                                             0
+##   American-Style Malt Liquor                                        0
+##   American-Style Märzen / Oktoberfest                               0
+##   Bamberg-Style Bock Rauchbier                                      0
+##   Bamberg-Style Märzen Rauchbier                                    0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)          0
+##   Barley Wine                                                       1
+##   Barrel-Aged                                                       2
+##   Belgian-style Fruit Beer                                          0
+##   Belgian-Style Fruit Lambic                                        0
+##   Belgian-Style Lambic                                              0
+##   Belgian-Style Quadrupel                                           2
+##   Belgian-Style Table Beer                                          0
+##   Bitter                                                            0
+##   Black                                                             0
+##   Blonde                                                            0
+##   Braggot                                                           0
+##   Brett Beer                                                        0
+##   Brown                                                             4
+##   California Common Beer                                            0
+##   Chili Pepper Beer                                                 0
+##   Chocolate / Cocoa-Flavored Beer                                   0
+##   Coffee-Flavored Beer                                              1
+##   Contemporary Gose                                                 0
+##   Dark American-Belgo-Style Ale                                     0
+##   Dortmunder / European-Style Export                                0
+##   Double India Pale Ale                                             0
+##   Dubbel                                                            2
+##   Dutch-Style Kuit, Kuyt or Koyt                                    0
+##   English-Style Dark Mild Ale                                       0
+##   English-Style Pale Mild Ale                                       0
+##   English-Style Summer Ale                                          0
+##   European-Style Dark / Münchner Dunkel                             0
+##   Field Beer                                                        0
+##   Flavored Malt Beverage                                            0
+##   French-Style Bière de Garde                                       0
+##   Fresh "Wet" Hop Ale                                               0
+##   Fruit Beer                                                        0
+##   Fruit Cider                                                       0
+##   German-Style Doppelbock                                           1
+##   German-Style Eisbock                                              0
+##   German-Style Heller Bock/Maibock                                  0
+##   German-Style Leichtbier                                           0
+##   German-Style Leichtes Weizen / Weissbier                          0
+##   German-Style Märzen                                               0
+##   German-Style Oktoberfest / Wiesen (Meadow)                        0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast           0
+##   German-Style Schwarzbier                                          1
+##   Gluten-Free Beer                                                  0
+##   Grodziskie                                                        0
+##   Herb and Spice Beer                                               1
+##   Historical Beer                                                   0
+##   India Pale Ale                                                    0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                     0
+##   Kölsch                                                            0
+##   Lager                                                             2
+##   Leipzig-Style Gose                                                0
+##   Mixed Culture Brett Beer                                          0
+##   Münchner (Munich)-Style Helles                                    0
+##   Old Ale                                                           0
+##   Other Belgian-Style Ales                                          1
+##   Pale Ale                                                          0
+##   Pale American-Belgo-Style Ale                                     0
+##   Pilsener                                                          0
+##   Porter                                                           12
+##   Pumpkin Beer                                                      1
+##   Red                                                               1
+##   Saison                                                            0
+##   Scotch Ale                                                        1
+##   Scottish-Style Export Ale                                         0
+##   Scottish-Style Heavy Ale                                          0
+##   Scottish-Style Light Ale                                          0
+##   Session Beer                                                      0
+##   Sour                                                              1
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier           0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier               0
+##   South German-Style Kristall Weizen / Kristall Weissbier           0
+##   South German-Style Weizenbock / Weissbock                         0
+##   Specialty Beer                                                    1
+##   Stout                                                            20
+##   Strong Ale                                                        3
+##   Traditional German-Style Bock                                     0
+##   Tripel                                                            0
+##   Wheat                                                             1
+##   Wild Beer                                                         0
+##                                                           
+##                                                            Traditional German-Style Bock
+##   Altbier                                                                              0
+##   Amber                                                                                0
+##   American-Style Malt Liquor                                                           0
+##   American-Style Märzen / Oktoberfest                                                  0
+##   Bamberg-Style Bock Rauchbier                                                         0
+##   Bamberg-Style Märzen Rauchbier                                                       0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)                             0
+##   Barley Wine                                                                          0
+##   Barrel-Aged                                                                          0
+##   Belgian-style Fruit Beer                                                             0
+##   Belgian-Style Fruit Lambic                                                           0
+##   Belgian-Style Lambic                                                                 0
+##   Belgian-Style Quadrupel                                                              0
+##   Belgian-Style Table Beer                                                             0
+##   Bitter                                                                               0
+##   Black                                                                                0
+##   Blonde                                                                               0
+##   Braggot                                                                              0
+##   Brett Beer                                                                           0
+##   Brown                                                                                0
+##   California Common Beer                                                               0
+##   Chili Pepper Beer                                                                    0
+##   Chocolate / Cocoa-Flavored Beer                                                      0
+##   Coffee-Flavored Beer                                                                 0
+##   Contemporary Gose                                                                    0
+##   Dark American-Belgo-Style Ale                                                        0
+##   Dortmunder / European-Style Export                                                   0
+##   Double India Pale Ale                                                                0
+##   Dubbel                                                                               0
+##   Dutch-Style Kuit, Kuyt or Koyt                                                       0
+##   English-Style Dark Mild Ale                                                          0
+##   English-Style Pale Mild Ale                                                          0
+##   English-Style Summer Ale                                                             0
+##   European-Style Dark / Münchner Dunkel                                                0
+##   Field Beer                                                                           0
+##   Flavored Malt Beverage                                                               0
+##   French-Style Bière de Garde                                                          0
+##   Fresh "Wet" Hop Ale                                                                  0
+##   Fruit Beer                                                                           0
+##   Fruit Cider                                                                          0
+##   German-Style Doppelbock                                                              0
+##   German-Style Eisbock                                                                 0
+##   German-Style Heller Bock/Maibock                                                     0
+##   German-Style Leichtbier                                                              0
+##   German-Style Leichtes Weizen / Weissbier                                             0
+##   German-Style Märzen                                                                  0
+##   German-Style Oktoberfest / Wiesen (Meadow)                                           0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast                              0
+##   German-Style Schwarzbier                                                             0
+##   Gluten-Free Beer                                                                     0
+##   Grodziskie                                                                           0
+##   Herb and Spice Beer                                                                  0
+##   Historical Beer                                                                      0
+##   India Pale Ale                                                                       0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                                        0
+##   Kölsch                                                                               0
+##   Lager                                                                                0
+##   Leipzig-Style Gose                                                                   0
+##   Mixed Culture Brett Beer                                                             0
+##   Münchner (Munich)-Style Helles                                                       0
+##   Old Ale                                                                              0
+##   Other Belgian-Style Ales                                                             0
+##   Pale Ale                                                                             0
+##   Pale American-Belgo-Style Ale                                                        0
+##   Pilsener                                                                             0
+##   Porter                                                                               0
+##   Pumpkin Beer                                                                         0
+##   Red                                                                                  0
+##   Saison                                                                               0
+##   Scotch Ale                                                                           0
+##   Scottish-Style Export Ale                                                            0
+##   Scottish-Style Heavy Ale                                                             0
+##   Scottish-Style Light Ale                                                             0
+##   Session Beer                                                                         0
+##   Sour                                                                                 0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier                              0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier                                  0
+##   South German-Style Kristall Weizen / Kristall Weissbier                              0
+##   South German-Style Weizenbock / Weissbock                                            0
+##   Specialty Beer                                                                       0
+##   Stout                                                                                0
+##   Strong Ale                                                                           0
+##   Traditional German-Style Bock                                                        0
+##   Tripel                                                                               0
+##   Wheat                                                                                0
+##   Wild Beer                                                                            0
+##                                                           
+##                                                            Tripel Wheat
+##   Altbier                                                       0     0
+##   Amber                                                         0     0
+##   American-Style Malt Liquor                                    0     0
+##   American-Style Märzen / Oktoberfest                           0     0
+##   Bamberg-Style Bock Rauchbier                                  0     0
+##   Bamberg-Style Märzen Rauchbier                                0     0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)      0     0
+##   Barley Wine                                                   0     0
+##   Barrel-Aged                                                   0     0
+##   Belgian-style Fruit Beer                                      0     0
+##   Belgian-Style Fruit Lambic                                    0     0
+##   Belgian-Style Lambic                                          0     0
+##   Belgian-Style Quadrupel                                       0     0
+##   Belgian-Style Table Beer                                      0     0
+##   Bitter                                                        0     0
+##   Black                                                         0     0
+##   Blonde                                                        0     0
+##   Braggot                                                       0     0
+##   Brett Beer                                                    0     0
+##   Brown                                                         0     0
+##   California Common Beer                                        0     0
+##   Chili Pepper Beer                                             0     0
+##   Chocolate / Cocoa-Flavored Beer                               0     0
+##   Coffee-Flavored Beer                                          0     0
+##   Contemporary Gose                                             0     0
+##   Dark American-Belgo-Style Ale                                 0     0
+##   Dortmunder / European-Style Export                            0     0
+##   Double India Pale Ale                                         0     0
+##   Dubbel                                                        0     0
+##   Dutch-Style Kuit, Kuyt or Koyt                                0     0
+##   English-Style Dark Mild Ale                                   0     0
+##   English-Style Pale Mild Ale                                   0     0
+##   English-Style Summer Ale                                      0     0
+##   European-Style Dark / Münchner Dunkel                         0     0
+##   Field Beer                                                    0     0
+##   Flavored Malt Beverage                                        0     0
+##   French-Style Bière de Garde                                   0     0
+##   Fresh "Wet" Hop Ale                                           0     0
+##   Fruit Beer                                                    0     0
+##   Fruit Cider                                                   0     0
+##   German-Style Doppelbock                                       0     0
+##   German-Style Eisbock                                          0     0
+##   German-Style Heller Bock/Maibock                              0     0
+##   German-Style Leichtbier                                       0     0
+##   German-Style Leichtes Weizen / Weissbier                      0     0
+##   German-Style Märzen                                           0     0
+##   German-Style Oktoberfest / Wiesen (Meadow)                    0     0
+##   German-Style Rye Ale (Roggenbier) with or without Yeast       0     0
+##   German-Style Schwarzbier                                      0     0
+##   Gluten-Free Beer                                              0     0
+##   Grodziskie                                                    0     0
+##   Herb and Spice Beer                                           0     0
+##   Historical Beer                                               0     0
+##   India Pale Ale                                                0     0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                 0     0
+##   Kölsch                                                        0     0
+##   Lager                                                         0     0
+##   Leipzig-Style Gose                                            0     0
+##   Mixed Culture Brett Beer                                      0     0
+##   Münchner (Munich)-Style Helles                                0     0
+##   Old Ale                                                       0     0
+##   Other Belgian-Style Ales                                      0     0
+##   Pale Ale                                                      0     0
+##   Pale American-Belgo-Style Ale                                 0     0
+##   Pilsener                                                      0     0
+##   Porter                                                        0     0
+##   Pumpkin Beer                                                  0     0
+##   Red                                                           0     0
+##   Saison                                                        0     0
+##   Scotch Ale                                                    0     0
+##   Scottish-Style Export Ale                                     0     0
+##   Scottish-Style Heavy Ale                                      0     0
+##   Scottish-Style Light Ale                                      0     0
+##   Session Beer                                                  0     0
+##   Sour                                                          0     0
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier       0     0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier           0     0
+##   South German-Style Kristall Weizen / Kristall Weissbier       0     0
+##   South German-Style Weizenbock / Weissbock                     0     0
+##   Specialty Beer                                                0     0
+##   Stout                                                         0     0
+##   Strong Ale                                                    0     0
+##   Traditional German-Style Bock                                 0     0
+##   Tripel                                                        0     0
+##   Wheat                                                         0     0
+##   Wild Beer                                                     0     0
+##                                                           
+##                                                            Wild Beer
+##   Altbier                                                          0
+##   Amber                                                            1
+##   American-Style Malt Liquor                                       0
+##   American-Style Märzen / Oktoberfest                              0
+##   Bamberg-Style Bock Rauchbier                                     0
+##   Bamberg-Style Märzen Rauchbier                                   0
+##   Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)         0
+##   Barley Wine                                                      0
+##   Barrel-Aged                                                      0
+##   Belgian-style Fruit Beer                                         1
+##   Belgian-Style Fruit Lambic                                       0
+##   Belgian-Style Lambic                                             1
+##   Belgian-Style Quadrupel                                          0
+##   Belgian-Style Table Beer                                         1
+##   Bitter                                                           0
+##   Black                                                            0
+##   Blonde                                                           9
+##   Braggot                                                          0
+##   Brett Beer                                                       1
+##   Brown                                                            1
+##   California Common Beer                                           0
+##   Chili Pepper Beer                                                1
+##   Chocolate / Cocoa-Flavored Beer                                  0
+##   Coffee-Flavored Beer                                             0
+##   Contemporary Gose                                                2
+##   Dark American-Belgo-Style Ale                                    0
+##   Dortmunder / European-Style Export                               0
+##   Double India Pale Ale                                            0
+##   Dubbel                                                           0
+##   Dutch-Style Kuit, Kuyt or Koyt                                   0
+##   English-Style Dark Mild Ale                                      1
+##   English-Style Pale Mild Ale                                      1
+##   English-Style Summer Ale                                         0
+##   European-Style Dark / Münchner Dunkel                            0
+##   Field Beer                                                       0
+##   Flavored Malt Beverage                                           0
+##   French-Style Bière de Garde                                      0
+##   Fresh "Wet" Hop Ale                                              0
+##   Fruit Beer                                                      10
+##   Fruit Cider                                                      0
+##   German-Style Doppelbock                                          0
+##   German-Style Eisbock                                             0
+##   German-Style Heller Bock/Maibock                                 0
+##   German-Style Leichtbier                                          0
+##   German-Style Leichtes Weizen / Weissbier                         0
+##   German-Style Märzen                                              0
+##   German-Style Oktoberfest / Wiesen (Meadow)                       1
+##   German-Style Rye Ale (Roggenbier) with or without Yeast          0
+##   German-Style Schwarzbier                                         0
+##   Gluten-Free Beer                                                 0
+##   Grodziskie                                                       0
+##   Herb and Spice Beer                                              2
+##   Historical Beer                                                  1
+##   India Pale Ale                                                   0
+##   Kellerbier (Cellar beer) or Zwickelbier - Ale                    0
+##   Kölsch                                                          10
+##   Lager                                                           19
+##   Leipzig-Style Gose                                               1
+##   Mixed Culture Brett Beer                                         0
+##   Münchner (Munich)-Style Helles                                   8
+##   Old Ale                                                          0
+##   Other Belgian-Style Ales                                         1
+##   Pale Ale                                                         2
+##   Pale American-Belgo-Style Ale                                    0
+##   Pilsener                                                         6
+##   Porter                                                           0
+##   Pumpkin Beer                                                     1
+##   Red                                                              1
+##   Saison                                                           6
+##   Scotch Ale                                                       0
+##   Scottish-Style Export Ale                                        0
+##   Scottish-Style Heavy Ale                                         0
+##   Scottish-Style Light Ale                                         0
+##   Session Beer                                                     0
+##   Sour                                                             3
+##   South German-Style Bernsteinfarbenes Weizen / Weissbier          0
+##   South German-Style Dunkel Weizen / Dunkel Weissbier              2
+##   South German-Style Kristall Weizen / Kristall Weissbier          0
+##   South German-Style Weizenbock / Weissbock                        0
+##   Specialty Beer                                                   5
+##   Stout                                                            0
+##   Strong Ale                                                       0
+##   Traditional German-Style Bock                                    0
+##   Tripel                                                           0
+##   Wheat                                                           65
+##   Wild Beer                                                        0
 ```
 
 
@@ -1733,13 +8517,13 @@ importance(bi_rf)[1:10]
 
 ```
 ##               total_hops               total_malt                      abv 
-##               10.3405186                8.7815286              105.2886116 
-##                      ibu                      srm ageddebitteredhopslambic 
-##              177.6704393               96.2534558                0.2728076 
-##                  ahtanum                  alchemy                 amarillo 
-##                0.6013545                1.8693009                3.2261151 
-##                   apollo 
-##                0.8684221
+##                9.5256631                9.5782188               93.9972655 
+##                      ibu                      srm                  admiral 
+##              152.3712156               92.8938643                0.0000000 
+## ageddebitteredhopslambic                  ahtanum                  alchemy 
+##                0.2174045                0.3020397                0.4786268 
+##                 amarillo 
+##                2.8212318
 ```
 
 
@@ -1757,12 +8541,11 @@ csrf_acc
 ```
 
 ```
-##  Accuracy     Kappa 
-## 0.3040936 0.2243069
+##   Accuracy      Kappa 
+## 0.14492754 0.09770386
 ```
 
 
-![](./pour.jpg)
 
 
 
@@ -1784,6 +8567,8 @@ csrf_acc
 * More on the hops deep dive: which hops are used most often in which styles?
 
 
+
+![](./pour.jpg)
 
 
 
