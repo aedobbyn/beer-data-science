@@ -65,6 +65,15 @@ style_centers <- popular_beer_dat %>%
   droplevels()
   
 
+# Give some nicer names
+style_centers_rename <- style_centers %>% 
+  rename(
+    `Collapsed Style` = style_collapsed,
+    `Mean ABV` = mean_abv,
+    `Mean IBU` = mean_ibu,
+    `Mean SRM` = mean_srm,
+    `Numer of Beers` = n
+  )
 
 
 

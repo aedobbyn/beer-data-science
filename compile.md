@@ -69,6 +69,9 @@ The question of what should be a predictor variable for style is a bit murky her
 
 
 
+**This document compiled by querying the beer database I built, specifically by sourcing the file read_from_db.R. This is done for expediency's sake, (the code below detailing how to get the beer, run in full in run_it.R, takes some time to execute).** 
+
+
 ### Get and Prepare Data
 
 **Getting beer, the age-old dilemma**
@@ -164,7 +167,19 @@ collapse_styles <- function(df) {
 }
 ```
 
-* Then we collapse further; right now we just combine all wheaty bears into Wheat by `fct_collapse`ing those levels
+* Then we collapse further; right now we just combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e's) by `fct_collapse`ing those levels
+
+
+```r
+collapse_further <- function(df) {
+  df[["style_collapsed"]] <- df[["style_collapsed"]] %>%
+    fct_collapse(
+      "Wheat" = c("Hefeweizen", "Wheat"),
+      "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener == pilsner == pils
+    )
+  return(df)
+}
+```
 
 
 
@@ -265,44 +280,54 @@ style_centers <- popular_beer_dat %>%
   arrange(desc(n)) %>% 
   drop_na() %>% 
   droplevels()
+
+# Give some nicer names
+style_centers_rename <- style_centers %>% 
+  rename(
+    `Collapsed Style` = style_collapsed,
+    `Mean ABV` = mean_abv,
+    `Mean IBU` = mean_ibu,
+    `Mean SRM` = mean_srm,
+    `Numer of Beers` = n
+  )
 ```
 
 
 Take a look at the table      
 
 
-|style_collapsed          |  mean_abv| mean_ibu|  mean_srm|    n|
-|:------------------------|---------:|--------:|---------:|----:|
-|India Pale Ale           |  6.578468| 66.04268|  9.989313| 6524|
-|Pale Ale                 |  5.695480| 40.86930|  8.890306| 4280|
-|Stout                    |  7.991841| 43.89729| 36.300000| 4238|
-|Wheat                    |  5.158040| 17.47168|  5.861842| 3349|
-|Double India Pale Ale    |  8.930599| 93.48142| 11.006873| 2525|
-|Red                      |  5.742565| 33.81127| 16.178862| 2521|
-|Lager                    |  5.453718| 30.64361|  8.457447| 2230|
-|Saison                   |  6.400189| 27.25114|  7.053476| 2167|
-|Blonde                   |  5.595298| 22.39432|  5.625000| 2044|
-|Porter                   |  6.182049| 33.25369| 32.197605| 1973|
-|Brown                    |  6.159212| 32.21577| 23.592000| 1462|
-|Pilsener                 |  5.227593| 33.51346|  4.413462| 1268|
-|Specialty Beer           |  6.446402| 33.77676| 15.520548| 1044|
-|Bitter                   |  5.322364| 38.28175| 12.460526|  939|
-|Fruit Beer               |  5.195222| 19.24049|  8.666667|  905|
-|Herb and Spice Beer      |  6.621446| 27.77342| 18.166667|  872|
-|Sour                     |  6.224316| 18.88869| 10.040816|  797|
-|Strong Ale               |  8.826425| 36.74233| 22.547945|  767|
-|Tripel                   |  9.029775| 32.51500|  7.680556|  734|
-|Black                    |  6.958714| 65.50831| 31.080000|  622|
-|Barley Wine              | 10.781600| 74.04843| 19.561404|  605|
-|Kölsch                   |  4.982216| 23.37183|  4.371795|  593|
-|Barrel-Aged              |  9.002506| 39.15789| 18.133333|  540|
-|Other Belgian-Style Ales |  7.516318| 37.55812| 17.549020|  506|
-|Pumpkin Beer             |  6.712839| 23.48359| 17.918033|  458|
-|Dubbel                   |  7.509088| 25.05128| 22.940000|  399|
-|Scotch Ale               |  7.620233| 26.36909| 24.222222|  393|
-|German-Style Doppelbock  |  8.045762| 28.88692| 25.696970|  376|
-|Fruit Cider              |  6.205786| 25.60000| 12.000000|  370|
-|German-Style Märzen      |  5.746102| 25.63796| 14.322581|  370|
+|Collapsed Style          |  Mean ABV| Mean IBU|  Mean SRM| Numer of Beers|
+|:------------------------|---------:|--------:|---------:|--------------:|
+|India Pale Ale           |  6.578468| 66.04268|  9.989313|           6524|
+|Pale Ale                 |  5.695480| 40.86930|  8.890306|           4280|
+|Stout                    |  7.991841| 43.89729| 36.300000|           4238|
+|Wheat                    |  5.158040| 17.47168|  5.861842|           3349|
+|Double India Pale Ale    |  8.930599| 93.48142| 11.006873|           2525|
+|Red                      |  5.742565| 33.81127| 16.178862|           2521|
+|Lager                    |  5.453718| 30.64361|  8.457447|           2230|
+|Saison                   |  6.400189| 27.25114|  7.053476|           2167|
+|Blonde                   |  5.595298| 22.39432|  5.625000|           2044|
+|Porter                   |  6.182049| 33.25369| 32.197605|           1973|
+|Brown                    |  6.159212| 32.21577| 23.592000|           1462|
+|Pilsener                 |  5.227593| 33.51346|  4.413462|           1268|
+|Specialty Beer           |  6.446402| 33.77676| 15.520548|           1044|
+|Bitter                   |  5.322364| 38.28175| 12.460526|            939|
+|Fruit Beer               |  5.195222| 19.24049|  8.666667|            905|
+|Herb and Spice Beer      |  6.621446| 27.77342| 18.166667|            872|
+|Sour                     |  6.224316| 18.88869| 10.040816|            797|
+|Strong Ale               |  8.826425| 36.74233| 22.547945|            767|
+|Tripel                   |  9.029775| 32.51500|  7.680556|            734|
+|Black                    |  6.958714| 65.50831| 31.080000|            622|
+|Barley Wine              | 10.781600| 74.04843| 19.561404|            605|
+|Kölsch                   |  4.982216| 23.37183|  4.371795|            593|
+|Barrel-Aged              |  9.002506| 39.15789| 18.133333|            540|
+|Other Belgian-Style Ales |  7.516318| 37.55812| 17.549020|            506|
+|Pumpkin Beer             |  6.712839| 23.48359| 17.918033|            458|
+|Dubbel                   |  7.509088| 25.05128| 22.940000|            399|
+|Scotch Ale               |  7.620233| 26.36909| 24.222222|            393|
+|German-Style Doppelbock  |  8.045762| 28.88692| 25.696970|            376|
+|Fruit Cider              |  6.205786| 25.60000| 12.000000|            370|
+|German-Style Märzen      |  5.746102| 25.63796| 14.322581|            370|
 
 
 ***
@@ -310,8 +335,10 @@ Take a look at the table
 Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
 
 
+***
+
 ### Unsupervised Clustering 
-We run K-means cluster beers based on the predictors ABV, IBU, and SRM. 
+We K-means cluster beers based on certain numeric predictor variables. 
 
 
 **Prep**
@@ -323,8 +350,6 @@ We run K-means cluster beers based on the predictors ABV, IBU, and SRM.
 * Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
 * Then cluster on just the predictors and compare to the response variable
   
-  
-**Cluster**
 
 
 ```r
@@ -373,15 +398,18 @@ cluster_it <- function(df, preds, to_scale, resp, n_centers) {
 ```
 
 
-We'll do 10 centers, and cluster on the predictors ABV, IBU, and SRM
+
+ 
+**Cluster**
+
+First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, and SRM.
+
 
 
 ```r
-# ----------- main clustering into 10 clusters -------
-
 cluster_on <- c("abv", "ibu", "srm")
 to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "styleId", "style_collapsed")
+response_vars <- c("name", "style", "style_collapsed")
 
 clustered_beer <- cluster_it(df = popular_beer_dat,
                              preds = cluster_on,
@@ -445,28 +473,28 @@ clustered_beer <- cluster_it(df = popular_beer_dat,
 
 Head of the clustering data
 
-|cluster_assignment |name                                                         |style                                              |styleId |style_collapsed       | abv_scaled| ibu_scaled| srm_scaled| abv|  ibu| srm|
-|:------------------|:------------------------------------------------------------|:--------------------------------------------------|:-------|:---------------------|----------:|----------:|----------:|---:|----:|---:|
-|3                  |"Ah Me Joy" Porter                                           |Robust Porter                                      |19      |Porter                | -0.6113116|  0.3483405|  2.5598503| 5.4| 51.0|  40|
-|2                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |25      |Pale Ale              | -0.3851131|  0.3483405| -0.5138012| 5.8| 51.0|   8|
-|2                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |25      |Pale Ale              | -0.6113116|  0.4631499| -0.2256464| 5.4| 54.0|  11|
-|6                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | -0.4982124| -0.5242109| -0.8019561| 5.6| 28.2|   5|
-|6                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |36      |Blonde                | -0.8940598| -0.8380232| -0.8019561| 4.9| 20.0|   5|
-|6                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |48      |Wheat                 | -0.7809605| -1.1824514| -0.8980077| 5.1| 11.0|   4|
-|6                  |#9                                                           |American-Style Pale Ale                            |25      |Pale Ale              | -0.7809605| -0.8380232| -0.4177496| 5.1| 20.0|   9|
-|6                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |45      |Kölsch                | -0.9506094| -0.5701346| -0.9940593| 4.8| 27.0|   3|
-|6                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |109     |Lager                 | -0.6678613| -0.9145628| -0.8019561| 5.3| 18.0|   5|
-|2                  |'tis the Saison                                              |French & Belgian-Style Saison                      |72      |Saison                |  0.2934824| -0.4553252| -0.6098528| 7.0| 30.0|   7|
-|6                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |65      |Wheat                 | -0.8375102| -0.8380232| -0.4177496| 5.0| 20.0|   9|
-|4                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |37      |Brown                 |  0.6327802| -0.4553252|  0.7348697| 7.6| 30.0|  21|
-|1                  |(512) FOUR                                                   |Strong Ale                                         |14      |Strong Ale            |  0.5762306| -0.2639763| -0.5138012| 7.5| 35.0|   8|
-|5                  |(512) IPA                                                    |American-Style India Pale Ale                      |30      |India Pale Ale        |  0.2934824|  0.8841177| -0.5138012| 7.0| 65.0|   8|
-|2                  |(512) Pale                                                   |American-Style Pale Ale                            |25      |Pale Ale              | -0.2720139| -0.4553252| -0.6098528| 6.0| 30.0|   7|
-|9                  |(512) SIX                                                    |Belgian-Style Dubbel                               |58      |Dubbel                |  0.5762306| -0.6466742|  1.4072310| 7.5| 25.0|  28|
-|1                  |(512) THREE                                                  |Belgian-Style Tripel                               |59      |Tripel                |  1.7072231| -0.7614836| -0.3216980| 9.5| 22.0|  10|
-|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |59      |Tripel                |  1.7072231| -0.7614836|  2.5598503| 9.5| 22.0|  40|
-|7                  |(512) TWO                                                    |Imperial or Double India Pale Ale                  |31      |Double India Pale Ale |  1.4244750|  2.1852908| -0.4177496| 9.0| 99.0|   9|
-|2                  |(512) White IPA                                              |American-Style India Pale Ale                      |30      |India Pale Ale        | -0.6678613|  0.5014197| -0.8980077| 5.3| 55.0|   4|
+|cluster_assignment |name                                                         |style                                              |style_collapsed       | abv_scaled| ibu_scaled| srm_scaled| abv|  ibu| srm|
+|:------------------|:------------------------------------------------------------|:--------------------------------------------------|:---------------------|----------:|----------:|----------:|---:|----:|---:|
+|3                  |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter                | -0.6113116|  0.3483405|  2.5598503| 5.4| 51.0|  40|
+|2                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale              | -0.3851131|  0.3483405| -0.5138012| 5.8| 51.0|   8|
+|2                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale              | -0.6113116|  0.4631499| -0.2256464| 5.4| 54.0|  11|
+|6                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | -0.4982124| -0.5242109| -0.8019561| 5.6| 28.2|   5|
+|6                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde                | -0.8940598| -0.8380232| -0.8019561| 4.9| 20.0|   5|
+|6                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | -0.7809605| -1.1824514| -0.8980077| 5.1| 11.0|   4|
+|6                  |#9                                                           |American-Style Pale Ale                            |Pale Ale              | -0.7809605| -0.8380232| -0.4177496| 5.1| 20.0|   9|
+|6                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | -0.9506094| -0.5701346| -0.9940593| 4.8| 27.0|   3|
+|6                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager                 | -0.6678613| -0.9145628| -0.8019561| 5.3| 18.0|   5|
+|2                  |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison                |  0.2934824| -0.4553252| -0.6098528| 7.0| 30.0|   7|
+|6                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | -0.8375102| -0.8380232| -0.4177496| 5.0| 20.0|   9|
+|4                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown                 |  0.6327802| -0.4553252|  0.7348697| 7.6| 30.0|  21|
+|1                  |(512) FOUR                                                   |Strong Ale                                         |Strong Ale            |  0.5762306| -0.2639763| -0.5138012| 7.5| 35.0|   8|
+|5                  |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale        |  0.2934824|  0.8841177| -0.5138012| 7.0| 65.0|   8|
+|2                  |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale              | -0.2720139| -0.4553252| -0.6098528| 6.0| 30.0|   7|
+|9                  |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel                |  0.5762306| -0.6466742|  1.4072310| 7.5| 25.0|  28|
+|1                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel                |  1.7072231| -0.7614836| -0.3216980| 9.5| 22.0|  10|
+|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel                |  1.7072231| -0.7614836|  2.5598503| 9.5| 22.0|  40|
+|7                  |(512) TWO                                                    |Imperial or Double India Pale Ale                  |Double India Pale Ale |  1.4244750|  2.1852908| -0.4177496| 9.0| 99.0|   9|
+|2                  |(512) White IPA                                              |American-Style India Pale Ale                      |India Pale Ale        | -0.6678613|  0.5014197| -0.8980077| 5.3| 55.0|   4|
 
 
 
@@ -518,7 +546,7 @@ clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ib
 clustered_beer_plot_abv_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-11-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
 
 ```r
 clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
@@ -529,43 +557,11 @@ clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = sr
 clustered_beer_plot_abv_srm
 ```
 
-![](compile_files/figure-html/unnamed-chunk-11-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-12-2.png)<!-- -->
 
 
 
-** Cluster on just certain selected styles **
-
-
-```r
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-clustered_beer_certain_styles <- clustered_beer %>% 
-  filter(
-   style_collapsed %in% styles_to_keep 
-  )
-
-style_centers_certain_styles <- style_centers %>% 
-  filter(
-    style_collapsed %in% styles_to_keep 
-  )
-
-by_style_plot <- ggplot() +   
-  geom_point(data = clustered_beer_certain_styles, 
-             aes(x = abv, y = ibu,
-                 colour = cluster_assignment), alpha = 0.5) +
-  facet_grid(. ~ style_collapsed) +
-  geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
-  ggtitle("Selected Styles Cluster Assignment") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster") +
-  theme_bw()
-by_style_plot
-```
-
-![](compile_files/figure-html/unnamed-chunk-12-1.png)<!-- -->
-
-
-Now add in the style centers (means) for collapsed styles
+Now we can add in the style centers (means) for each `style_collapsed` and label it.
 
 
 ```r
@@ -589,6 +585,52 @@ abv_ibu_clusters_vs_style_centers
 ![](compile_files/figure-html/unnamed-chunk-13-1.png)<!-- -->
 
 
+The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
+
+
+
+**Cluster on just certain selected styles**
+
+We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
+
+
+
+```r
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+clustered_beer_certain_styles <- clustered_beer %>% 
+  filter(
+   style_collapsed %in% styles_to_keep 
+  )
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(
+    style_collapsed %in% styles_to_keep 
+  )
+```
+
+
+Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
+
+
+```r
+by_style_plot <- ggplot() +   
+  geom_point(data = clustered_beer_certain_styles, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+![](compile_files/figure-html/unnamed-chunk-15-1.png)<!-- -->
+
+
+
 ***
 
 ### Ingredients
@@ -597,7 +639,7 @@ To get more granular with ingredients, we can split out each individual ingredie
 
 From this, we can find the total number of hops and malts per grouper.
 
-* Join the clustered beer on our main `beer_necessities` dataframe 
+* The dataframe we'll use will be `clustered_beer`, which contains each beer's cluster assignment, joined on our main `beer_necessities` dataframe 
 
 
 ```r
@@ -606,21 +648,24 @@ clustered_beer_necessities <- clustered_beer %>%
 ```
 
 ```
-## Joining, by = c("name", "style", "styleId", "style_collapsed", "abv", "ibu", "srm")
+## Joining, by = c("name", "style", "style_collapsed", "abv", "ibu", "srm")
 ```
 
 * This function takes a dataframe and two other parameters set at the outset:
     * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
     * `grouper`: can be a vector of one or more things to group by, like beer `name` or `style`
-  
-In more depth: [^1] 
-    
 
 
 ```r
 pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   # ----------------------- Setup --------------------------- #
+  # We've already split ingredient number names out from the concatenated string into columns like `malt_name_1`,
+  # `malt_name_2`, etc. We need to find the range of these columns; there will be a different number of malt
+  # columns than hops columns, for instance. The first one will be `<ingredient>_name_1` and from this we can find
+  # the index of this column in our dataframe. We get the name of last one with the `get_last_ing_name_col()`
+  # function. Then we save a vector of all the ingredient column names in `ingredient_colnames`. It will stay
+  # constant even if the indices change when we select out certain columns. 
   
   # First ingredient
   first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
@@ -648,6 +693,11 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   # -------------------------------------------------------------------------------# 
   
+  # Inside `gather_ingredients()` we take out superflous column names that are not in `to_keep_col_names` or one 
+  # of the ingredient columns, find what the new ingredient column indices are, since they'll have changed after 
+  # we pared down and then gather all of the ingredient columns (e.g., `hops_name_1`) into one long column, 
+  # `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`.
+  
   # ----------------------------- Gather columns --------------------------------- #
   gather_ingredients <- function(df, cols_to_gather) {
     to_keep_indices <- which(colnames(df) %in% to_keep_col_names)
@@ -670,6 +720,9 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 
   
+  # Next we get a vector of all ingredient levels and take out the one that's an empty string and 
+  # use this vector of ingredient levels in `select_spread_cols()` below
+
   # Get a vector of all ingredient levels
   beer_gathered$ing_names <- factor(beer_gathered$ing_names)
   ingredient_levels <- levels(beer_gathered$ing_names) 
@@ -679,6 +732,16 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   ingredient_levels <- ingredient_levels[to_keep_levels]
   
   beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
+  
+  # ----------------------------------------------------------------------------- # 
+  
+  # Then we spread the ingredient names: we take what was previously the `value` in our gathered dataframe, the
+  # actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names. The
+  # new `value` is `value` is count; it'll populate the row cells. If a given row has a certain ingredient, it
+  # gets a 1 in the corresponding cell, an NA otherwise. 
+  # We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO
+  # comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr)).
+
   
   # ------------------------------- Spread columns -------------------------------- #
   spread_ingredients <- function(df) {
@@ -719,6 +782,8 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   
   # ----------------- Group ingredients by the grouper specified ------------------- #
+  # Then we do the final step and group by the groupers.
+  
   get_ingredients_per_grouper <- function(df, grouper = grouper) {
     df_grouped <- df %>%
       ungroup() %>% 
@@ -870,7 +935,7 @@ Table of style vs. cluster.
 |Tripel         |   3| 60|   0|   1|  1|
 |Wheat          |   0|  9| 234|   5| 15|
 
-![](compile_files/figure-html/unnamed-chunk-19-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
 
 
@@ -889,7 +954,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-20-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
 ```r
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
@@ -929,7 +994,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
 
 
 **Most popular hops**
@@ -1008,7 +1073,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-23-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
 
 
 ```r
@@ -1020,7 +1085,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 
 # Neural Net
@@ -1368,7 +1433,7 @@ bi_train <- bi_train %>%
   dplyr::select(-row)
 
 
-bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity")
+bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity", seed = 11)
 ```
 
 
@@ -1379,7 +1444,7 @@ OOB (out of bag) prediction error is around 58%
 ## Ranger result
 ## 
 ## Call:
-##  ranger(style_collapsed ~ ., data = bi_train, importance = "impurity") 
+##  ranger(style_collapsed ~ ., data = bi_train, importance = "impurity",      seed = 11) 
 ## 
 ## Type:                             Classification 
 ## Number of trees:                  500 
@@ -1388,10 +1453,278 @@ OOB (out of bag) prediction error is around 58%
 ## Mtry:                             14 
 ## Target node size:                 1 
 ## Variable importance mode:         impurity 
-## OOB prediction error:             56.78 %
+## OOB prediction error:             56.75 %
 ```
 
 
+We can compare predicted classification on the test set to their actual style classification.
+
+```r
+pred_bi_rf <- predict(bi_rf, dat = bi_test)
+table(bi_test$style_collapsed, pred_bi_rf$predictions)
+```
+
+```
+##                           
+##                            Barley Wine Barrel-Aged Bitter Black Blonde
+##   Barley Wine                        0           0      0     0      0
+##   Barrel-Aged                        0           0      0     0      0
+##   Bitter                             0           0      0     0      0
+##   Black                              0           0      0     0      0
+##   Blonde                             0           0      0     0      0
+##   Brown                              0           0      0     0      0
+##   Double India Pale Ale              0           0      0     0      0
+##   Dubbel                             0           0      0     0      0
+##   Fruit Beer                         0           0      0     0      0
+##   Fruit Cider                        0           0      0     0      0
+##   German-Style Doppelbock            0           0      0     0      0
+##   German-Style Märzen                0           0      0     0      0
+##   Herb and Spice Beer                0           0      0     0      0
+##   India Pale Ale                     0           0      0     0      0
+##   Kölsch                             0           0      0     0      0
+##   Lager                              0           0      0     0      0
+##   Other Belgian-Style Ales           0           0      0     0      0
+##   Pale Ale                           0           0      0     0      0
+##   Pilsener                           0           0      0     0      0
+##   Porter                             0           0      0     0      0
+##   Pumpkin Beer                       0           0      0     0      0
+##   Red                                0           0      0     0      0
+##   Saison                             0           0      0     0      0
+##   Scotch Ale                         0           0      0     0      0
+##   Sour                               0           0      0     0      0
+##   Specialty Beer                     0           0      0     0      0
+##   Stout                              0           0      0     0      0
+##   Strong Ale                         0           0      0     0      0
+##   Tripel                             0           0      0     0      0
+##   Wheat                              0           0      0     0      0
+##                           
+##                            Brown Double India Pale Ale Dubbel Fruit Beer
+##   Barley Wine                  0                     9      0          0
+##   Barrel-Aged                  0                     0      0          0
+##   Bitter                       0                     0      0          0
+##   Black                        0                     0      0          0
+##   Blonde                       0                     2      0          0
+##   Brown                        1                     1      0          0
+##   Double India Pale Ale        0                    42      0          0
+##   Dubbel                       0                     2      0          0
+##   Fruit Beer                   0                     0      0          0
+##   Fruit Cider                  0                     0      0          0
+##   German-Style Doppelbock      0                     2      0          0
+##   German-Style Märzen          0                     0      0          0
+##   Herb and Spice Beer          0                     1      0          0
+##   India Pale Ale               0                     3      0          0
+##   Kölsch                       0                     0      0          0
+##   Lager                        0                     1      0          0
+##   Other Belgian-Style Ales     0                     2      0          0
+##   Pale Ale                     0                     3      0          0
+##   Pilsener                     0                     0      0          0
+##   Porter                       0                     0      0          0
+##   Pumpkin Beer                 0                     2      0          0
+##   Red                          0                     1      0          0
+##   Saison                       0                     3      0          0
+##   Scotch Ale                   0                     1      0          0
+##   Sour                         0                     0      0          0
+##   Specialty Beer               0                     1      0          0
+##   Stout                        0                     1      0          0
+##   Strong Ale                   0                    11      0          0
+##   Tripel                       0                    13      0          0
+##   Wheat                        0                     1      0          0
+##                           
+##                            Fruit Cider German-Style Doppelbock
+##   Barley Wine                        0                       0
+##   Barrel-Aged                        0                       0
+##   Bitter                             0                       0
+##   Black                              0                       0
+##   Blonde                             0                       0
+##   Brown                              0                       0
+##   Double India Pale Ale              0                       0
+##   Dubbel                             0                       0
+##   Fruit Beer                         0                       0
+##   Fruit Cider                        0                       0
+##   German-Style Doppelbock            0                       0
+##   German-Style Märzen                0                       0
+##   Herb and Spice Beer                0                       0
+##   India Pale Ale                     0                       0
+##   Kölsch                             0                       0
+##   Lager                              0                       0
+##   Other Belgian-Style Ales           0                       0
+##   Pale Ale                           0                       0
+##   Pilsener                           0                       0
+##   Porter                             0                       0
+##   Pumpkin Beer                       0                       0
+##   Red                                0                       0
+##   Saison                             0                       0
+##   Scotch Ale                         0                       0
+##   Sour                               0                       0
+##   Specialty Beer                     0                       0
+##   Stout                              0                       0
+##   Strong Ale                         0                       0
+##   Tripel                             0                       0
+##   Wheat                              0                       0
+##                           
+##                            German-Style Märzen Herb and Spice Beer
+##   Barley Wine                                0                   0
+##   Barrel-Aged                                0                   0
+##   Bitter                                     0                   0
+##   Black                                      0                   0
+##   Blonde                                     0                   0
+##   Brown                                      0                   0
+##   Double India Pale Ale                      0                   0
+##   Dubbel                                     0                   0
+##   Fruit Beer                                 0                   0
+##   Fruit Cider                                0                   0
+##   German-Style Doppelbock                    0                   0
+##   German-Style Märzen                        2                   0
+##   Herb and Spice Beer                        1                   0
+##   India Pale Ale                             0                   0
+##   Kölsch                                     0                   0
+##   Lager                                      0                   0
+##   Other Belgian-Style Ales                   0                   0
+##   Pale Ale                                   0                   0
+##   Pilsener                                   0                   0
+##   Porter                                     0                   0
+##   Pumpkin Beer                               0                   0
+##   Red                                        0                   0
+##   Saison                                     0                   0
+##   Scotch Ale                                 0                   0
+##   Sour                                       0                   0
+##   Specialty Beer                             0                   0
+##   Stout                                      0                   0
+##   Strong Ale                                 0                   0
+##   Tripel                                     0                   0
+##   Wheat                                      0                   0
+##                           
+##                            India Pale Ale Kölsch Lager
+##   Barley Wine                           0      0     0
+##   Barrel-Aged                           1      0     0
+##   Bitter                                1      0     0
+##   Black                                 8      0     0
+##   Blonde                                2      0     0
+##   Brown                                 1      0     0
+##   Double India Pale Ale                 4      0     0
+##   Dubbel                                0      0     0
+##   Fruit Beer                            1      0     0
+##   Fruit Cider                           0      0     0
+##   German-Style Doppelbock               0      0     0
+##   German-Style Märzen                   0      0     0
+##   Herb and Spice Beer                   1      0     0
+##   India Pale Ale                       92      0     0
+##   Kölsch                                0      0     0
+##   Lager                                 6      0     1
+##   Other Belgian-Style Ales              0      0     0
+##   Pale Ale                             10      0     0
+##   Pilsener                              1      0     0
+##   Porter                                0      0     0
+##   Pumpkin Beer                          0      0     0
+##   Red                                   4      0     0
+##   Saison                                1      0     0
+##   Scotch Ale                            0      0     0
+##   Sour                                  1      0     0
+##   Specialty Beer                        0      0     0
+##   Stout                                 0      0     0
+##   Strong Ale                            0      0     0
+##   Tripel                                0      0     0
+##   Wheat                                 1      0     0
+##                           
+##                            Other Belgian-Style Ales Pale Ale Pilsener
+##   Barley Wine                                     0        0        0
+##   Barrel-Aged                                     0        0        0
+##   Bitter                                          0       10        0
+##   Black                                           0        0        0
+##   Blonde                                          0        7        0
+##   Brown                                           0        0        0
+##   Double India Pale Ale                           0        0        0
+##   Dubbel                                          0        0        0
+##   Fruit Beer                                      0        0        0
+##   Fruit Cider                                     0        0        0
+##   German-Style Doppelbock                         0        0        0
+##   German-Style Märzen                             0        1        0
+##   Herb and Spice Beer                             0        1        0
+##   India Pale Ale                                  0       11        0
+##   Kölsch                                          0        1        0
+##   Lager                                           0        5        0
+##   Other Belgian-Style Ales                        0        0        0
+##   Pale Ale                                        0       59        0
+##   Pilsener                                        0       12        0
+##   Porter                                          0        3        0
+##   Pumpkin Beer                                    0        0        0
+##   Red                                             0        5        0
+##   Saison                                          0        8        0
+##   Scotch Ale                                      0        0        0
+##   Sour                                            0        0        0
+##   Specialty Beer                                  0        2        0
+##   Stout                                           0        0        0
+##   Strong Ale                                      0        0        0
+##   Tripel                                          0        0        0
+##   Wheat                                           0        6        1
+##                           
+##                            Porter Pumpkin Beer Red Saison Scotch Ale Sour
+##   Barley Wine                   0            0   0      0          0    0
+##   Barrel-Aged                   0            0   1      0          0    0
+##   Bitter                        0            0   4      0          0    0
+##   Black                         2            0   0      0          0    0
+##   Blonde                        0            0   1      4          0    0
+##   Brown                         8            0   7      0          0    0
+##   Double India Pale Ale         0            0   0      0          0    0
+##   Dubbel                        2            0   1      0          0    0
+##   Fruit Beer                    2            0   3      0          0    0
+##   Fruit Cider                   0            0   0      0          0    0
+##   German-Style Doppelbock       2            0   0      0          0    0
+##   German-Style Märzen           0            0   1      0          0    0
+##   Herb and Spice Beer           2            0   2      1          0    0
+##   India Pale Ale                0            0   0      0          0    0
+##   Kölsch                        0            0   0      0          0    0
+##   Lager                         1            0   3      1          0    0
+##   Other Belgian-Style Ales      2            0   2      0          0    0
+##   Pale Ale                      0            0   3      2          0    0
+##   Pilsener                      0            0   0      0          0    0
+##   Porter                       18            0   1      0          0    0
+##   Pumpkin Beer                  1            0   3      0          0    0
+##   Red                           4            0  21      0          0    0
+##   Saison                        0            0   1      7          0    0
+##   Scotch Ale                    3            0   2      0          0    0
+##   Sour                          1            0   1      1          0    0
+##   Specialty Beer                2            0   3      0          0    0
+##   Stout                        12            0   0      1          0    0
+##   Strong Ale                    0            0   0      0          0    0
+##   Tripel                        0            0   0      2          0    0
+##   Wheat                         0            0   3      1          0    0
+##                           
+##                            Specialty Beer Stout Strong Ale Tripel Wheat
+##   Barley Wine                           0     2          0      0     0
+##   Barrel-Aged                           0     0          0      0     2
+##   Bitter                                0     0          0      0     2
+##   Black                                 0     0          0      0     0
+##   Blonde                                0     0          0      0    19
+##   Brown                                 0     2          0      0     0
+##   Double India Pale Ale                 0     0          0      0     0
+##   Dubbel                                0     0          0      0     0
+##   Fruit Beer                            0     0          0      0     5
+##   Fruit Cider                           0     0          0      0     0
+##   German-Style Doppelbock               0     1          0      0     0
+##   German-Style Märzen                   0     0          0      0     1
+##   Herb and Spice Beer                   0     1          0      0     1
+##   India Pale Ale                        0     0          0      0     0
+##   Kölsch                                0     0          0      0    14
+##   Lager                                 0     0          0      0    13
+##   Other Belgian-Style Ales              0     2          0      0     1
+##   Pale Ale                              0     0          0      0     2
+##   Pilsener                              0     0          0      0     6
+##   Porter                                0     6          0      0     1
+##   Pumpkin Beer                          0     0          0      0     0
+##   Red                                   0     0          0      0     0
+##   Saison                                0     0          0      0     5
+##   Scotch Ale                            0     1          0      0     0
+##   Sour                                  0     1          0      0     3
+##   Specialty Beer                        0     0          0      0     0
+##   Stout                                 0    27          0      0     0
+##   Strong Ale                            0     1          0      0     0
+##   Tripel                                0     0          0      0     0
+##   Wheat                                 0     0          0      0    46
+```
+
+
+Variable importance
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
 
 ```r
@@ -1400,13 +1733,13 @@ importance(bi_rf)[1:10]
 
 ```
 ##               total_hops               total_malt                      abv 
-##               10.3590387                8.4187124              108.2855551 
+##               10.3405186                8.7815286              105.2886116 
 ##                      ibu                      srm ageddebitteredhopslambic 
-##              174.3470872               97.9125272                0.2416759 
+##              177.6704393               96.2534558                0.2728076 
 ##                  ahtanum                  alchemy                 amarillo 
-##                0.5750893                1.7049982                2.9860434 
+##                0.6013545                1.8693009                3.2261151 
 ##                   apollo 
-##                0.7517504
+##                0.8684221
 ```
 
 
@@ -1453,14 +1786,4 @@ csrf_acc
 
 
 
- [^1] We've already split ingredient number names out from the concatenated string into columns like `malt_name_1`, `malt_name_2`, etc. We need to find the range of these columns; there will be a different number of malt columns than hops columns, for instance. The first one will be `<ingredient>_name_1` and from this we can find the index of this column in our dataframe. We get the name of last one with the `get_last_ing_name_col()` function. Then we save a vector of all the ingredient column names in `ingredient_colnames`. It will stay constant even if the indices change when we select out certain columns. 
-    
 
-Inside `gather_ingredients()` we take out superflous column names that are not in `to_keep_col_names` or one of the ingredient columns, find what the new ingredient column indices are, since they'll have changed after we pared down and then gather all of the ingredient columns (e.g., `hops_name_1`) into one long column, `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`.
-
-
-Next we get a vector of all ingredient levels and take out the one that's an empty string and use this vector of ingredient levels in `select_spread_cols()` below
-    
-* Then we spread the ingredient names: we take what was previously the `value` in our gathered dataframe, the actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names. The new `value` is `value` is count; it'll populate the row cells. If a given row has a certain ingredient, it gets a 1 in the corresponding cell, an NA otherwise. We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr))
-
-Then we do the final step and group by the groupers.

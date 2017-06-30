@@ -92,9 +92,6 @@ The question of what should be a predictor variable for style is a bit murky her
 
 
 
-**This document compiled by querying the beer database I built, specifically by sourcing the file read_from_db.R. This is done for expediency's sake, (the code below detailing how to get the beer, run in full in run_it.R, takes some time to execute).** 
-
-
 ### Get and Prepare Data
 
 **Getting beer, the age-old dilemma**
@@ -300,23 +297,13 @@ style_centers <- popular_beer_dat %>%
   arrange(desc(n)) %>% 
   drop_na() %>% 
   droplevels()
-
-# Give some nicer names
-style_centers_rename <- style_centers %>% 
-  rename(
-    `Collapsed Style` = style_collapsed,
-    `Mean ABV` = mean_abv,
-    `Mean IBU` = mean_ibu,
-    `Mean SRM` = mean_srm,
-    `Numer of Beers` = n
-  )
 ```
 
 
 Take a look at the table      
 
 ```{r}
-kable(style_centers_rename)
+kable(style_centers)
 ```
 
 
@@ -325,10 +312,8 @@ kable(style_centers_rename)
 Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
 
 
-***
-
 ### Unsupervised Clustering 
-We K-means cluster beers based on certain numeric predictor variables. 
+We run K-means cluster beers based on the predictors ABV, IBU, and SRM. 
 
 
 **Prep**
@@ -340,6 +325,8 @@ We K-means cluster beers based on certain numeric predictor variables.
 * Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
 * Then cluster on just the predictors and compare to the response variable
   
+  
+**Cluster**
 
 ```{r, echo=TRUE}
 
@@ -389,18 +376,15 @@ cluster_it <- function(df, preds, to_scale, resp, n_centers) {
 ```
 
 
-
- 
-**Cluster**
-
-First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, and SRM.
-
+We'll do 10 centers, and cluster on the predictors ABV, IBU, and SRM
 
 ```{r, echo=TRUE}
 
+# ----------- main clustering into 10 clusters -------
+
 cluster_on <- c("abv", "ibu", "srm")
 to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "style_collapsed")
+response_vars <- c("name", "style", "styleId", "style_collapsed")
 
 clustered_beer <- cluster_it(df = popular_beer_dat,
                              preds = cluster_on,
@@ -445,7 +429,36 @@ clustered_beer_plot_abv_srm
 
 
 
-Now we can add in the style centers (means) for each `style_collapsed` and label it.
+** Cluster on just certain selected styles **
+
+```{r, echo=TRUE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+clustered_beer_certain_styles <- clustered_beer %>% 
+  filter(
+   style_collapsed %in% styles_to_keep 
+  )
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(
+    style_collapsed %in% styles_to_keep 
+  )
+
+by_style_plot <- ggplot() +   
+  geom_point(data = clustered_beer_certain_styles, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+
+Now add in the style centers (means) for collapsed styles
 
 ```{r, echo=TRUE}
 library(ggrepel)
@@ -464,48 +477,6 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   theme_bw()
 abv_ibu_clusters_vs_style_centers
 ```
-
-
-The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
-
-
-
-**Cluster on just certain selected styles**
-
-We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
-
-
-```{r, echo=TRUE}
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-clustered_beer_certain_styles <- clustered_beer %>% 
-  filter(
-   style_collapsed %in% styles_to_keep 
-  )
-
-style_centers_certain_styles <- style_centers %>% 
-  filter(
-    style_collapsed %in% styles_to_keep 
-  )
-```
-
-
-Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
-
-```{r, echo=TRUE}
-by_style_plot <- ggplot() +   
-  geom_point(data = clustered_beer_certain_styles, 
-             aes(x = abv, y = ibu,
-                 colour = cluster_assignment), alpha = 0.5) +
-  facet_grid(. ~ style_collapsed) +
-  geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
-  ggtitle("Selected Styles Cluster Assignment") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster") +
-  theme_bw()
-by_style_plot
-```
-
 
 
 ***
