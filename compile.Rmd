@@ -3,12 +3,22 @@ title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
 date: '`r format(Sys.time(), "%B %d, %Y")`'
-output: 
+output:
   html_notebook:
     toc: false
     theme: yeti
+  pdf_document:
+    toc: false
   github_document:
     toc: true
+    
+# output:
+#   html_document:
+#     keep_md: true
+#     toc: false
+#     theme: yeti
+#   github_document:
+#     toc: true
 ---
 
 
@@ -21,7 +31,7 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
-source("./read_from_db.R")
+# source("./read_from_db.R")
 source("./most_popular_styles.R")
 # # source("./cluster.R")
 # # source("./plot.R")
@@ -325,187 +335,6 @@ kable(style_centers_rename)
 Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
 
 
-***
-
-### Unsupervised Clustering 
-We K-means cluster beers based on certain numeric predictor variables. 
-
-
-**Prep**
-
-* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it
-
-* Take out missing values, and scale the data
-* Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
-* Then cluster on just the predictors and compare to the response variable
-  
-
-```{r, echo=TRUE}
-
-library(NbClust)
-
-cluster_it <- function(df, preds, to_scale, resp, n_centers) {
-  df_for_clustering <- df %>%
-    select_(.dots = c(response_vars, cluster_on)) %>%
-    na.omit() %>%
-    filter(
-      abv < 20 & abv > 3
-    ) %>%
-    filter(
-      ibu < 200
-    )
-
-  df_all_preds <- df_for_clustering %>%
-    select_(.dots = preds)
-
-  df_preds_scale <- df_all_preds %>%
-    select_(.dots = to_scale) %>%
-    rename(
-      abv_scaled = abv,
-      ibu_scaled = ibu,
-      srm_scaled = srm
-    ) %>%
-    scale() %>%
-    as_tibble()
-
-  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
-
-  df_outcome <- df_for_clustering %>%
-    select_(.dots = resp) %>%
-    na.omit()
-
-  set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
-
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster),
-    df_outcome, df_preds,
-    df_for_clustering %>% select(abv, ibu, srm)))
-
-  return(clustered_df)
-}
-
-```
-
-
-
- 
-**Cluster**
-
-First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, and SRM.
-
-
-```{r, echo=TRUE}
-
-cluster_on <- c("abv", "ibu", "srm")
-to_scale <- c("abv", "ibu", "srm")
-response_vars <- c("name", "style", "style_collapsed")
-
-clustered_beer <- cluster_it(df = popular_beer_dat,
-                             preds = cluster_on,
-                             to_scale = to_scale,
-                             resp = response_vars,
-                             n_centers = 10)
-```
-
-
-Head of the clustering data
-```{r}
-kable(clustered_beer[1:20, ])
-```
-
-
-
-A table of cluster counts broken down by style
-```{r}
-cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = clustered_beer$cluster_assignment)
-
-kable(cluster_table_counts)
-```
-
-
-Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
-
-```{r, echo=TRUE}
-clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
-  geom_jitter() + theme_minimal()  +
-  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster Assignment")
-clustered_beer_plot_abv_ibu
-
-clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
-  geom_jitter() + theme_minimal()  +
-  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "SRM") +
-  labs(colour = "Cluster Assignment")
-clustered_beer_plot_abv_srm
-```
-
-
-
-Now we can add in the style centers (means) for each `style_collapsed` and label it.
-
-```{r, echo=TRUE}
-library(ggrepel)
-abv_ibu_clusters_vs_style_centers <- ggplot() +   
-  geom_point(data = clustered_beer, 
-             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-  geom_point(data = style_centers,
-             aes(mean_abv, mean_ibu), colour = "black") +
-  geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
-                  box.padding = unit(0.45, "lines"),
-                  family = "Calibri",
-                  label.size = 0.3) +
-  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster Assignment") +
-  theme_bw()
-abv_ibu_clusters_vs_style_centers
-```
-
-
-The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
-
-
-
-**Cluster on just certain selected styles**
-
-We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
-
-
-```{r, echo=TRUE}
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-clustered_beer_certain_styles <- clustered_beer %>% 
-  filter(
-   style_collapsed %in% styles_to_keep 
-  )
-
-style_centers_certain_styles <- style_centers %>% 
-  filter(
-    style_collapsed %in% styles_to_keep 
-  )
-```
-
-
-Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
-
-```{r, echo=TRUE}
-by_style_plot <- ggplot() +   
-  geom_point(data = clustered_beer_certain_styles, 
-             aes(x = abv, y = ibu,
-                 colour = cluster_assignment), alpha = 0.5) +
-  facet_grid(. ~ style_collapsed) +
-  geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
-  ggtitle("Selected Styles Cluster Assignment") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster") +
-  theme_bw()
-by_style_plot
-```
-
 
 
 ***
@@ -516,13 +345,14 @@ To get more granular with ingredients, we can split out each individual ingredie
 
 From this, we can find the total number of hops and malts per grouper.
 
-* The dataframe we'll use will be `clustered_beer`, which contains each beer's cluster assignment, joined on our main `beer_necessities` dataframe 
+* The dataframe we'll use will be `beer_necessities`
 
-```{r, eval=TRUE, echo=TRUE}
-clustered_beer_necessities <- clustered_beer %>% 
-  inner_join(beer_necessities)
 
-```
+<!-- ```{r, eval=TRUE, echo=TRUE} -->
+<!-- clustered_beer_necessities <- clustered_beer %>% -->
+<!--   inner_join(beer_necessities) -->
+
+<!-- ``` -->
 
 * This function takes a dataframe and two other parameters set at the outset:
     * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
@@ -542,7 +372,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   # First ingredient
   first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
-  first_ingredient_index <- which(colnames(clustered_beer_necessities)==first_ingredient_name)
+  first_ingredient_index <- which(colnames(df)==first_ingredient_name)
   
   # Get the last ingredient
   get_last_ing_name_col <- function(df) {
@@ -555,11 +385,11 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   }
   
   # Last ingredient
-  last_ingredient_name <- get_last_ing_name_col(clustered_beer_necessities)
-  last_ingredient_index <- which(colnames(clustered_beer_necessities)==last_ingredient_name)
+  last_ingredient_name <- get_last_ing_name_col(df)
+  last_ingredient_index <- which(colnames(df)==last_ingredient_name)
   
   # Vector of all the ingredient column names
-  ingredient_colnames <- names(clustered_beer_necessities)[first_ingredient_index:last_ingredient_index]
+  ingredient_colnames <- names(df)[first_ingredient_index:last_ingredient_index]
   
   # Non-ingredient column names we want to keep
   to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
@@ -590,7 +420,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
       )
     df_gathered
   }
-  beer_gathered <- gather_ingredients(clustered_beer_necessities, ingredient_colnames)  # ingredient colnames defined above function
+  beer_gathered <- gather_ingredients(df, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 
   
   # Next we get a vector of all ingredient levels and take out the one that's an empty string and 
@@ -701,16 +531,16 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 ```{r, echo=TRUE, eval=TRUE}
 # Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
-                                                      clustered_beer_necessities, 
+                                                      beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
 # Same for malt
 ingredients_per_beer_malt <- pick_ingredient_get_beer(ingredient_want = "malt", 
-                                                      clustered_beer_necessities, 
+                                                      beer_necessities, 
                                                       grouper = c("name", "style_collapsed"))
 
 # Join those on our original dataframe by name
-beer_ingredients_join_first_ingredient <- left_join(clustered_beer_necessities, ingredients_per_beer_hops,
+beer_ingredients_join_first_ingredient <- left_join(beer_necessities, ingredients_per_beer_hops,
                                                     by = "name")
 beer_ingredients_join <- left_join(beer_ingredients_join_first_ingredient, ingredients_per_beer_malt,
                                    by = "name")
@@ -733,6 +563,13 @@ beer_ingredients_join <- beer_ingredients_join %>%
     id, name, total_hops, total_malt, everything(), -description
   )
 
+# And get a df that includes total_hops and total_malt but not all the other ingredient columns
+beer_totals <- beer_ingredients_join %>% 
+  select(
+    id, name, total_hops, total_malt, style, style_collapsed,
+    abv, ibu, srm, glass, hops_name, malt_name
+  )
+
 ```
 
 
@@ -745,53 +582,240 @@ kable(beer_ingredients_join[1:20, ])
 
 
 
-### Back to clustering: cluster on only 5 styles
+***
 
-* We'll pare down the beer data to just beers in 5 selected styles; these styles were intentionally chosen because they are quite distinct: Blonde, IPA, Stout, Tripel, Wheat
-  * Arguably, of these five styles Blondes and Wheats are the closest
-* We'll cluster these into 5 clusters
-* This time we'll add in `total_hops` and `total_malts` as predictors 
+### Unsupervised Clustering 
+We K-means cluster beers based on certain numeric predictor variables. 
+
+
+**Prep**
+
+* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
+    * NB: There are not not very many beers have SRM so we may not want to omit based on it
+
+* Take out missing values, and scale the data
+* Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
+* Then cluster on just the predictors and compare to the response variable
+  
+
+```{r, echo=TRUE}
+
+library(NbClust)
+
+cluster_it <- function(df, preds, to_scale, resp, n_centers) {
+  df_for_clustering <- df %>%
+    select_(.dots = c(response_vars, cluster_on)) %>%
+    na.omit() %>%
+    filter(
+      abv < 20 & abv > 3
+    ) %>%
+    filter(
+      ibu < 200
+    )
+
+  df_all_preds <- df_for_clustering %>%
+    select_(.dots = preds)
+
+  df_preds_scale <- df_all_preds %>%
+    select_(.dots = to_scale) %>%
+    rename(
+      abv_scaled = abv,
+      ibu_scaled = ibu,
+      srm_scaled = srm
+    ) %>%
+    scale() %>%
+    as_tibble()
+
+  df_preds <- bind_cols(df_preds_scale, df_all_preds[, (!names(df_all_preds) %in% to_scale)])
+
+  df_outcome <- df_for_clustering %>%
+    select_(.dots = resp) %>%
+    na.omit()
+
+  set.seed(9)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_outcome, df_preds,
+    df_for_clustering %>% select(abv, ibu, srm)))
+
+  return(clustered_df)
+}
+
+```
+
+
+
+ 
+**Cluster**
+
+First we'll run the fuction with 10 centers, and cluster on the predictors ABV, IBU, SRM, total_hops, and total_malt.
+
+
+```{r, echo=TRUE}
+
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+response_vars <- c("name", "style", "style_collapsed")
+
+clustered_beer <- cluster_it(df = beer_totals,
+                             preds = cluster_on,
+                             to_scale = to_scale,
+                             resp = response_vars,
+                             n_centers = 10)
+```
+
+
+Head of the clustering data
+```{r}
+kable(clustered_beer[1:20, ])
+```
+
+
+
+A table of cluster counts broken down by style
+```{r}
+cluster_table_counts <- table(style = clustered_beer$style_collapsed, cluster = clustered_beer$cluster_assignment)
+
+kable(cluster_table_counts)
+```
+
+
+Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
+
+```{r, echo=TRUE}
+clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ibu, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment")
+clustered_beer_plot_abv_ibu
+
+clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
+  geom_jitter() + theme_minimal()  +
+  ggtitle("k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "SRM") +
+  labs(colour = "Cluster Assignment")
+clustered_beer_plot_abv_srm
+```
+
+
+
+Now we can add in the style centers (means) for each `style_collapsed` and label it.
+
+```{r, echo=TRUE}
+library(ggrepel)
+abv_ibu_clusters_vs_style_centers <- ggplot() +   
+  geom_point(data = clustered_beer, 
+             aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+  geom_point(data = style_centers,
+             aes(mean_abv, mean_ibu), colour = "black") +
+  geom_text_repel(data = style_centers, aes(mean_abv, mean_ibu, label = style_collapsed), 
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster Assignment") +
+  theme_bw()
+abv_ibu_clusters_vs_style_centers
+```
+
+
+The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
+
+
+
+**Cluster on just certain selected styles**
+
+We'll take five very distinct collapsed styles and re-run the clustering on beers that fall into these categories. 
+These styles were intentionally chosen because they are quite distinct: Blonde, IPA, Stout, Tripel, Wheat. Arguably, of these five styles Blondes and Wheats are the closest
+
+
 
 ```{r, echo=TRUE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bn_certain_styles <- beer_ingredients_join %>%
+bt_certain_styles <- beer_totals %>%
   filter(
     style_collapsed %in% styles_to_keep
   )
 
+
 cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-to_scale <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 response_vars <- c("name", "style", "style_collapsed")
 
-certain_styles_clustered <- cluster_it(df = bn_certain_styles,
+certain_styles_clustered <- cluster_it(df = bt_certain_styles,
                                  preds = cluster_on,
                                  to_scale = to_scale,
                                  resp = response_vars,
                                  n_centers = 5)
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(style_collapsed %in% styles_to_keep)
 ```
+
+
+
+
 
 Table of style vs. cluster.
 ```{r}
 kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
-
-ggplot() +
-  geom_point(data = certain_styles_clustered,
-             aes(x = abv, y = ibu,
-                 shape = cluster_assignment,
-                 colour = style_collapsed), alpha = 0.5) +
-  geom_point(data = style_centers_certain_styles,
-             aes(mean_abv, mean_ibu), colour = "black") +
-  geom_text_repel(data = style_centers_certain_styles,
-                  aes(mean_abv, mean_ibu, label = style_collapsed),
-                  box.padding = unit(0.45, "lines"),
-                  family = "Calibri",
-                  label.size = 0.3) +
-  ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Style", shape = "Cluster Assignment") +
-  theme_bw()
-
 ```
+
+
+
+Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left entirely blue, second from left entirely green, etc.)
+
+
+
+```{r, echo=TRUE}
+by_style_plot <- ggplot() +   
+  geom_point(data = certain_styles_clustered, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), colour = "black", shape = 5) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+
+
+
+<!-- ### Back to clustering: cluster on only 5 styles -->
+
+<!-- * We'll pare down the beer data to just beers in 5 selected styles; 
+<!-- * We'll cluster these into 5 clusters -->
+<!-- <!-- * This time we'll add in `total_hops` and `total_malt` as predictors  --> -->
+
+
+
+
+<!-- ggplot() + -->
+<!--   geom_point(data = certain_styles_clustered, -->
+<!--              aes(x = abv, y = ibu, -->
+<!--                  shape = cluster_assignment, -->
+<!--                  colour = style_collapsed), alpha = 0.5) + -->
+<!--   geom_point(data = style_centers_certain_styles, -->
+<!--              aes(mean_abv, mean_ibu), colour = "black") + -->
+<!--   geom_text_repel(data = style_centers_certain_styles, -->
+<!--                   aes(mean_abv, mean_ibu, label = style_collapsed), -->
+<!--                   box.padding = unit(0.45, "lines"), -->
+<!--                   family = "Calibri", -->
+<!--                   label.size = 0.3) + -->
+<!--   ggtitle("Selected Styles (colors) matched with Cluster Assignments (shapes)") + -->
+<!--   labs(x = "ABV", y = "IBU") + -->
+<!--   labs(colour = "Style", shape = "Cluster Assignment") + -->
+<!--   theme_bw() -->
+
+<!-- ``` -->
 
 
 
@@ -944,12 +968,12 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 ```
 
-* Set the dataframe to be `beer_ingredients_join`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
+* Set the dataframe to be `beer_totals`, the predictor variables to be the vector contained in `p_vars`, the outcome to be `style_collapsed`
 
 ```{r, echo=TRUE, eval=TRUE}
-p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
-nn_collapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out <- run_neural_net(df = beer_totals, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
 
 
@@ -966,7 +990,7 @@ nn_collapsed_out$most_important_vars
 
 ```{r, echo=TRUE}
 
-nn_notcollapsed_out <- run_neural_net(df = beer_ingredients_join, outcome = "style", 
+nn_notcollapsed_out <- run_neural_net(df = beer_totals, outcome = "style", 
                          predictor_vars = p_vars)
 
 nn_notcollapsed_out$nn_accuracy
@@ -976,17 +1000,17 @@ nn_notcollapsed_out$most_important_vars
 ```
 
 
-And now if we drop `glass`?
+And now if we add `glass` as a predictor?
 ```{r, echo=TRUE}
 
-p_vars_no_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
-nn_collapsed_out_no_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars_no_glass)
 
-nn_collapsed_out_no_glass$nn_accuracy
+nn_collapsed_out_add_glass$nn_accuracy
 
-nn_collapsed_out_no_glass$most_important_vars
+nn_collapsed_out_add_glass$most_important_vars
 
 ```
 
