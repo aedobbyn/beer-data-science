@@ -35,8 +35,8 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
 options(knitr.table.format = 'markdown')
 
-# source("./read_from_db.R")
-source("./most_popular_styles.R")
+source("./read_from_db.R")
+# source("./most_popular_styles.R")
 # # source("./cluster.R")
 # # source("./plot.R")
 # source("./get_ingredient_levels.R")
@@ -102,7 +102,7 @@ The question of what should be a predictor variable for style is a bit murky her
         * Inputs to a beer that have some effect on its flavor profile
         * Semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added 
     * Glass type
-        * This is defined entirely by style and is very predictive of it
+        * This is defined entirely by style and so should be very predictive of it. Since it's determined by style and not by any aspect of the actual beer we don't use it as a predictor.
 
 
 
@@ -330,7 +330,7 @@ style_centers_rename <- style_centers %>%
 Take a look at the table      
 
 ```{r}
-kable(style_centers_rename)
+# kable(style_centers_rename)
 ```
 
 
@@ -562,17 +562,33 @@ beer_ingredients_join <-
   beer_ingredients_join[, (! grepl(more_unnecessary, names(beer_ingredients_join)) == TRUE)]
 
 # Reorder columns a bit
-beer_ingredients_join <- beer_ingredients_join %>% 
+beer_ingredients_join_all <- beer_ingredients_join %>% 
   select(
     id, name, total_hops, total_malt, everything(), -description
   )
 
+# Keep only beers that fall into a style_collapsed bucket
+# Not filtering by levels in beer_necessities$style_collapsed because those levels contain more than what's in just the keywords of collapse_styles()
+beer_ingredients_join <- beer_ingredients_join_all %>% 
+  filter(
+    style_collapsed %in% levels(style_centers$style_collapsed)
+  ) %>% 
+  droplevels()
+
 # And get a df that includes total_hops and total_malt but not all the other ingredient columns
-beer_totals <- beer_ingredients_join %>% 
+beer_totals_all <- beer_ingredients_join_all %>% 
   select(
     id, name, total_hops, total_malt, style, style_collapsed,
     abv, ibu, srm, glass, hops_name, malt_name
   )
+
+# And just style_collapsed
+beer_totals <- beer_ingredients_join %>% 
+  filter(
+    style_collapsed %in% levels(style_centers$style_collapsed)
+  ) %>% 
+  droplevels()
+
 
 ```
 
@@ -834,7 +850,6 @@ by_style_plot
 
 * It would appear so, from this graph and this regression (beta = 2.394418)
 ```{r, echo=TRUE}
-
 ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") + 
@@ -842,9 +857,15 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 
+```
+
+
+Regressing total number of hops on bitterness (IBU):
+```{r, echo = TRUE}
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join)
 summary(hops_ibu_lm)
 ```
+
 
 * However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
 ```{r, echo=TRUE}
@@ -1035,7 +1056,7 @@ nn_collapsed_out_add_glass$most_important_vars
 ### Random forest with all ingredients
 
 * We can use a random forest to get even more granular with ingredients
-    * The sparse ingredient dataframe was too complex for the multinomial neural net but the `ranger` package is built to handle sparse data like this
+    * The sparse ingredient dataframe was too complex for the multinomial neural net but the `ranger` can handle sparse data like this
 
 * Here we don't include `glass` as a predictor
 
@@ -1085,11 +1106,12 @@ bi_rf
 We can compare predicted classification on the test set to their actual style classification.
 ```{r, echo=TRUE}
 pred_bi_rf <- predict(bi_rf, dat = bi_test)
-table(bi_test$style_collapsed, pred_bi_rf$predictions)
+# kable(table(bi_test$style_collapsed, pred_bi_rf$predictions))
 ```
 
 
 Variable importance
+
 * Interestingly, ABV, IBU, and SRM are all much more important in the random forest than `total_hops` and `total_malt`
 ```{r, echo=TRUE}
 
