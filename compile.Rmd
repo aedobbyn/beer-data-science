@@ -269,7 +269,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 * Arrange collapsed styles by the number of beers that fall into them
     * This is of course dependent on how we collapse styles
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=TRUE, echo=TRUE}
 library(forcats)
 
 # Pare down to only cases where style is not NA
@@ -330,14 +330,8 @@ style_centers_rename <- style_centers %>%
 Take a look at the table      
 
 ```{r}
-# kable(style_centers_rename)
+kable(style_centers_rename)
 ```
-
-
-***
-
-Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
-
 
 
 
@@ -600,6 +594,10 @@ kable(beer_ingredients_join[1:20, ])
 ```
 
 
+
+***
+
+Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
 
 
 ***
