@@ -22,7 +22,7 @@ output:
     toc: true
 ---
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 # If need to close all connections
 lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 ```
@@ -56,7 +56,7 @@ This is a first pass exploration of different aspects of beer.
       * Two approaches: clustering and prediction 
       * Clustering: are there natural clusters across the spectum of beers that align well with the styles they're grouped into? 
           * Unsupervised (k-means) clustering based on 
-              * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
+              * ABV (alcohol by volume), IBU (international bitterness units), SRM ([a measure of color](http://www.twobeerdudes.com/beer/srm)) 
               * How well do these match up with various "style centers," defined by mean of ABV, IBU, and SRM per beer style
       * Prediction: can we predict a beer's style based on certain characteristics of the beer?
           * Neural net 
@@ -106,7 +106,7 @@ The question of what should be a predictor variable for style is a bit murky her
 
 
 
-**This document compiled by querying the beer database I built, specifically by sourcing the file read_from_db.R. This is done for expediency's sake, (the code below detailing how to get the beer, run in full in run_it.R, takes some time to execute).** 
+**The "Get and Prepare" section of this document details the methods used to get and prepare the data contained in the BreweryDB database. That data was then stored in a database. This document was compiled by querying that database, specifically by sourcing the file read_from_db.R. This is done for expediency's sake, (the code below detailing how to get the beer, run in full in run_it.R, takes some time to execute).** 
 
 
 ### Get and Prepare Data
@@ -186,6 +186,8 @@ unnest_it <- function(df) {
 
 collapse_styles <- function(df) {
   keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
+  
+  df[["style_collapsed"]] <- vector(length = nrow(df))
   
   for (beer in 1:nrow(df)) {
     if (grepl(paste(keywords, collapse="|"), df$style[beer])) {    
@@ -282,7 +284,6 @@ style_popularity <- beer_dat_pared %>%
   group_by(style) %>% 
   count() %>% 
   arrange(desc(n))
-style_popularity
 
 # Add a column that scales popularity
 style_popularity <- bind_cols(style_popularity, 
@@ -299,8 +300,15 @@ popular_beer_dat <- beer_dat_pared %>%
   ) %>% 
   droplevels() %>% 
   as_tibble() 
-nrow(popular_beer_dat)
+```
 
+
+How many rows do we have in our dataset of just beers that fall into the popular styles?
+```{r, echo=TRUE}
+nrow(popular_beer_dat)
+```
+
+```{r, echo=TRUE}
 # Find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
@@ -327,7 +335,7 @@ style_centers_rename <- style_centers %>%
 ```
 
 
-Take a look at the table      
+Take a look at the table, ordered by number of beers in that style, descending.      
 
 ```{r}
 kable(style_centers_rename)
