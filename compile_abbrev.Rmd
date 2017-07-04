@@ -453,17 +453,32 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
     not_for_summing <- which(colnames(df_grouped) %in% to_keep_col_names)
     max_not_for_summing <- max(not_for_summing)
     
+    browser()
     per_grouper <- df_grouped %>% 
+      # select_if(!grepl("Id|id", names(df_grouped))) %>%
       select(-c(abv, ibu, srm)) %>%    # taking out temporarily
       summarise_if(
-        is.numeric,              
+        is.numeric,
         sum, na.rm = TRUE
         # -c(abv, ibu, srm)
       ) %>%
       mutate(
-        total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)    
+        total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)
       )
     
+    # baz <- beer_necessities[1:100, ] %>%
+    #   # select_if(!grepl("Id|id", names(.))) %>%
+    # # select(-c(abv, ibu, srm)) %>%    # taking out temporarily
+    #   # select_if(is.numeric) %>%
+    #   summarise_if(
+    #     (is.numeric & !(grepl("hops|malt|abv|ibu|srm|Id|id", names(.)))),
+    #     sum, na.rm = TRUE
+    #     # -c(abv, ibu, srm)
+    #   ) %>%
+    #   mutate(
+    #     total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)
+    #   )
+
     # Send total to the second position
     per_grouper <- per_grouper %>% 
       select(
