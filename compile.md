@@ -2,37 +2,28 @@
 `r format(Sys.time(), "%B %d, %Y")`  
 
 
+
+
+
+
 ```r
-# If need to close all connections
-lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
+source("./read_from_db.R")
 ```
 
 
+This is a first pass exploration of different aspects of beer. The data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable workplace beer consortium.
 
-This is a first pass exploration of different aspects of beer.
+The main question this analysis is meant to tackle is: Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? I took two approaches to this: unsupervised clustering and supervised prediction. 
 
-* Data courtesy of [BreweryDB](http://www.brewerydb.com/developers)
-    * Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and beer
-    
-    
-*** 
+Clusters defined by the algorithm were compared to the style "centers" as defined by the mean ABV, IBU, and SRM. On the prediction side, predictor variables for include ABV (alcohol by volume), IBU (international bitterness units), SRM ([a measure of color](http://www.twobeerdudes.com/beer/srm)) as well as ingredients like hops and malts. The outcome variable is the style that beer was assigned.
 
+This document starts off with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database, specifically by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake as the code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
 
-* The main question on the table is this:
-    * Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary?
-      * Two approaches: clustering and prediction 
-      * Clustering: are there natural clusters across the spectum of beers that align well with the styles they're grouped into? 
-          * Unsupervised (k-means) clustering based on 
-              * ABV (alcohol by volume), IBU (international bitterness units), SRM (measure of color)
-              * How well do these match up with various "style centers," defined by mean of ABV, IBU, and SRM per beer style
-      * Prediction: can we predict a beer's style based on certain characteristics of the beer?
-          * Neural net 
-          * Random forest
-      
-* Answer thus far
-    * Beer-intrinsic attributes aren't great predictors of style
-    * Style-defined attributes are the best predictors
-        * For instance, the glass a beer is served in (which is defined by its style) is a much better predictor of its style than actual characteristics of the beer like ABV and even the number of different types of hops it contains
+It then moves into clustering (k-means) and prediction (neural net, random forest).
+        
+The answer thus far seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depeends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+
+Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB.
 
 ![](./taps.jpg)
 
@@ -40,40 +31,32 @@ This is a first pass exploration of different aspects of beer.
 
 ### Workflow Overview
 
-* Hit the BreweryDB API to iteratively pull in all beers and their ingredients along with other things we might want like breweries and glassware
-* Unnest the JSON responses, including all the ingredients columns, and 
-* Dump this all into a MySQL database 
+**Get and Prepare**
 
-* Create a `style_collapsed` column to reduce the number of levels of our outcome variable
-    * `grep` through each beer's style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style
-    * If it does, it gets that keyword in a `style_collapsed` column 
-    * Further collpase styles that are similar like Hefeweizen and Wit into Wheat
-    
-* Unnest the ingredients `hops` and `malts` into a sparse matrix
-    * Individual ingredients as columns, beers as rows; cell gets a 1 if ingredient is present and 0 otherwise 
-    
-* Cluster: unsupervised k-means clsutering based on ABV, IBU, and SRM
+When we first hit the BreweryDB API to iteratively pull in all beers and their ingredients along with other things we might want like breweries and glassware. Then we unnest the JSON responses, including all the ingredients columns, and dump this all into a MySQL database.
 
-* Run a neural net
-    * Predict either `style` or `style_collapsed` from all the predictors including the total number of hops and malts per beer
+Next, we create a `style_collapsed` column to reduce the number of levels of our outcome variable. We do this by `grep`ing through each beer's style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style; if it does, it gets that keyword in a `style_collapsed` column.
 
+Finally we unnest the ingredients `hops` and `malts` into a wide, sparse dataframe. Individual ingredients are now columns, with each beer still in its own rows; a cell gets a 1 if ingredient is present and 0 otherwise. This allows more granual inference into ingredients' effects on both style and bitterness (occasioning a short foray into hops).
+
+**Short foray into hops**
+
+A quick look at the most popular hops and an exploration of the relationship between hops and bitterness.
+
+
+**Infer**
+
+Cluster: unsupervised k-means clustering partitioning the entire dataset into ten clusters. Next, we cluster on a dataset composed of just five selected styles into five clusters. 
+
+We then attempt to predict predict either `style` or `style_collapsed` using a neural net and a random forest. The main predictors are ABV, IBU, SRM, total number of hops, and total number of malts. The glass a beer is served in is also considered. Finally, 
+
+***
 
 **Short Aside**
 
-The question of what should be a predictor variable for style is a bit murky here. What should be fair game for predicting style and what shouldn't? Characteristics of a beer that are defined *by* its style would seem to be "cheating" in a way. 
-
-* Main candidates are:
-    * ABV (alcohol by volume), IBU (international bitterness units), SRM (standard reference measure, a scale of beer color from light to dark)
-        * These are outputs of a beer that meaningfully define the beer and are theoretically orthogonal to each other
-    * Ingredients in a beer such as hops and malts
-        * Inputs to a beer that have some effect on its flavor profile
-        * Semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added 
-    * Glass type
-        * This is defined entirely by style and so should be very predictive of it. Since it's determined by style and not by any aspect of the actual beer we don't use it as a predictor.
+The question of what should be a predictor variable for style is a bit murky here. What should be fair game for predicting style and what shouldn't? Characteristics of a beer that are defined *by* its style would seem to be "cheating" in a way. The only "inputs" to a beer we have in our dataset are its ingredients, primarly hops and malts. While these certainly have an effect on its flavor profile, I consider them semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added. The main candidates in my mind are ABV, IBU, and SRM. These are "outputs" of a beer (in the sense that they can only be exactly determined once a beer is brewered) that meaningfully define it. While correlated ABV is correlated with both IBU and SRM, the three are theoretically orthogonal to each other. A style-defined attribute like glass type is a bad candidate for a predictor variable because it is completely decoupled from the beer itself and determined entirely by the style the beer has been assigned to.
 
 
-
-**This document compiled by querying the beer database I built, specifically by sourcing the file read_from_db.R. This is done for expediency's sake, (the code below detailing how to get the beer, run in full in run_it.R, takes some time to execute).** 
 
 
 ### Get and Prepare Data
@@ -83,7 +66,7 @@ The question of what should be a predictor variable for style is a bit murky her
 * The BreweryDB API returns a certain number of results per page; if we want 
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
     * We can change `number_of_pages` to, e.g., 3 if we only want the first 3 pages
-    * If there's only one page (as is the case for the glassware endpoing), numberOfPages won't be returned, so in this case we set number_of_pages to 1
+    * If there's only one page (as is the case for the glassware endpoint), numberOfPages won't be returned, so in this case we set number_of_pages to 1
 * The `addition` parameter can be an empty string if nothing else is needed
 
 
@@ -91,7 +74,7 @@ The question of what should be a predictor variable for style is a bit murky her
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
-paginated_request <- function(ep, addition) {    
+paginated_request <- function(ep, addition, trace_progress = TRUE) {    
   full_request <- NULL
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
                                 , "&p=1"))
@@ -103,10 +86,10 @@ paginated_request <- function(ep, addition) {
                                     , "&p=", page, addition),
                              flatten = TRUE) 
     this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
-    print(this_req_unnested$currentPage)
+    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))}
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
   }
-  full_request
+  return(full_request)
 } 
 
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
@@ -132,7 +115,7 @@ unnest_it <- function(df) {
       }
     }
   }
-  unnested
+  return(unnested)
 }
 ```
 
@@ -152,8 +135,11 @@ unnest_it <- function(df) {
 
 
 ```r
-collapse_styles <- function(df) {
-  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
+keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
+
+collapse_styles <- function(df, trace_progress = TRUE) {
+  
+  df[["style_collapsed"]] <- vector(length = nrow(df))
   
   for (beer in 1:nrow(df)) {
     if (grepl(paste(keywords, collapse="|"), df$style[beer])) {    
@@ -165,10 +151,12 @@ collapse_styles <- function(df) {
     } else {
       df$style_collapsed[beer] <- as.character(df$style[beer])       
     }
-    print(df$style_collapsed[beer])
+    if(trace_progress == TRUE) {message(paste0("Collapsing this ", df$style[beer], " to: ", df$style_collapsed[beer]))}
   }
   return(df)
 }
+
+bar <- collapse_styles(foo)
 ```
 
 * Then we collapse further; right now we just combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e's) by `fct_collapse`ing those levels
@@ -189,14 +177,9 @@ collapse_further <- function(df) {
 
 **Split out Ingredients**
 
-* When we unnested ingredients, we just concatenated all of the ingredients for a given beer into a long string
-* If we want, we can split out the ingredients that were concatenated in `<ingredient>_name` with this `split_ingredients` function
-* This takes a vector of `ingredients_to_split`, so e.g. `c("hops_name", "malt_name")` and creates one column for each type of ingredient (`hops_name_1`, `hops_name_2`, etc.)
+When we unnested ingredients, we just concatenated all of the ingredients for a given beer into a long string. If we want, we can split out the ingredients that were concatenated in `<ingredient>_name` with this `split_ingredients` function.
 
-* We `str_split` on the ingredient and get a list back
-* We find the max number of instances of an ingredient per beer, which will be the number of columns we're adding
-* For each new column we need, we create it, initialize it with NAs, and name it
-* Then for each element in our list of split up ingredients, if it exists, we add it to the correct column in our df
+This takes a vector of `ingredients_to_split`, so e.g. `c("hops_name", "malt_name")` and creates one column for each type of ingredient (`hops_name_1`, `hops_name_2`, etc.). It's flexible enough to adapt if data in BreweryDB changes and a beer now has 15 hops where before the maximum number of hops a beer had was 10.
 
 
 ```r
@@ -231,49 +214,81 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
+Some quick summary stats on our main dataframe called `beer_necessities`:
+
+```r
+dim(beer_necessities)
+```
+
+```
+## [1] 63495    39
+```
+
+```r
+str(beer_necessities)
+```
+
+```
+## 'data.frame':	63495 obs. of  39 variables:
+##  $ id              : chr  "cBLTUw" "ZsQEJt" "tmEthz" "b7SfHG" ...
+##  $ name            : chr  "\"18\" Imperial IPA 2" "\"633\" American Pale Ale" "\"Admiral\" Stache" "\"Ah Me Joy\" Porter" ...
+##  $ description     : chr  "Hop Heads this one's for you!  Checking in with 143 IBU's this ale punches you in the mouth with extreme bitterness then rounds"| __truncated__ "Our first beer has been aptly named \"633\" after the Regions telephone exchange for starters.  \"If I could call a beer home, "| __truncated__ "Milwaukee Brewing Co’s take on a classic European style. Baltic Porters are the stronger lager fermented cousin of the classic "| __truncated__ "A robust porter style ale with a twist. This beer has moderate roastiness with a bitter finish, complemented by the sweetness o"| __truncated__ ...
+##  $ style           : Factor w/ 170 levels "Adambier","Aged Beer (Ale or Lager)",..: 13 20 30 139 23 108 8 20 7 54 ...
+##  $ abv             : num  11.1 6.33 7 5.4 4.8 4.6 8.5 5.8 7.6 10.8 ...
+##  $ ibu             : num  NA 25 23 51 12 NA 30 51 80 70 ...
+##  $ srm             : num  33 NA 37 40 NA 5 NA 8 NA NA ...
+##  $ glass           : Factor w/ 12 levels "Flute","Goblet",..: 6 NA 6 NA NA NA NA NA NA NA ...
+##  $ hops_name       : Factor w/ 969 levels "","#06300","Admiral, Aurora, Challenger, Fuggle (American), Target",..: NA NA 902 NA NA NA NA NA NA NA ...
+##  $ hops_id         : Factor w/ 969 levels "","1, 22, 23, 25, 146",..: NA NA 955 NA NA NA NA NA NA NA ...
+##  $ malt_name       : Factor w/ 923 levels "","Abbey Malt",..: NA NA 143 NA NA NA NA NA NA NA ...
+##  $ malt_id         : Factor w/ 923 levels "","165","165, 1947, 633, 1922",..: NA NA 124 NA NA NA NA NA NA NA ...
+##  $ glasswareId     : num  5 NA 5 NA NA NA NA NA NA NA ...
+##  $ styleId         : Factor w/ 170 levels "1","10","100",..: 109 89 7 82 106 101 102 89 107 68 ...
+##  $ style.categoryId: num  3 3 9 1 3 3 3 3 3 1 ...
+##  $ style_collapsed : Factor w/ 108 levels "Adambier","Altbier",..: 101 81 84 84 95 21 24 81 20 101 ...
+##  $ hops_name_1     : Factor w/ 113 levels "","#06300","Admiral",..: NA NA 90 NA NA NA NA NA NA NA ...
+##  $ hops_name_2     : Factor w/ 98 levels "Amarillo","Apollo",..: NA NA 70 NA NA NA NA NA NA NA ...
+##  $ hops_name_3     : Factor w/ 90 levels "Amarillo","Aramis",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_4     : Factor w/ 63 levels "Amarillo","Apollo",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_5     : Factor w/ 50 levels "Australian Dr. Rudi",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_6     : Factor w/ 29 levels "Cascade","Columbus",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_7     : Factor w/ 20 levels "Azzeca","Crystal",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_8     : Factor w/ 10 levels "Equinox","Experimental 06277",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_9     : Factor w/ 4 levels "Motueka","Nugget",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_10    : Factor w/ 4 levels "Nelson Sauvin",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_11    : Factor w/ 4 levels "Simcoe","Styrian Bobeks",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_12    : Factor w/ 3 levels "Summit","Super Galena",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ hops_name_13    : Factor w/ 2 levels "Target","Willamette": NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_1     : Factor w/ 128 levels "","Abbey Malt",..: NA NA 9 NA NA NA NA NA NA NA ...
+##  $ malt_name_2     : Factor w/ 134 levels "Amber Malt","Barley - Flaked",..: NA NA 64 NA NA NA NA NA NA NA ...
+##  $ malt_name_3     : Factor w/ 122 levels "Acidulated Malt",..: NA NA 73 NA NA NA NA NA NA NA ...
+##  $ malt_name_4     : Factor w/ 94 levels "Bamberg Smoked Malt",..: NA NA 52 NA NA NA NA NA NA NA ...
+##  $ malt_name_5     : Factor w/ 62 levels "Asheburne Mild Malt",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_6     : Factor w/ 41 levels "Aromatic Malt",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_7     : Factor w/ 19 levels "Barley - Roasted",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_8     : Factor w/ 15 levels "Crisp 120","Crisp 77",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_9     : Factor w/ 6 levels "Rye Malt","Smoked Malt",..: NA NA NA NA NA NA NA NA NA NA ...
+##  $ malt_name_10    : Factor w/ 1 level "Victory Malt": NA NA NA NA NA NA NA NA NA NA ...
+```
+
 
 **Find the Most Popualar Styles**
 
-* Find mean ABV, IBU, and SRM per collapsed style
-* Arrange collapsed styles by the number of beers that fall into them
-    * This is of course dependent on how we collapse styles
+We find mean ABV, IBU, and SRM per collapsed style and arrange collapsed styles by the number of beers that fall into them. (This is of course dependent on how we collapse styles; if we looped all Double IPAs in with IPAs then the category IPA would be much bigger than it is if we keep the two separate.)
 
 
 ```r
 library(forcats)
 
 # Pare down to only cases where style is not NA
-beer_dat <- beer_necessities
-
-beer_dat_pared <- beer_dat[complete.cases(beer_dat$style), ]
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
 
 # Arrange beer dat by style popularity
 style_popularity <- beer_dat_pared %>% 
   group_by(style) %>% 
   count() %>% 
   arrange(desc(n))
-style_popularity
-```
 
-```
-## # A tibble: 170 x 2
-## # Groups:   style [170]
-##                                style     n
-##                               <fctr> <int>
-##  1     American-Style India Pale Ale  6156
-##  2           American-Style Pale Ale  3734
-##  3 Imperial or Double India Pale Ale  2525
-##  4     French & Belgian-Style Saison  2167
-##  5      American-Style Amber/Red Ale  1961
-##  6              Golden or Blonde Ale  1547
-##  7     American-Style Imperial Stout  1518
-##  8          American-Style Brown Ale  1462
-##  9                      Brown Porter  1451
-## 10              American-Style Stout  1401
-## # ... with 160 more rows
-```
-
-```r
 # Add a column that scales popularity
 style_popularity <- bind_cols(style_popularity, 
                                n_scaled = as.vector(scale(style_popularity$n)))
@@ -289,12 +304,21 @@ popular_beer_dat <- beer_dat_pared %>%
   ) %>% 
   droplevels() %>% 
   as_tibble() 
+```
+
+
+How many rows do we have in our dataset of just beers that fall into the popular styles?
+
+```r
 nrow(popular_beer_dat)
 ```
 
 ```
 ## [1] 45871
 ```
+
+
+Now we find the style centers.
 
 ```r
 # Find the centers (mean abv, ibu, srm) of the most popular styles
@@ -323,7 +347,7 @@ style_centers_rename <- style_centers %>%
 ```
 
 
-Take a look at the table      
+Take a look at the table, ordered by number of beers in that style, descending.      
 
 
 |Collapsed Style          |  Mean ABV| Mean IBU|  Mean SRM| Numer of Beers|
@@ -372,11 +396,6 @@ From this, we can find the total number of hops and malts per grouper.
 * The dataframe we'll use will be `beer_necessities`
 
 
-<!-- ```{r, eval=TRUE, echo=TRUE} -->
-<!-- clustered_beer_necessities <- clustered_beer %>% -->
-<!--   inner_join(beer_necessities) -->
-
-<!-- ``` -->
 
 * This function takes a dataframe and two other parameters set at the outset:
     * `ingredient_want`: this can be `hops`, `malt`, or other ingredients like `yeast` if we pull that in
@@ -612,7 +631,6 @@ beer_totals <- beer_ingredients_join %>%
 ```
 
 
-
 Now we're left with something of a sparse matrix of all the ingredients compared to all the beers
 
 |id     |name                                                         | total_hops| total_malt|style                                   |   abv|  ibu| srm|glass |hops_name                         |malt_name                                                   |style_collapsed | #06300| Admiral| Aged / Debittered Hops (Lambic)| Ahtanum| Alchemy| Amarillo| Amarillo Gold| Apollo| Aquila| Aramis| Argentine Cascade| Athanum| Aurora| Australian Dr. Rudi| Azacca| Azzeca| Belma| Bobek| Bramling Cross| Bravo| Brewer's Gold| Brewer's Gold (American)| Calypso| Cascade| Celeia| Centennial| Challenger| Chinook| Citra| Cluster| Cobb| Columbus| Columbus (Tomahawk)| Comet| Crystal| CTZ| Delta| East Kent Golding| El Dorado| Ella| Enigma| Equinox| Eureka| Experimental 05256| Experimental 06277| Falconer's Flight| First Gold| French Strisserspalt| French Triskel| Fuggle (American)| Fuggle (English)| Fuggles| Galaxy| Galena| German Magnum| German Mandarina Bavaria| German Opal| German Perle| German Polaris| German Select| German Tradition| Glacier| Golding (American)| Green Bullet| Hallertau Hallertauer Mittelfrüher| Hallertau Hallertauer Tradition| Hallertau Northern Brewer| Hallertauer (American)| Hallertauer Herkules| Hallertauer Hersbrucker| Hallertauer Perle| Hallertauer Select| Helga| Hop Extract| Hops| Horizon| Huell Melon| Idaho 7| Jarrylo| Kent Goldings| Kohatu| Lemon Drop| Liberty| Magnum| Marynka| Meridian| Millenium| Mosaic| Motueka| Mount Hood| Mt. Rainier| Nelson Sauvin| New Zealand Hallertauer| New Zealand Motueka| New Zealand Sauvin| Newport| Noble| Northdown| Northern Brewer (American)| Nugget| Orbit| Pacific Gem| Pacific Jade| Pacifica| Palisades| Perle (American)| Phoenix| Pilgrim| Premiant| Pride of Ringwood| Rakau| Revolution| Saaz (American)| Saaz (Czech)| Santiam| Saphir (German Organic)| Simcoe| Sladek (Saaz)| Sorachi Ace| Southern Cross| Sovereign| Spalt| Spalt Select| Spalt Spalter| Sterling| Sticklebract| Strisselspalt| Styrian Aurora| Styrian Bobeks| Styrian Goldings| Summit| Super Galena| Target| Tettnang Tettnanger| Tettnanger (American)| Tomahawk| Topaz| Tradition| Ultra| Vanguard| Vic Secret| Waimea| Wakatu| Warrior| Willamette| Yakima Willamette| Zeus| Zythos| Abbey Malt| Acidulated Malt| Amber Malt| Aromatic Malt| Asheburne Mild Malt| Bamberg Smoked Malt| Barley - Black| Barley - Flaked| Barley - Lightly Roasted| Barley - Malted| Barley - Raw| Barley - Roasted| Barley - Roasted/De-husked| Beechwood Smoked| Belgian Pale| Belgian Pilsner| Biscuit Malt| Black Malt| Black Malt - Debittered| Black Malt - Organic| Black Patent| Black Roast| Blackprinz Malt| Blue Agave Nectar| Blue Corn| Bonlander| Briess 2-row Chocolate Malt| Briess Blackprinz Malt| British Pale Malt| Brown Malt| Brown Sugar| Buckwheat - Roasted| C-15| Canada 2-Row Silo| Cane Sugar| Cara Malt| CaraAmber| CaraAroma| CaraBrown| Carafa I| Carafa II| Carafa III| Carafa Special| CaraFoam| CaraHell| Caramel/Crystal Malt| Caramel/Crystal Malt - Dark| Caramel/Crystal Malt - Extra Dark| Caramel/Crystal Malt - Heritage| Caramel/Crystal Malt - Light| Caramel/Crystal Malt - Medium| Caramel/Crystal Malt - Organic| Caramel/Crystal Malt 10L| Caramel/Crystal Malt 120L| Caramel/Crystal Malt 150L| Caramel/Crystal Malt 15L| Caramel/Crystal Malt 20L| Caramel/Crystal Malt 300L| Caramel/Crystal Malt 30L| Caramel/Crystal Malt 40L| Caramel/Crystal Malt 45L| Caramel/Crystal Malt 50L| Caramel/Crystal Malt 55L| Caramel/Crystal Malt 60L| Caramel/Crystal Malt 70L| Caramel/Crystal Malt 75L| Caramel/Crystal Malt 80L| Caramel/Crystal Malt 85L| Caramel/Crystal Malt 8L| Caramel/Crystal Malt 90L| CaraMunich| CaraMunich 120L| CaraMunich 20L| CaraMunich 40L| CaraMunich 60L| CaraMunich I| CaraMunich II| CaraMunich III| CaraPils/Dextrin Malt| CaraRed| CaraRye| CaraStan| CaraVienne Malt| CaraWheat| Carolina Rye Malt| Cereal| Cherry Smoked| Cherrywood Smoke Malt| Chit Malt| Chocolate Malt| Chocolate Rye Malt| Chocolate Wheat Malt| Coffee Malt| Corn| Corn - Field| Corn - Flaked| Corn Grits| Crisp 120| Crisp 77| Crystal 77| Dark Chocolate| Dememera Sugar| Dextrin Malt| Dextrose Syrup| Extra Special Malt| Fawcett Crystal Rye| Fawcett Rye| German Cologne| Gladfield Pale| Glen Eagle Maris Otter| Golden Promise| Harrington 2-Row Base Malt| High Fructose Corn Syrup| Honey| Honey Malt| Hugh Baird Pale Ale Malt| Kiln Amber| Lactose| Lager Malt| Malt Extract| Malted Rye| Malto Franco-Belge Pils Malt| Maple Syrup| Maris Otter| Melanoidin Malt| Metcalfe| Midnight Wheat| Mild Malt| Millet| Munich Malt| Munich Malt - Dark| Munich Malt - Light| Munich Malt - Organic| Munich Malt - Smoked| Munich Malt - Type I| Munich Malt - Type II| Munich Malt 10L| Munich Malt 20L| Munich Malt 40L| Munich Wheat| Oats - Flaked| Oats - Golden Naked| Oats - Malted| Oats - Rolled| Oats - Steel Cut (Pinhead Oats)| Oats - Toasted| Pale Chocolate Malt| Pale Malt| Pale Malt - Halcyon| Pale Malt - Optic| Pale Malt - Organic| Pale Wheat| Palev| Pearl Malt| Peated Malt - Smoked| Piloncillo| Pilsner Malt| Pilsner Malt - Organic| Rahr 2-Row Malt| Rahr Special Pale| Rauchmalz| Rice| Rice - Flaked| Rice - Hulls| Rice - Red| Rice - White| Roast Malt| Rye - Flaked| Rye Malt| Samuel Adams two-row pale malt blend| Six-Row Pale Malt| Smoked Malt| Special B Malt| Special Roast| Special W Malt| Spelt Malt| Sugar (Albion)| Toasted Malt| Torrefied Wheat| Two-Row Barley Malt| Two-Row Pale Malt| Two-Row Pale Malt - Organic| Two-Row Pale Malt - Toasted| Two-Row Pilsner Malt| Two-Row Pilsner Malt - Belgian| Two-Row Pilsner Malt - Germany| Victory Malt| Vienna Malt| Weyermann Rye| Wheat - Flaked| Wheat - Raw| Wheat - Red| Wheat - Toasted| Wheat - Torrified| Wheat Malt| Wheat Malt - Dark| Wheat Malt - German| Wheat Malt - Light| Wheat Malt - Organic| Wheat Malt - Red| Wheat Malt - Smoked| Wheat Malt - White| White Wheat| Wyermann Vienna|
@@ -696,7 +714,7 @@ cluster_it <- function(df, preds, to_scale, resp, n_centers) {
     na.omit()
 
   set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = TRUE)
+  clustered_df_out <- kmeans(x = df_preds, centers = n_centers, trace = FALSE)
 
   clustered_df <- as_tibble(data.frame(
     cluster_assignment = factor(clustered_df_out$cluster),
@@ -728,39 +746,14 @@ clustered_beer <- cluster_it(df = beer_totals,
                              n_centers = 10)
 ```
 
-```
-## KMNS(*, k=10): iter=  1, indx=1
-##  QTRAN(): istep=3918, icoun=46
-##  QTRAN(): istep=7836, icoun=37
-##  QTRAN(): istep=11754, icoun=55
-##  QTRAN(): istep=15672, icoun=209
-##  QTRAN(): istep=19590, icoun=207
-##  QTRAN(): istep=23508, icoun=1018
-##  QTRAN(): istep=27426, icoun=3107
-## KMNS(*, k=10): iter=  2, indx=6
-##  QTRAN(): istep=3918, icoun=0
-##  QTRAN(): istep=7836, icoun=16
-##  QTRAN(): istep=11754, icoun=134
-##  QTRAN(): istep=15672, icoun=80
-##  QTRAN(): istep=19590, icoun=542
-##  QTRAN(): istep=23508, icoun=2438
-##  QTRAN(): istep=27426, icoun=2665
-## KMNS(*, k=10): iter=  3, indx=173
-##  QTRAN(): istep=3918, icoun=16
-##  QTRAN(): istep=7836, icoun=80
-##  QTRAN(): istep=11754, icoun=327
-##  QTRAN(): istep=15672, icoun=232
-##  QTRAN(): istep=19590, icoun=940
-##  QTRAN(): istep=23508, icoun=481
-##  QTRAN(): istep=27426, icoun=637
-## KMNS(*, k=10): iter=  4, indx=33
-##  QTRAN(): istep=3918, icoun=637
-##  QTRAN(): istep=7836, icoun=637
-## KMNS(*, k=10): iter=  5, indx=3918
+
+Head of the resulting clustered data. Cluster assignment column on the far left.
+
+```r
+kable(clustered_beer[1:20, ])
 ```
 
 
-Head of the clustering data
 
 |cluster_assignment |name                                                         |style                                              |style_collapsed | abv_scaled| ibu_scaled| srm_scaled| total_hops| total_malt| abv|  ibu| srm|
 |:------------------|:------------------------------------------------------------|:--------------------------------------------------|:---------------|----------:|----------:|----------:|----------:|----------:|---:|----:|---:|
@@ -784,6 +777,15 @@ Head of the clustering data
 |10                 |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel          |  0.5443409| -0.6295639|  1.3401218|  0.4674779|  0.8074861| 7.5| 25.0|  28|
 |8                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661| -0.3513760|  0.1370470|  0.8074861| 9.5| 22.0|  10|
 |9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661|  2.4677869| -0.1933839| -0.2023226| 9.5| 22.0|  40|
+
+```r
+# How many rows do we have?
+nrow(clustered_beer)
+```
+
+```
+## [1] 3918
+```
 
 Join the clustered beer on `beer_ingredients_join`
 
@@ -837,7 +839,7 @@ clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ib
 clustered_beer_plot_abv_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-17-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
 
 ```r
 clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
@@ -848,7 +850,7 @@ clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = sr
 clustered_beer_plot_abv_srm
 ```
 
-![](compile_files/figure-html/unnamed-chunk-17-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-21-2.png)<!-- -->
 
 
 
@@ -873,7 +875,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-18-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
 
 
 The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
@@ -893,7 +895,8 @@ styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
 bt_certain_styles <- beer_totals %>%
   filter(
     style_collapsed %in% styles_to_keep
-  )
+  ) %>% 
+  droplevels()
 
 
 cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
@@ -905,28 +908,7 @@ certain_styles_clustered <- cluster_it(df = bt_certain_styles,
                                  to_scale = to_scale,
                                  resp = response_vars,
                                  n_centers = 5)
-```
 
-```
-## KMNS(*, k=5): iter=  1, indx=4
-##  QTRAN(): istep=1322, icoun=2
-##  QTRAN(): istep=2644, icoun=20
-##  QTRAN(): istep=3966, icoun=96
-##  QTRAN(): istep=5288, icoun=0
-##  QTRAN(): istep=6610, icoun=13
-##  QTRAN(): istep=7932, icoun=285
-## KMNS(*, k=5): iter=  2, indx=13
-##  QTRAN(): istep=1322, icoun=147
-##  QTRAN(): istep=2644, icoun=138
-##  QTRAN(): istep=3966, icoun=20
-##  QTRAN(): istep=5288, icoun=599
-## KMNS(*, k=5): iter=  3, indx=20
-##  QTRAN(): istep=1322, icoun=146
-##  QTRAN(): istep=2644, icoun=617
-## KMNS(*, k=5): iter=  4, indx=1322
-```
-
-```r
 style_centers_certain_styles <- style_centers %>% 
   filter(style_collapsed %in% styles_to_keep)
 ```
@@ -937,38 +919,19 @@ style_centers_certain_styles <- style_centers %>%
 
 Table of style vs. cluster.
 
-|                         |  1|   2|   3|  4|   5|
-|:------------------------|--:|---:|---:|--:|---:|
-|Barley Wine              |  0|   0|   0|  0|   0|
-|Barrel-Aged              |  0|   0|   0|  0|   0|
-|Bitter                   |  0|   0|   0|  0|   0|
-|Black                    |  0|   0|   0|  0|   0|
-|Blonde                   |  1| 142|   1|  0|  16|
-|Brown                    |  0|   0|   0|  0|   0|
-|Double India Pale Ale    |  0|   0|   0|  0|   0|
-|Dubbel                   |  0|   0|   0|  0|   0|
-|Fruit Beer               |  0|   0|   0|  0|   0|
-|Fruit Cider              |  0|   0|   0|  0|   0|
-|German-Style Doppelbock  |  0|   0|   0|  0|   0|
-|German-Style Märzen      |  0|   0|   0|  0|   0|
-|Herb and Spice Beer      |  0|   0|   0|  0|   0|
-|India Pale Ale           |  2|  48|  10| 17| 500|
-|Kölsch                   |  0|   0|   0|  0|   0|
-|Lager                    |  0|   0|   0|  0|   0|
-|Other Belgian-Style Ales |  0|   0|   0|  0|   0|
-|Pale Ale                 |  0|   0|   0|  0|   0|
-|Pilsener                 |  0|   0|   0|  0|   0|
-|Porter                   |  0|   0|   0|  0|   0|
-|Pumpkin Beer             |  0|   0|   0|  0|   0|
-|Red                      |  0|   0|   0|  0|   0|
-|Saison                   |  0|   0|   0|  0|   0|
-|Scotch Ale               |  0|   0|   0|  0|   0|
-|Sour                     |  0|   0|   0|  0|   0|
-|Specialty Beer           |  0|   0|   0|  0|   0|
-|Stout                    | 58|   6| 135|  0|   4|
-|Strong Ale               |  0|   0|   0|  0|   0|
-|Tripel                   |  3|   3|   1|  0|  58|
-|Wheat                    |  3| 287|   5|  9|  13|
+```r
+kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
+```
+
+
+
+|               |  1|   2|   3|  4|   5|
+|:--------------|--:|---:|---:|--:|---:|
+|Blonde         |  1| 142|   1|  0|  16|
+|India Pale Ale |  2|  48|  10| 17| 500|
+|Stout          | 58|   6| 135|  0|   4|
+|Tripel         |  3|   3|   1|  0|  58|
+|Wheat          |  3| 287|   5|  9|  13|
 
 
 
@@ -992,7 +955,7 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-![](compile_files/figure-html/unnamed-chunk-21-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
 
 
 
@@ -1031,7 +994,7 @@ by_style_plot
 
 **Do more hops always mean more bitterness?**
 
-* It would appear so, from this graph and this regression (beta = 2.394418)
+* It would appear so, from this graph (considering only beer in the most popular styles) and this regression (beta = 2.394418)
 
 ```r
 ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
@@ -1042,7 +1005,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-22-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 
 Regressing total number of hops on bitterness (IBU):
@@ -1087,7 +1050,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-28-1.png)<!-- -->
 
 
 **Most popular hops**
@@ -1166,7 +1129,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
 
 
 ```r
@@ -1178,7 +1141,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
 
 
 # Neural Net
@@ -1225,7 +1188,7 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
-                 data = df_train, maxit=500, trace=T)
+                 data = df_train, maxit=500, trace=FALSE)
 
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
@@ -1248,6 +1211,9 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 Take out NAs
 
+```r
+bt_omit <- beer_totals %>% na.omit()
+```
 
 
 ```r
@@ -1255,46 +1221,8 @@ p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
 nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed", 
                          predictor_vars = p_vars)
-```
 
-```
-## # weights:  175 (144 variable)
-## initial  value 650.212917 
-## iter  10 value 493.434127
-## iter  20 value 452.356127
-## iter  30 value 439.498591
-## iter  40 value 419.102099
-## iter  50 value 376.252566
-## iter  60 value 341.987764
-## iter  70 value 313.465169
-## iter  80 value 295.686903
-## iter  90 value 286.724771
-## iter 100 value 280.426715
-## iter 110 value 275.919391
-## iter 120 value 272.115527
-## iter 130 value 267.273981
-## iter 140 value 264.023949
-## iter 150 value 262.386224
-## iter 160 value 261.254801
-## iter 170 value 260.738526
-## iter 180 value 260.519034
-## iter 190 value 260.183951
-## iter 200 value 259.914986
-## iter 210 value 259.855051
-## iter 220 value 259.843456
-## iter 230 value 259.830529
-## iter 240 value 259.809471
-## iter 250 value 259.751855
-## iter 260 value 259.709597
-## iter 270 value 259.700268
-## iter 280 value 259.699171
-## iter 290 value 259.699065
-## iter 290 value 259.699064
-## final  value 259.699064 
-## converged
-```
 
-```r
 # How accurate was it?
 nn_collapsed_out$nn_accuracy
 ```
@@ -1325,66 +1253,7 @@ nn_collapsed_out$most_important_vars
 ```r
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
-```
 
-```
-## # weights:  336 (282 variable)
-## initial  value 781.982604 
-## iter  10 value 587.005467
-## iter  20 value 542.092202
-## iter  30 value 515.133139
-## iter  40 value 498.141544
-## iter  50 value 481.992507
-## iter  60 value 464.898416
-## iter  70 value 427.521956
-## iter  80 value 372.759698
-## iter  90 value 340.310377
-## iter 100 value 303.871979
-## iter 110 value 276.500094
-## iter 120 value 259.767941
-## iter 130 value 248.234178
-## iter 140 value 236.629670
-## iter 150 value 228.654715
-## iter 160 value 223.488913
-## iter 170 value 219.801138
-## iter 180 value 217.435860
-## iter 190 value 215.609808
-## iter 200 value 214.110116
-## iter 210 value 212.706743
-## iter 220 value 211.772872
-## iter 230 value 211.009126
-## iter 240 value 210.453086
-## iter 250 value 209.888260
-## iter 260 value 209.408294
-## iter 270 value 209.159295
-## iter 280 value 208.996765
-## iter 290 value 208.870308
-## iter 300 value 208.733640
-## iter 310 value 208.557713
-## iter 320 value 208.461260
-## iter 330 value 208.367993
-## iter 340 value 208.277821
-## iter 350 value 208.189574
-## iter 360 value 208.126267
-## iter 370 value 208.073231
-## iter 380 value 208.022468
-## iter 390 value 207.980556
-## iter 400 value 207.940134
-## iter 410 value 207.898122
-## iter 420 value 207.844677
-## iter 430 value 207.792940
-## iter 440 value 207.753781
-## iter 450 value 207.711076
-## iter 460 value 207.655849
-## iter 470 value 207.565148
-## iter 480 value 207.502488
-## iter 490 value 207.432821
-## iter 500 value 207.366292
-## final  value 207.366292 
-## stopped after 500 iterations
-```
-
-```r
 nn_notcollapsed_out$nn_accuracy
 ```
 
@@ -1414,48 +1283,7 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
-```
 
-```
-## # weights:  522 (476 variable)
-## initial  value 6051.030606 
-## iter  10 value 4862.881876
-## iter  20 value 4563.438310
-## iter  30 value 4337.873160
-## iter  40 value 4122.273501
-## iter  50 value 3850.880191
-## iter  60 value 3750.544595
-## iter  70 value 3638.929180
-## iter  80 value 3496.615277
-## iter  90 value 3386.496034
-## iter 100 value 3298.932906
-## iter 110 value 3217.233676
-## iter 120 value 3171.108856
-## iter 130 value 3115.214521
-## iter 140 value 3073.911423
-## iter 150 value 3063.527030
-## iter 160 value 3058.682173
-## iter 170 value 3055.822315
-## iter 180 value 3054.364067
-## iter 190 value 3053.657552
-## iter 200 value 3053.354864
-## iter 210 value 3053.247522
-## iter 220 value 3053.145802
-## iter 230 value 3053.027239
-## iter 240 value 3052.993223
-## iter 250 value 3052.978357
-## iter 260 value 3052.943344
-## iter 270 value 3052.908721
-## iter 280 value 3052.884602
-## iter 290 value 3052.867036
-## iter 300 value 3052.860072
-## iter 310 value 3052.852499
-## iter 320 value 3052.850430
-## final  value 3052.850245 
-## converged
-```
-
-```r
 nn_collapsed_out_add_glass$nn_accuracy
 ```
 
@@ -1624,6 +1452,50 @@ csrf_acc
 
 
 ![](./pour.jpg)
+
+
+
+```r
+sessionInfo()
+```
+
+```
+## R version 3.3.3 (2017-03-06)
+## Platform: x86_64-apple-darwin13.4.0 (64-bit)
+## Running under: macOS Sierra 10.12.4
+## 
+## locale:
+## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+## 
+## attached base packages:
+## [1] stats     graphics  grDevices utils     datasets  methods   base     
+## 
+## other attached packages:
+##  [1] stringr_1.1.0   ranger_0.7.0    caret_6.0-73    lattice_0.20-34
+##  [5] nnet_7.3-12     ggrepel_0.6.5   NbClust_3.0     bindrcpp_0.1   
+##  [9] forcats_0.1.1   dplyr_0.7.0     purrr_0.2.2     readr_1.1.0    
+## [13] tidyr_0.6.1     tibble_1.3.3    ggplot2_2.2.1   tidyverse_1.0.0
+## [17] RMySQL_0.10.11  DBI_0.6-1       knitr_1.15.1   
+## 
+## loaded via a namespace (and not attached):
+##  [1] reshape2_1.4.2     splines_3.3.3      colorspace_1.3-2  
+##  [4] stats4_3.3.3       htmltools_0.3.6    mgcv_1.8-17       
+##  [7] yaml_2.1.14        rlang_0.1.1        e1071_1.6-7       
+## [10] ModelMetrics_1.1.0 nloptr_1.0.4       glue_1.0.0        
+## [13] foreach_1.4.3      bindr_0.1          plyr_1.8.4        
+## [16] MatrixModels_0.4-1 munsell_0.4.3      gtable_0.2.0      
+## [19] codetools_0.2-15   evaluate_0.10      labeling_0.3      
+## [22] SparseM_1.74       class_7.3-14       quantreg_5.29     
+## [25] parallel_3.3.3     pbkrtest_0.4-6     highr_0.6         
+## [28] Rcpp_0.12.11       scales_0.4.1       backports_1.0.5   
+## [31] lme4_1.1-12        hms_0.3            digest_0.6.12     
+## [34] stringi_1.1.2      grid_3.3.3         rprojroot_1.2     
+## [37] tools_3.3.3        magrittr_1.5       lazyeval_0.2.0    
+## [40] car_2.1-4          pkgconfig_2.0.1    MASS_7.3-45       
+## [43] Matrix_1.2-8       assertthat_0.2.0   minqa_1.2.4       
+## [46] rmarkdown_1.3      iterators_1.0.8    R6_2.2.1          
+## [49] nlme_3.1-131
+```
 
 
 
