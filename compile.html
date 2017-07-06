@@ -10,7 +10,7 @@
 
 
 
-<meta name="date" content="2017-07-04" />
+<meta name="date" content="2017-07-06" />
 
 <title>Data Science Musings on Beer</title>
 
@@ -118,7 +118,7 @@ $(document).ready(function () {
 
 <h1 class="title toc-ignore">Data Science Musings on Beer</h1>
 <h4 class="author"><em>Amanda Dobbyn</em></h4>
-<h4 class="date"><em>July 04, 2017</em></h4>
+<h4 class="date"><em>July 06, 2017</em></h4>
 
 </div>
 
@@ -244,9 +244,7 @@ collapse_styles &lt;- function(df, trace_progress = TRUE) {
     if(trace_progress == TRUE) {message(paste0(&quot;Collapsing this &quot;, df$style[beer], &quot; to: &quot;, df$style_collapsed[beer]))}
   }
   return(df)
-}
-
-bar &lt;- collapse_styles(foo)</code></pre>
+}</code></pre>
 <ul>
 <li>Then we collapse further; right now we just combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e’s) by <code>fct_collapse</code>ing those levels</li>
 </ul>
@@ -684,7 +682,7 @@ style_centers_rename &lt;- style_centers %&gt;%
       mutate(
         count = 1
       )
-    df_gathered
+    return(df_gathered)
   }
   beer_gathered &lt;- gather_ingredients(df, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 

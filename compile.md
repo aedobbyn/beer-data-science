@@ -155,8 +155,6 @@ collapse_styles <- function(df, trace_progress = TRUE) {
   }
   return(df)
 }
-
-bar <- collapse_styles(foo)
 ```
 
 * Then we collapse further; right now we just combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e's) by `fct_collapse`ing those levels
@@ -461,7 +459,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
       mutate(
         count = 1
       )
-    df_gathered
+    return(df_gathered)
   }
   beer_gathered <- gather_ingredients(df, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 
