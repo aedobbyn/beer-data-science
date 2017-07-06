@@ -855,8 +855,7 @@ summary(hops_ibu_lm)
 
 * However, past a certain point (3 hops or more), there's no effect of number of hops on IBU
 ```{r, echo=TRUE}
-ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2
-                                          & beer_ingredients_join$total_hops < 8), ], aes(total_hops, ibu)) +
+ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 2), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") +
   ggtitle("3+ Hops Per Beer vs. Bitterness") +
@@ -1135,6 +1134,7 @@ csrf_acc
 
 *Future Directions*
 
+* Hierarchical clustering
 * Incorporate flavor profiles for beers sourced/scraped from somewhere
 * Implement a GAN to come up with beer names
 * More on the hops deep dive: which hops are used most often in which styles?

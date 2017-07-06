@@ -344,6 +344,13 @@ From this, we can find the total number of hops and malts per grouper.
 pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   
   # ----------------------- Setup --------------------------- #
+  # We've already split ingredient number names out from the concatenated string into columns like `malt_name_1`,
+  # `malt_name_2`, etc. We need to find the range of these columns; there will be a different number of malt
+  # columns than hops columns, for instance. The first one will be `<ingredient>_name_1` and from this we can find
+  # the index of this column in our dataframe. We get the name of last one with the `get_last_ing_name_col()`
+  # function. Then we save a vector of all the ingredient column names in `ingredient_colnames`. It will stay
+  # constant even if the indices change when we select out certain columns. 
+  
   # First ingredient
   first_ingredient_name <- paste(ingredient_want, "_name_1", sep="")
   first_ingredient_index <- which(colnames(df)==first_ingredient_name)
@@ -366,9 +373,14 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   ingredient_colnames <- names(df)[first_ingredient_index:last_ingredient_index]
   
   # Non-ingredient column names we want to keep
-  to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
+  to_keep_col_names <- c("id", "cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
   
   # -------------------------------------------------------------------------------# 
+  
+  # Inside `gather_ingredients()` we take out superflous column names that are not in `to_keep_col_names` or one 
+  # of the ingredient columns, find what the new ingredient column indices are, since they'll have changed after 
+  # we pared down and then gather all of the ingredient columns (e.g., `hops_name_1`) into one long column, 
+  # `ing_keys` and all the actual ingredient names (e.g., Cascade) into `ing_names`.
   
   # ----------------------------- Gather columns --------------------------------- #
   gather_ingredients <- function(df, cols_to_gather) {
@@ -387,10 +399,13 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
       mutate(
         count = 1
       )
-    df_gathered
+    return(df_gathered)
   }
   beer_gathered <- gather_ingredients(df, ingredient_colnames)  # ingredient colnames defined above function
   # ------------------------------------------------------------------------------- # 
+  
+  # Next we get a vector of all ingredient levels and take out the one that's an empty string and 
+  # use this vector of ingredient levels in `select_spread_cols()` below
 
   # Get a vector of all ingredient levels
   beer_gathered$ing_names <- factor(beer_gathered$ing_names)
@@ -403,6 +418,14 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   beer_gathered$ing_names <- as.character(beer_gathered$ing_names)
   
   # ----------------------------------------------------------------------------- # 
+  
+  # Then we spread the ingredient names: we take what was previously the `value` in our gathered dataframe, the
+  # actual ingredient names (Cascade, Centennial) and make that our `key`; it'll form the new column names. The
+  # new `value` is `value` is count; it'll populate the row cells. If a given row has a certain ingredient, it
+  # gets a 1 in the corresponding cell, an NA otherwise. 
+  # We add a unique idenfitier for each row with `row`, which we'll drop later (see [Hadley's SO
+  # comment](https://stackoverflow.com/questions/25960394/unexpected-behavior-with-tidyr)).
+
   
   # ------------------------------- Spread columns -------------------------------- #
   spread_ingredients <- function(df) {
@@ -450,51 +473,35 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
       ungroup() %>% 
       group_by_(grouper)
     
-    
-    # browser()
-    per_grouper <- df_grouped %>% 
-      # select_if(!grepl("hops|malt|abv|ibu|srm|Id|id", names(.))) %>%
-      select(-c(abv, ibu, srm)) %>%    # taking out temporarily
-      summarise_if(
-        is.numeric,
-        sum, na.rm = TRUE
-        # -c(abv, ibu, srm)
-      )
-    
-    not_for_summing <- which(colnames(per_grouper) %in% to_keep_col_names)
+    not_for_summing <- which(colnames(df_grouped) %in% to_keep_col_names)
     max_not_for_summing <- max(not_for_summing)
     
-    per_grouper_w_totals <- per_grouper %>%
+    browser()
+    per_grouper <- df_grouped %>% 
+      select(-c(abv, ibu, srm)) %>%    # taking out temporarily
+      summarise_if(
+        is.numeric,              
+        sum, na.rm = TRUE
+        # -c(abv, ibu, srm)
+      ) %>%
       mutate(
-        total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)
+        total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)    
       )
     
-    # baz <- beer_necessities[1:100, ] %>%
-    #   select_if(!grepl("Id|id", names(.))) %>%
-    #   select_if(is.numeric) %>%
-    #   summarise_if(
-    #     # (is.numeric & !(grepl("hops|malt|abv|ibu|srm|Id|id", names(.)))),
-    #     is.numeric,
-    #     sum, na.rm = TRUE
-    #   ) %>%
-    #   mutate(
-    #     total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)
-    #   )
-
     # Send total to the second position
-    per_grouper_reorder <- per_grouper_w_totals %>% 
+    per_grouper <- per_grouper %>% 
       select(
-        name, total, everything()
+        id, total, everything()
       )
     
     # Replace total column with more descriptive name: total_<ingredient>
-    names(per_grouper_reorder)[which(names(per_grouper_reorder) == "total")] <- paste0("total_", ingredient_want)
+    names(per_grouper)[which(names(per_grouper) == "total")] <- paste0("total_", ingredient_want)
     
-    return(per_grouper_reorder)
+    return(per_grouper)
   }
   # ------------------------------------------------------------------------------- # 
   
-  ingredients_per_grouper <- get_ingredients_per_grouper(beer_spread_no_na, grouper)
+  ingredients_per_grouper <- get_ingredients_per_grouper(beer_spread_selected, grouper)
   return(ingredients_per_grouper)
 }
 ```
@@ -507,18 +514,18 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 # Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
                                                       beer_necessities, 
-                                                      grouper = c("name", "style_collapsed"))
+                                                      grouper = c("id"))
 
 # Same for malt
 ingredients_per_beer_malt <- pick_ingredient_get_beer(ingredient_want = "malt", 
                                                       beer_necessities, 
-                                                      grouper = c("name", "style_collapsed"))
+                                                      grouper = c("id"))
 
 # Join those on our original dataframe by name
 beer_ingredients_join_first_ingredient <- left_join(beer_necessities, ingredients_per_beer_hops,
-                                                    by = "name")
+                                                    by = "id")
 beer_ingredients_join <- left_join(beer_ingredients_join_first_ingredient, ingredients_per_beer_malt,
-                                   by = "name")
+                                   by = "id")
 
 
 # Take out some unnecessary columns

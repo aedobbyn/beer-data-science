@@ -433,7 +433,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   ingredient_colnames <- names(df)[first_ingredient_index:last_ingredient_index]
   
   # Non-ingredient column names we want to keep
-  to_keep_col_names <- c("cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
+  to_keep_col_names <- c("id", "cluster_assignment", "name", "abv", "ibu", "srm", "style", "style_collapsed")
   
   # -------------------------------------------------------------------------------# 
   
@@ -536,6 +536,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
     not_for_summing <- which(colnames(df_grouped) %in% to_keep_col_names)
     max_not_for_summing <- max(not_for_summing)
     
+    browser()
     per_grouper <- df_grouped %>% 
       select(-c(abv, ibu, srm)) %>%    # taking out temporarily
       summarise_if(
@@ -550,7 +551,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
     # Send total to the second position
     per_grouper <- per_grouper %>% 
       select(
-        name, total, everything()
+        id, total, everything()
       )
     
     # Replace total column with more descriptive name: total_<ingredient>
@@ -574,18 +575,44 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
 # Run the entire function with ingredient_want set to hops, grouping by name
 ingredients_per_beer_hops <- pick_ingredient_get_beer(ingredient_want = "hops", 
                                                       beer_necessities, 
-                                                      grouper = c("name", "style_collapsed"))
+                                                      grouper = c("id"))
+```
 
+```
+## Called from: get_ingredients_per_grouper(beer_spread_selected, grouper)
+## debug at <text>#138: per_grouper <- df_grouped %>% select(-c(abv, ibu, srm)) %>% summarise_if(is.numeric, 
+##     sum, na.rm = TRUE) %>% mutate(total = rowSums(.[(max_not_for_summing + 
+##     1):ncol(.)], na.rm = TRUE))
+## debug at <text>#150: per_grouper <- per_grouper %>% select(id, total, everything())
+## debug at <text>#156: names(per_grouper)[which(names(per_grouper) == "total")] <- paste0("total_", 
+##     ingredient_want)
+## debug at <text>#158: return(per_grouper)
+```
+
+```r
 # Same for malt
 ingredients_per_beer_malt <- pick_ingredient_get_beer(ingredient_want = "malt", 
                                                       beer_necessities, 
-                                                      grouper = c("name", "style_collapsed"))
+                                                      grouper = c("id"))
+```
 
+```
+## Called from: get_ingredients_per_grouper(beer_spread_selected, grouper)
+## debug at <text>#138: per_grouper <- df_grouped %>% select(-c(abv, ibu, srm)) %>% summarise_if(is.numeric, 
+##     sum, na.rm = TRUE) %>% mutate(total = rowSums(.[(max_not_for_summing + 
+##     1):ncol(.)], na.rm = TRUE))
+## debug at <text>#150: per_grouper <- per_grouper %>% select(id, total, everything())
+## debug at <text>#156: names(per_grouper)[which(names(per_grouper) == "total")] <- paste0("total_", 
+##     ingredient_want)
+## debug at <text>#158: return(per_grouper)
+```
+
+```r
 # Join those on our original dataframe by name
 beer_ingredients_join_first_ingredient <- left_join(beer_necessities, ingredients_per_beer_hops,
-                                                    by = "name")
+                                                    by = "id")
 beer_ingredients_join <- left_join(beer_ingredients_join_first_ingredient, ingredients_per_beer_malt,
-                                   by = "name")
+                                   by = "id")
 
 
 # Take out some unnecessary columns
@@ -755,26 +782,26 @@ kable(clustered_beer[1:20, ])
 
 |cluster_assignment |name                                                         |style                                              |style_collapsed | abv_scaled| ibu_scaled| srm_scaled| total_hops| total_malt| abv|  ibu| srm|
 |:------------------|:------------------------------------------------------------|:--------------------------------------------------|:---------------|----------:|----------:|----------:|----------:|----------:|---:|----:|---:|
-|10                 |"Admiral" Stache                                             |Baltic-Style Porter                                |Porter          |  0.2700989| -0.7075654|  2.1858706|  0.4674779|  1.1440890| 7.0| 23.0|  37|
-|10                 |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter          | -0.6074754|  0.3844558|  2.4677869| -0.1933839| -0.2023226| 5.4| 51.0|  40|
-|6                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale        | -0.3880818|  0.3844558| -0.5393202| -0.1933839| -0.2023226| 5.8| 51.0|   8|
-|6                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale        | -0.6074754|  0.5014580| -0.2574039| -0.1933839| -0.2023226| 5.4| 54.0|  11|
-|3                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.4977786| -0.5047614| -0.8212365| -0.1933839| -0.2023226| 5.6| 28.2|   5|
-|3                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde          | -0.8817174| -0.8245676| -0.8212365| -0.1933839| -0.2023226| 4.9| 20.0|   5|
-|3                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat           | -0.7720206| -1.1755744| -0.9152086| -0.1933839| -0.2023226| 5.1| 11.0|   4|
-|3                  |#9                                                           |American-Style Pale Ale                            |Pale Ale        | -0.7720206| -0.8245676| -0.4453481|  0.4674779|  0.4708832| 5.1| 20.0|   9|
-|3                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.9365658| -0.5515624| -1.0091807| -0.1933839| -0.2023226| 4.8| 27.0|   3|
-|3                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager           | -0.6623238| -0.9025691| -0.8212365| -0.1933839| -0.2023226| 5.3| 18.0|   5|
-|8                  |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison          |  0.2700989| -0.4345601| -0.6332923| -0.1933839| -0.2023226| 7.0| 30.0|   7|
-|3                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat           | -0.8268690| -0.8245676| -0.4453481| -0.1933839| -0.2023226| 5.0| 20.0|   9|
-|4                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown           |  0.5991893| -0.4345601|  0.6823171|  0.1370470|  1.1440890| 7.6| 30.0|  21|
-|8                  |(512) FOUR                                                   |Strong Ale                                         |Strong Ale      |  0.5443409| -0.2395563| -0.5393202|  0.7979088|  1.1440890| 7.5| 35.0|   8|
-|7                  |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale  |  0.2700989|  0.9304663| -0.5393202|  0.7979088|  0.8074861| 7.0| 65.0|   8|
-|8                  |(512) ONE                                                    |Belgian-Style Pale Strong Ale                      |Strong Ale      |  0.8185829| -0.7465661| -0.5393202| -0.1933839|  0.4708832| 8.0| 22.0|   8|
-|6                  |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale        | -0.2783850| -0.4345601| -0.6332923|  0.7979088|  0.8074861| 6.0| 30.0|   7|
-|10                 |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel          |  0.5443409| -0.6295639|  1.3401218|  0.4674779|  0.8074861| 7.5| 25.0|  28|
-|8                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661| -0.3513760|  0.1370470|  0.8074861| 9.5| 22.0|  10|
-|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661|  2.4677869| -0.1933839| -0.2023226| 9.5| 22.0|  40|
+|6                  |"Admiral" Stache                                             |Baltic-Style Porter                                |Porter          |  0.2700989| -0.7075654|  2.1858706|  2.5475341|  4.6826819| 7.0| 23.0|  37|
+|10                 |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter          | -0.6074754|  0.3844558|  2.4677869| -0.2502903| -0.2274607| 5.4| 51.0|  40|
+|1                  |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale        | -0.3880818|  0.3844558| -0.5393202| -0.2502903| -0.2274607| 5.8| 51.0|   8|
+|1                  |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale        | -0.6074754|  0.5014580| -0.2574039| -0.2502903| -0.2274607| 5.4| 54.0|  11|
+|3                  |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.4977786| -0.5047614| -0.8212365| -0.2502903| -0.2274607| 5.6| 28.2|   5|
+|3                  |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde          | -0.8817174| -0.8245676| -0.8212365| -0.2502903| -0.2274607| 4.9| 20.0|   5|
+|3                  |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat           | -0.7720206| -1.1755744| -0.9152086| -0.2502903| -0.2274607| 5.1| 11.0|   4|
+|6                  |#9                                                           |American-Style Pale Ale                            |Pale Ale        | -0.7720206| -0.8245676| -0.4453481|  2.5475341|  2.2276106| 5.1| 20.0|   9|
+|3                  |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch          | -0.9365658| -0.5515624| -1.0091807| -0.2502903| -0.2274607| 4.8| 27.0|   3|
+|3                  |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager           | -0.6623238| -0.9025691| -0.8212365| -0.2502903| -0.2274607| 5.3| 18.0|   5|
+|8                  |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison          |  0.2700989| -0.4345601| -0.6332923| -0.2502903| -0.2274607| 7.0| 30.0|   7|
+|3                  |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat           | -0.8268690| -0.8245676| -0.4453481| -0.2502903| -0.2274607| 5.0| 20.0|   9|
+|6                  |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown           |  0.5991893| -0.4345601|  0.6823171|  1.1486219|  4.6826819| 7.6| 30.0|  21|
+|6                  |(512) FOUR                                                   |Strong Ale                                         |Strong Ale      |  0.5443409| -0.2395563| -0.5393202|  3.9464463|  4.6826819| 7.5| 35.0|   8|
+|6                  |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale  |  0.2700989|  0.9304663| -0.5393202|  3.9464463|  3.4551463| 7.0| 65.0|   8|
+|8                  |(512) ONE                                                    |Belgian-Style Pale Strong Ale                      |Strong Ale      |  0.8185829| -0.7465661| -0.5393202| -0.2502903|  2.2276106| 8.0| 22.0|   8|
+|6                  |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale        | -0.2783850| -0.4345601| -0.6332923|  2.5475341|  3.4551463| 6.0| 30.0|   7|
+|6                  |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel          |  0.5443409| -0.6295639|  1.3401218|  2.5475341|  3.4551463| 7.5| 25.0|  28|
+|6                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661| -0.3513760|  1.1486219|  3.4551463| 9.5| 22.0|  10|
+|9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661|  2.4677869| -0.2502903| -0.2274607| 9.5| 22.0|  40|
 
 ```r
 # How many rows do we have?
@@ -791,38 +818,38 @@ Join the clustered beer on `beer_ingredients_join`
 
 A table of cluster counts broken down by style
 
-|                         |  1|   2|   3|   4|  5|   6|   7|  8|  9|  10|
-|:------------------------|--:|---:|---:|---:|--:|---:|---:|--:|--:|---:|
-|Barley Wine              |  0|  28|   0|   0| 14|   0|   2|  7| 11|   0|
-|Barrel-Aged              |  0|   3|   2|   4|  6|   3|   1| 11| 15|   3|
-|Bitter                   |  0|   0|  17|  20|  0|  38|   2|  1|  1|   1|
-|Black                    |  0|   0|   0|   1| 18|   0|   7|  0|  0|  17|
-|Blonde                   |  0|   0| 118|   2|  0|  13|   1| 24|  1|   1|
-|Brown                    |  0|   1|   8|  95|  3|   2|   6|  0|  6|  27|
-|Double India Pale Ale    |  0| 171|   0|   0| 11|   0|  45|  4|  1|   0|
-|Dubbel                   |  0|   0|   0|  16|  0|   0|   1|  7|  6|  11|
-|Fruit Beer               |  0|   0|  36|   7|  0|   2|   4|  4|  2|   1|
-|Fruit Cider              |  0|   0|   1|   0|  0|   0|   0|  0|  0|   0|
-|German-Style Doppelbock  |  0|   0|   0|   5|  1|   0|   0|  5| 12|   6|
-|German-Style Märzen      | 11|   0|   8|  10|  0|   1|   0|  0|  0|   0|
-|Herb and Spice Beer      |  0|   0|  13|  13|  0|   4|   6|  3|  4|  12|
-|India Pale Ale           | 15|  18|   6|   7| 10| 100| 413|  3|  0|   5|
-|Kölsch                   |  0|   0|  67|   1|  0|   3|   1|  0|  0|   0|
-|Lager                    |  0|   3| 135|  50|  4|  28|  27| 10|  3|   7|
-|Other Belgian-Style Ales |  0|   0|   4|   7|  1|   4|   9|  4|  5|   5|
-|Pale Ale                 | 19|   2|  57|  25|  3| 229|  49| 11|  1|   2|
-|Pilsener                 |  0|   1|  74|   0|  1|  54|   3|  3|  0|   0|
-|Porter                   |  0|   0|   0|  36|  9|   1|   0|  1| 10| 127|
-|Pumpkin Beer             |  0|   0|   7|  18|  0|   2|   0|  9|  5|   5|
-|Red                      |  0|   8|  33| 125| 13|  46|  21|  7|  4|  16|
-|Saison                   |  0|   0|  52|   6|  1|  34|   2| 41|  0|   3|
-|Scotch Ale               |  0|   0|   0|  10|  1|   0|   0|  5|  7|  10|
-|Sour                     |  0|   0|  18|   4|  0|   3|   1|  4|  5|   2|
-|Specialty Beer           |  0|   1|  15|  13|  0|   5|   5| 11|  5|  10|
-|Stout                    |  0|   0|   2|   6| 49|   2|   1|  3| 14| 126|
-|Strong Ale               |  0|   4|   0|   5|  1|   2|   5| 29| 33|   3|
-|Tripel                   |  0|   2|   0|   0|  1|   1|   0| 57|  4|   0|
-|Wheat                    |  0|   0| 268|  12|  0|  17|   4| 11|  2|   3|
+|                         |   1|   2|   3|   4|  5|  6|   7|  8|  9|  10|
+|:------------------------|---:|---:|---:|---:|--:|--:|---:|--:|--:|---:|
+|Barley Wine              |   0|  27|   0|   0| 11|  4|   2|  5| 13|   0|
+|Barrel-Aged              |   3|   3|   2|   4|  8|  1|   1| 10| 14|   2|
+|Bitter                   |  37|   0|  15|  19|  0|  5|   2|  1|  0|   1|
+|Black                    |   0|   0|   0|   1| 12|  2|  11|  0|  0|  17|
+|Blonde                   |  14|   0| 112|   2|  0|  6|   1| 23|  1|   1|
+|Brown                    |   2|   1|   7|  90|  4| 10|   5|  0|  4|  25|
+|Double India Pale Ale    |   0| 157|   0|   0|  7| 19|  44|  4|  1|   0|
+|Dubbel                   |   0|   0|   0|  16|  1|  1|   1|  7|  5|  10|
+|Fruit Beer               |   2|   0|  36|   7|  0|  1|   3|  4|  2|   1|
+|Fruit Cider              |   0|   0|   1|   0|  0|  0|   0|  0|  0|   0|
+|German-Style Doppelbock  |   0|   0|   0|   5|  0|  1|   0|  5| 13|   5|
+|German-Style Märzen      |   2|   0|  11|  13|  0|  3|   0|  0|  0|   1|
+|Herb and Spice Beer      |   4|   0|  12|  11|  0|  5|   7|  2|  5|   9|
+|India Pale Ale           |  92|  18|   6|   7|  5| 53| 387|  3|  0|   6|
+|Kölsch                   |   3|   0|  65|   1|  0|  2|   1|  0|  0|   0|
+|Lager                    |  24|   2| 128|  48|  3| 17|  25| 10|  3|   7|
+|Other Belgian-Style Ales |   4|   0|   4|   7|  1|  0|   9|  4|  5|   5|
+|Pale Ale                 | 231|   2|  53|  25|  2| 25|  46| 11|  2|   1|
+|Pilsener                 |  52|   1|  70|   0|  0|  6|   3|  3|  0|   1|
+|Porter                   |   1|   0|   0|  34|  8|  8|   0|  1| 12| 120|
+|Pumpkin Beer             |   3|   0|   6|  17|  0|  3|   0|  8|  5|   4|
+|Red                      |  44|   9|  31| 118|  5| 18|  21|  6|  5|  16|
+|Saison                   |  33|   0|  50|   6|  1|  6|   0| 41|  0|   2|
+|Scotch Ale               |   1|   0|   0|   9|  1|  2|   0|  4|  7|   9|
+|Sour                     |   3|   0|  18|   4|  0|  1|   1|  4|  4|   2|
+|Specialty Beer           |   5|   1|  14|  13|  0|  1|   5| 10|  6|  10|
+|Stout                    |   2|   0|   2|   5| 51|  5|   1|  3|  9| 125|
+|Strong Ale               |   2|   4|   0|   5|  2|  4|   4| 26| 32|   3|
+|Tripel                   |   1|   2|   0|   0|  1|  3|   1| 53|  4|   0|
+|Wheat                    |  16|   0| 257|  11|  0| 13|   4| 11|  2|   3|
 
 
 Plot the clusters. There are 3 axes: ABV, IBU, and SRM, so we choose two at a time. 
@@ -923,13 +950,13 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 
 
 
-|               |  1|   2|   3|  4|   5|
-|:--------------|--:|---:|---:|--:|---:|
-|Blonde         |  1| 142|   1|  0|  16|
-|India Pale Ale |  2|  48|  10| 17| 500|
-|Stout          | 58|   6| 135|  0|   4|
-|Tripel         |  3|   3|   1|  0|  58|
-|Wheat          |  3| 287|   5|  9|  13|
+|               |  1|   2|   3|   4|  5|
+|:--------------|--:|---:|---:|---:|--:|
+|Blonde         |  1| 136|   1|  15|  7|
+|India Pale Ale |  2|  44|  11| 466| 54|
+|Stout          | 55|   5| 133|   5|  5|
+|Tripel         |  3|   3|   1|  54|  4|
+|Wheat          |  3| 284|   5|  13| 12|
 
 
 
@@ -1020,19 +1047,19 @@ summary(hops_ibu_lm)
 ## 
 ## Residuals:
 ##    Min     1Q Median     3Q    Max 
-## -41.57 -19.87  -7.57  17.43 957.43 
+## -45.14 -20.32  -7.32  17.68 957.68 
 ## 
 ## Coefficients:
 ##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept) 42.56732    0.19611 217.058  < 2e-16 ***
-## total_hops   0.25734    0.07137   3.606 0.000312 ***
+## (Intercept)  42.3232     0.1966 215.276   <2e-16 ***
+## total_hops    2.8599     0.3045   9.393   <2e-16 ***
 ## ---
 ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
 ## 
-## Residual standard error: 27.67 on 20569 degrees of freedom
+## Residual standard error: 27.62 on 20569 degrees of freedom
 ##   (32047 observations deleted due to missingness)
-## Multiple R-squared:  0.0006317,	Adjusted R-squared:  0.0005832 
-## F-statistic:    13 on 1 and 20569 DF,  p-value: 0.0003118
+## Multiple R-squared:  0.004271,	Adjusted R-squared:  0.004223 
+## F-statistic: 88.23 on 1 and 20569 DF,  p-value: < 2.2e-16
 ```
 
 
@@ -1227,7 +1254,7 @@ nn_collapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.4600000 0.3894166
+## 0.5000000 0.4333636
 ```
 
 ```r
@@ -1236,12 +1263,12 @@ nn_collapsed_out$most_important_vars
 ```
 
 ```
-##              Overall
-## total_hops 47.800176
-## total_malt 20.004529
-## abv        89.410059
-## ibu         9.613098
-## srm        10.306743
+##             Overall
+## total_hops 79.46037
+## total_malt 43.28298
+## abv        77.78209
+## ibu        12.14150
+## srm        12.35745
 ```
 
 
@@ -1257,7 +1284,7 @@ nn_notcollapsed_out$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.3157895 0.2526475
+## 0.4468085 0.3351469
 ```
 
 ```r
@@ -1266,11 +1293,11 @@ nn_notcollapsed_out$most_important_vars
 
 ```
 ##              Overall
-## total_hops 295.37261
-## total_malt 125.65757
-## abv        282.01690
-## ibu         29.59821
-## srm         76.06801
+## total_hops 749.05284
+## total_malt 289.73030
+## abv        758.23105
+## ibu         46.66839
+## srm        162.57572
 ```
 
 
@@ -1287,7 +1314,7 @@ nn_collapsed_out_add_glass$nn_accuracy
 
 ```
 ##  Accuracy     Kappa 
-## 0.4729730 0.4273967
+## 0.4516129 0.4083468
 ```
 
 ```r
@@ -1295,23 +1322,23 @@ nn_collapsed_out_add_glass$most_important_vars
 ```
 
 ```
-##                              Overall
-## total_hops                 35.829782
-## total_malt                 39.598236
-## abv                        23.385121
-## ibu                         4.358984
-## srm                         4.192987
-## glassGoblet               276.945549
-## glassMug                  277.413741
-## glassOversized Wine Glass 168.202461
-## glassPilsner              268.251069
-## glassPint                 236.346857
-## glassSnifter              263.082839
-## glassStange               330.278549
-## glassThistle              151.569836
-## glassTulip                239.098692
-## glassWeizen               151.257372
-## glassWilli                243.894623
+##                               Overall
+## total_hops                 107.313429
+## total_malt                  74.822230
+## abv                         24.013061
+## ibu                          4.335098
+## srm                          4.172626
+## glassGoblet                808.203181
+## glassMug                   821.031767
+## glassOversized Wine Glass  288.551752
+## glassPilsner               594.616580
+## glassPint                  701.466856
+## glassSnifter               818.352890
+## glassStange               1227.496011
+## glassThistle               321.108367
+## glassTulip                 796.630457
+## glassWeizen                303.466753
+## glassWilli                 621.770176
 ```
 
 
@@ -1376,7 +1403,7 @@ OOB (out of bag) prediction error is around 58%
 ## Mtry:                             18 
 ## Target node size:                 1 
 ## Variable importance mode:         impurity 
-## OOB prediction error:             60.85 %
+## OOB prediction error:             68.67 %
 ```
 
 
@@ -1398,13 +1425,13 @@ importance(bi_rf)[1:10]
 
 ```
 ##               total_hops               total_malt                      abv 
-##                8.9901878                9.0178055               93.8351384 
+##                5.3089324                4.5666358               75.4660697 
 ##                      ibu                      srm                  admiral 
-##              152.5179092               95.3009886                0.0000000 
+##              131.8145224               77.5369714                0.0000000 
 ## ageddebitteredhopslambic                  ahtanum                  alchemy 
-##                0.2345633                0.5261183                0.8799468 
+##                0.2928408                0.5363817                0.1255118 
 ##                 amarillo 
-##                2.8598095
+##                1.7584761
 ```
 
 
@@ -1423,7 +1450,7 @@ csrf_acc
 
 ```
 ##  Accuracy     Kappa 
-## 0.2973316 0.2243348
+## 0.2668361 0.1851716
 ```
 
 
@@ -1443,6 +1470,7 @@ csrf_acc
 
 *Future Directions*
 
+* Hierarchical clustering
 * Incorporate flavor profiles for beers sourced/scraped from somewhere
 * Implement a GAN to come up with beer names
 * More on the hops deep dive: which hops are used most often in which styles?

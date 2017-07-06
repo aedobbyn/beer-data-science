@@ -689,3 +689,19 @@ get_hop_levels <- function() {
 all_hop_levels <- get_hop_levels()
 
 length(all_hop_levels)
+
+
+
+
+
+baz <- beer_necessities[1:100, ] %>%
+  select_if(!grepl("Id|id", names(.))) %>%
+  select_if(is.numeric) %>%
+  summarise_if(
+    # (is.numeric & !(grepl("hops|malt|abv|ibu|srm|Id|id", names(.)))),
+    is.numeric,
+    sum, na.rm = TRUE
+  ) %>%
+  mutate(
+    total = rowSums(.[(max_not_for_summing + 1):ncol(.)], na.rm = TRUE)
+  )
