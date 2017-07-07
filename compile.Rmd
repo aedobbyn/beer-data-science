@@ -877,7 +877,7 @@ This holds even with 5 or more hops.
 ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") +
-  ggtitle("3+ Hops Per Beer vs. Bitterness") +
+  ggtitle("5+ Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
