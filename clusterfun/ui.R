@@ -15,7 +15,12 @@ shinyUI(fluidPage(
                        "Brown" = "Brown", 
                        "Double India Pale Ale" = "Double India Pale Ale",
                        "Red" = "Red",
-                       "Stout" = "Stout"))
+                       "Stout" = "Stout")),
+      
+      selectInput("num_clusters", "Number of Clusters:", 
+                  list("1" = "1",
+                       "2" = "2",
+                       "10" = "10"))
       
       # checkboxInput("show_centers", "Show style centers", FALSE)
     ),

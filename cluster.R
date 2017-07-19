@@ -84,19 +84,19 @@ resp = response_vars)
 
 
 
-cluster_it <- function(df_preds, n_centers) {
-  set.seed(9)
-  clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
-  
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster),
-    df_preds$outcome, df_preds$preds,
-    df_preds$df_for_clustering %>% select(abv, ibu, srm)))
-  
-  return(clustered_df)
-}
-
-clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
+# cluster_it <- function(df_preds, n_centers) {
+#   set.seed(9)
+#   clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
+# 
+#   clustered_df <- as_tibble(data.frame(
+#     cluster_assignment = factor(clustered_df_out$cluster),
+#     df_preds$outcome, df_preds$preds,
+#     df_preds$df_for_clustering %>% select(abv, ibu, srm)))
+# 
+#   return(clustered_df)
+# }
+# 
+# clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 
 
 
