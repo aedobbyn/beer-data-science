@@ -30,6 +30,10 @@ dbWriteTable(con, "simple_beer_necessities",
 dbWriteTable(con, "beer_dat", 
              value = beer_dat, append = TRUE, row.names = FALSE)
 
+dbWriteTable(con, "beer_totals", 
+             value = beer_totals, append = TRUE, row.names = FALSE)
+
+
 
 
 # ------------- write to csv

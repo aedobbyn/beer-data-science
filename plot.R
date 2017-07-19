@@ -87,7 +87,7 @@ ggplot() +
   ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster Assignment") +
-  theme_bw()
+  theme_minimal()
 
 
 
@@ -108,7 +108,7 @@ style_centers_certain_styles <- style_centers %>%
 sparser_cluster_plot <- ggplot() +   
   geom_point(data = clustered_beer_certain_styles, 
              aes(x = abv, y = ibu,
-                 # shape = cluster_assignment,
+                 shape = cluster_assignment,
                  colour = style_collapsed), alpha = 0.5) +
   geom_point(data = style_centers_certain_styles,
              aes(mean_abv, mean_ibu), colour = "black") +
