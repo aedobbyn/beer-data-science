@@ -89,7 +89,9 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
                                     , "&p=", page, addition),
                              flatten = TRUE) 
     this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
-    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))}
+    
+    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))} # if TRUE, print the page we're on
+    
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
   }
   return(full_request)
@@ -313,6 +315,9 @@ str(beer_necessities)
 ```
 
 
+\newpage
+
+
 **Find the Most Popualar Styles**
 
 We find mean ABV, IBU, and SRM per collapsed style and arrange collapsed styles by the number of beers that fall into them. (This is of course dependent on how we collapse styles; if we looped all Double IPAs in with IPAs then the category IPA would be much bigger than it is if we keep the two separate.)
@@ -348,7 +353,7 @@ popular_beer_dat <- beer_dat_pared %>%
 ```
 
 
-How many rows do we have in our dataset of just beers that fall into the popular styles?
+How many rows do we have in our dataset of just beers that fall into the popular styles? (In the original dataset we had 63495)
 
 ```r
 nrow(popular_beer_dat)
@@ -359,7 +364,14 @@ nrow(popular_beer_dat)
 ```
 
 
-Now we find the style centers.
+  
+  
+  
+  
+  
+  
+
+Now we find what I'm calling the "style centers" for each of these most popular styles. The center is defined by the mean ABV, mean IBU, and mean SRM of all of the beers in that style. 
 
 ```r
 # Find the centers (mean abv, ibu, srm) of the most popular styles
@@ -427,6 +439,10 @@ Take a look at the table, ordered by number of beers in that style, descending.
 
 
 ***
+
+\newpage
+
+
 
 ### Ingredients
 
@@ -671,7 +687,11 @@ beer_totals <- beer_ingredients_join %>%
 ```
 
 
-Now we're left with something of a sparse matrix of all the ingredients compared to all the beers
+  
+  
+  
+
+Now we're left with something of a sparse matrix of all the ingredients compared to all the beers. Scroll right to see the extent of the granularity this affords us.
 
 ```r
 kable(beer_ingredients_join[1:20, ])
@@ -704,23 +724,27 @@ kable(beer_ingredients_join[1:20, ])
 
 
 
-***
-
-Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
-
+\newpage
 
 ***
+
+Now that the munging is done, onto the main question: to what extent do natural clusters in beer align with style boundaries?
+
+
 
 ### Unsupervised Clustering 
-We K-means cluster beers based on certain numeric predictor variables. 
+We K-means cluster beers based on certain numeric predictor variables. The data we'll use is includes all beers as well as the total number of hops and malts in each beer. 
 
 
 **Prep**
 
-* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it
+We'll prep the data for clustering first in order to 
 
-* Take out missing values, and scale the data
+Here we define a funciton that takes a dataframe, a set of predictors, a set of variables to scale, and a response variable
+
+
+We select only the response variable(s) and the variables to cluster on. If there are any missing values, we remove them. (NB: There are not not very many beers have SRM so we may not want to omit based on it.)
+
 * Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
 * Then cluster on just the predictors and compare to the response variable
   
@@ -780,10 +804,12 @@ cluster_prep <- prep_clusters(df = beer_totals,
 ```
 
 
+After prepping, we're left with  beers to cluster on.
 
 
-Determine an optimal number of clusters by setting the minimum to 2 and max to 15 clusters.
-From the resulting histogram, 10 seemed an optimal number of clusters. 
+
+Before clustering, we can determine an optimal number of clusters by setting the minimum to 2 and max to 15 clusters.
+From the resulting histogram (not run here for computational ), 10 seemed an optimal number of clusters. 
 
 
 ```r
@@ -1089,7 +1115,7 @@ This holds even with 5 or more hops.
 ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") +
-  ggtitle("3+ Hops Per Beer vs. Bitterness") +
+  ggtitle("5+ Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
@@ -1532,7 +1558,7 @@ sessionInfo()
 ```
 ## R version 3.3.3 (2017-03-06)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Sierra 10.12.4
+## Running under: macOS Sierra 10.12.5
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8

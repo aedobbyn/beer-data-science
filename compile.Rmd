@@ -31,6 +31,7 @@ lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 library(knitr)
 library(broom)
 
+# knitr::opts_chunk$set(cache=TRUE)
 # knitr::opts_knit$set(root.dir=normalizePath('../'))
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8) 
@@ -120,7 +121,9 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
                                     , "&p=", page, addition),
                              flatten = TRUE) 
     this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
-    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))}
+    
+    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))} # if TRUE, print the page we're on
+    
     full_request <- bind_rows(full_request, this_req_unnested[["data"]])
   }
   return(full_request)
@@ -258,6 +261,9 @@ str(beer_necessities)
 ```
 
 
+\newpage
+
+
 **Find the Most Popualar Styles**
 
 We find mean ABV, IBU, and SRM per collapsed style and arrange collapsed styles by the number of beers that fall into them. (This is of course dependent on how we collapse styles; if we looped all Double IPAs in with IPAs then the category IPA would be much bigger than it is if we keep the two separate.)
@@ -292,22 +298,31 @@ popular_beer_dat <- beer_dat_pared %>%
 ```
 
 
-How many rows do we have in our dataset of just beers that fall into the popular styles?
+How many rows do we have in our dataset of just beers that fall into the popular styles? (In the original dataset we had `r nrow(beer_necessities)`)
 ```{r, echo=TRUE}
 nrow(popular_beer_dat)
 ```
 
 
-Now we find the style centers.
+  
+  
+  
+  
+  
+  
+
+Now we find what I'm calling the "style centers" for each of these most popular styles. The center is defined by the mean ABV, mean IBU, and mean SRM of all of the beers in that style. 
+
+Styles that appear here that did not appear in the keywords that we collapsed to are the most popular styles that did not contain one of those keywords. 
 ```{r, echo=TRUE}
 # Find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
   add_count() %>% 
   summarise(
-    mean_abv = mean(abv, na.rm = TRUE),
-    mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_srm = mean(srm, na.rm = TRUE),
+    mean_abv = mean(abv, na.rm = TRUE) %>% round(., digits = 2),
+    mean_ibu = mean(ibu, na.rm = TRUE) %>% round(., digits = 2), 
+    mean_srm = mean(srm, na.rm = TRUE) %>% round(., digits = 2),
     n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
   ) %>% 
   arrange(desc(n)) %>% 
@@ -335,6 +350,10 @@ kable(style_centers_rename)
 
 
 ***
+
+\newpage
+
+
 
 ### Ingredients
 
@@ -579,30 +598,38 @@ beer_totals <- beer_ingredients_join %>%
 ```
 
 
-Now we're left with something of a sparse matrix of all the ingredients compared to all the beers
+  
+  
+  
+
+Now we're left with something of a sparse matrix of all the ingredients compared to all the beers. Scroll right to see the extent of the granularity this affords us.
 ```{r, echo=TRUE}
 kable(beer_ingredients_join[1:20, ])
 ```
 
 
 
-***
-
-Now that the munging is done, onto the main question: do natural clusters in beer align with style boundaries?
-
+\newpage
 
 ***
+
+Now that the munging is done, onto the main question: to what extent do natural clusters in beer align with style boundaries?
+
+
 
 ### Unsupervised Clustering 
-We K-means cluster beers based on certain numeric predictor variables. 
+We K-means cluster beers based on certain numeric predictor variables. The data we'll use is includes all beers as well as the total number of hops and malts in each beer. 
 
 
 **Prep**
 
-* Write a funciton that takes a dataframe, a set of predictors, a response variable, and the number of cluster centers you want
-    * NB: There are not not very many beers have SRM so we may not want to omit based on it
+We'll prep the data for clustering first in order to 
 
-* Take out missing values, and scale the data
+Here we define a funciton that takes a dataframe, a set of predictors, a set of variables to scale, and a response variable
+
+
+We select only the response variable(s) and the variables to cluster on. If there are any missing values, we remove them. (NB: There are not not very many beers have SRM so we may not want to omit based on it.)
+
 * Take out outliers, defined as beers have to have an ABV between 3 and 20 and an IBU less than 200
 * Then cluster on just the predictors and compare to the response variable
   
@@ -661,10 +688,12 @@ cluster_prep <- prep_clusters(df = beer_totals,
 ```
 
 
+After prepping, we're left with `r nrow(cluster_prep)` beers to cluster on.
 
 
-Determine an optimal number of clusters by setting the minimum to 2 and max to 15 clusters.
-From the resulting histogram, 10 seemed an optimal number of clusters. 
+
+Before clustering, we can determine an optimal number of clusters by setting the minimum to 2 and max to 15 clusters.
+From the resulting histogram (not run here for computational ), 10 seemed an optimal number of clusters. 
 
 ```{r, echo=TRUE, eval=FALSE}
 nb <- NbClust(cluster_prep$preds, distance = "euclidean",
@@ -757,7 +786,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster Assignment") +
-  theme_bw()
+  theme_minimal()
 abv_ibu_clusters_vs_style_centers
 ```
 
