@@ -2,7 +2,8 @@
 # may want to cluster the remaining into one of these groups down the road
 
 # source("./munge.R")
-source("./read_from_db.R")
+source("/Users/amanda/Desktop/Projects/beer_data_science/read_from_db.R")  # using absolute path
+# here so that shiny app can source this from inside a different directory than this file
 library(forcats)
 
 # beer_dat <- dbGetQuery(con, "select * from all_beers")

@@ -1,36 +1,47 @@
 
+# if need to close some connections
 # lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 
 
 library(shiny)
 library(shinythemes)
 
-source("../cluster.R")
-# source("../most_popular_styles.R")
+# cluster data prepared in cluster.R
+# our same clustering function
+cluster_it <- function(df_preds, n_centers) {
+  clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
+  
+  clustered_df <- as_tibble(data.frame(
+    cluster_assignment = factor(clustered_df_out$cluster),
+    df_preds$outcome, df_preds$preds,
+    df_preds$df_for_clustering %>% select(abv, ibu, srm)))
+  
+  return(clustered_df)
+}
 
 
 shinyServer(function(input, output) {
   
-
   output$cluster_plot <- renderPlot({
+  
     
-    cluster_it <- function(df_preds, n_centers) {
-      set.seed(9)
-      clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
-      
-      clustered_df <- as_tibble(data.frame(
-        cluster_assignment = factor(clustered_df_out$cluster),
-        df_preds$outcome, df_preds$preds,
-        df_preds$df_for_clustering %>% select(abv, ibu, srm)))
-      
-      return(clustered_df)
+    # cluster the data with a number of centers specified by the user and filter to just the style
+    # specified
+    
+    if (input$show_all == FALSE) {
+      this_style_data <- cluster_it(df_preds = cluster_prep, n_centers = input$num_clusters) %>%
+        filter(style_collapsed == input$style_collapsed)
+      this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed)
+    } else {
+      this_style_data <- cluster_it(df_preds = cluster_prep, n_centers = input$num_clusters)
+      this_style_center <- style_centers 
     }
     
-    this_style_data <- cluster_it(df_preds = cluster_prep, n_centers = input$num_clusters) %>%
-      filter(style_collapsed == input$style_collapsed)
     
-    this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed) 
+     
     
+    
+    # if our checkbox is checked saying we do want style centers, show them. else, don't.
     if (input$show_centers == TRUE) {
       ggplot() +   
         geom_point(data = this_style_data,
