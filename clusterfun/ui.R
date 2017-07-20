@@ -1,6 +1,10 @@
 
 library(shiny)
 
+style_names <- levels(clustered_beer$style_collapsed)
+names(style_names) <- levels(clustered_beer$style_collapsed)
+
+
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
   
@@ -11,11 +15,7 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       selectInput("style_collapsed", "Collapsed Style:",
-                  list("Blonde" = "Blonde", 
-                       "Brown" = "Brown", 
-                       "Double India Pale Ale" = "Double India Pale Ale",
-                       "Red" = "Red",
-                       "Stout" = "Stout")),
+                  style_names),
       
       numericInput("num_clusters", "Number of Clusters:", 4)
       
