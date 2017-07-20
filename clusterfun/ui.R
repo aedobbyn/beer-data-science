@@ -17,9 +17,9 @@ shinyUI(fluidPage(
       selectInput("style_collapsed", "Collapsed Style:",
                   style_names),
       
-      numericInput("num_clusters", "Number of Clusters:", 4)
+      numericInput("num_clusters", "Number of Clusters:", 4),
       
-      # checkboxInput("show_centers", "Show style centers", FALSE)
+      checkboxInput("show_centers", "Show style centers", FALSE)
     ),
     
     mainPanel(
