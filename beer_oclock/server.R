@@ -6,7 +6,6 @@ library(shiny)
 
 source("../read_from_db.R")
 
-
 want_styles <- beer_necessities %>% 
   group_by(style_collapsed) %>% 
   tally(., sort = TRUE) %>% 

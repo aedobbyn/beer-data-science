@@ -4,10 +4,10 @@ library(shiny)
 # Define UI for application that draws a histogram
 shinyUI(fluidPage(
   
-  # Application title
+  theme = shinytheme("spacelab"),
+  
   titlePanel("Clustered Beer"),
   
-  # Sidebar with a slider input for number of bins 
   sidebarLayout(
     sidebarPanel(
       selectInput("style_collapsed", "Collapsed Style:",
@@ -17,17 +17,15 @@ shinyUI(fluidPage(
                        "Red" = "Red",
                        "Stout" = "Stout")),
       
-      selectInput("num_clusters", "Number of Clusters:", 
-                  list("1" = "1",
-                       "2" = "2",
-                       "10" = "10"))
+      numericInput("num_clusters", "Number of Clusters:", 4)
       
       # checkboxInput("show_centers", "Show style centers", FALSE)
     ),
     
-    # Show a plot of the generated distribution
     mainPanel(
-       plotOutput("cluster_plot")
+       plotOutput("cluster_plot"),
+       
+       tableOutput("this_style_data")
     )
   )
 ))
