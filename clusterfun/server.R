@@ -1,10 +1,41 @@
-
 # if need to close some connections
 # lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 
+# setwd("/Users/amanda/Desktop/Projects/beer_data_science/clusterfun")
 
+
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(rdrop2)
 library(shiny)
 library(shinythemes)
+
+style_centers <- read_csv("./data/style_centers.csv")
+popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
+
+# token <- readRDS("../../droptoken.rds")
+# beer_totals <- drop_read_csv("beer_data_science/beer_totals.csv", dtoken = token)
+# style_centers <- drop_read_csv("beer_data_science/style_centers.csv", dtoken = token)
+
+factorize_cols <- function(df) {
+  for(col_name in names(df)) {
+    if (grepl(("hops_name_|malt_name_|style|glass"), col_name) == TRUE) {
+      df[[col_name]] <- factor(df[[col_name]])
+    }
+  df <- as_tibble(df)
+  }
+  return(df)
+}
+
+style_centers <- factorize_cols(style_centers)
+popular_beer_dat <- factorize_cols(popular_beer_dat)
+
+source("./cluster_prep.R")
+
+
 
 # cluster data prepared in cluster.R
 # our same clustering function

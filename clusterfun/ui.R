@@ -1,9 +1,28 @@
 
 
-source("../most_popular_styles.R")
-source("../cluster.R")
+# source("../most_popular_styles.R", local = TRUE)
+# source("../cluster.R", local = TRUE)
 
+# beer_totals <- read_csv("../beer_totals.csv")
+# style_centers <- read_csv("../style_centers.csv")
+
+# beer_totals <- read_csv("data/beer_totals.csv")
+# style_centers <- read_csv("data/style_centers.csv")
+
+
+
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(rdrop2)
 library(shiny)
+library(shinythemes)
+
+beer_totals <- read_csv("./data/beer_totals.csv")
+style_centers <- read_csv("./data/style_centers.csv")
+popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
+
 
 # so that we don't have to name each of the styles inside selectInput with 
 # something like (list("Blonde" = "Blonde", "Pale Ale" = "Pale Ale" ... ))
@@ -18,7 +37,7 @@ shinyUI(fluidPage(
   
   theme = shinytheme("spacelab"),
   
-  titlePanel("Clustered Beer"),
+  titlePanel("Clusterfun with Beer"),
   p("Beers from the BreweryDB API. To drill down into a certain style, uncheck the 'Show all styles'
   checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
   centers by changing the Number of Clusters."),
@@ -36,13 +55,15 @@ shinyUI(fluidPage(
       
       numericInput("num_clusters", "Number of Clusters:", 4),
       
+      checkboxInput("show_centers", "Show style centers", FALSE),
+      
       conditionalPanel(
         condition = "input.show_all == false",
         selectInput("style_collapsed", "Collapsed Style:",
                     style_names)
-      ),
+      )
       
-      checkboxInput("show_centers", "Show style centers", FALSE)
+      
     ),
     
     mainPanel(
