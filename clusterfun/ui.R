@@ -33,6 +33,9 @@ shinyUI(fluidPage(
   checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
   centers by changing the Number of Clusters."),
   br(),
+  p("More info and code at "), a("https://github.com/aedobbyn/beer-data-science/blob/master/compile.md"),
+  br(),
+  br(),
   # p("Beers were collapsed into these styles using this function:"),
   # br(),
   # pre(renderText("../keywords.txt")),
