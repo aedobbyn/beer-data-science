@@ -20,7 +20,7 @@ beer_totals$malt_name <- factor(beer_totals$malt_name)
 
 factorize_ingredients <- function(df) {
   for(col_name in names(df)) {
-    if (grepl(("hops_name_|malt_name_"), col_name) == TRUE) {
+    if (grepl(("hops_name_|malt_name_|style|glass"), col_name) == TRUE) {
       df[[col_name]] <- factor(df[[col_name]])
     }
   }

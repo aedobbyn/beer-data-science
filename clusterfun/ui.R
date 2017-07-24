@@ -1,16 +1,4 @@
 
-
-# source("../most_popular_styles.R", local = TRUE)
-# source("../cluster.R", local = TRUE)
-
-# beer_totals <- read_csv("../beer_totals.csv")
-# style_centers <- read_csv("../style_centers.csv")
-
-# beer_totals <- read_csv("data/beer_totals.csv")
-# style_centers <- read_csv("data/style_centers.csv")
-
-
-
 library(readr)
 library(dplyr)
 library(ggplot2)
@@ -51,7 +39,7 @@ shinyUI(fluidPage(
  
   sidebarLayout(
     sidebarPanel(
-      checkboxInput("show_all", "Show all styles", TRUE),
+      checkboxInput("show_all", "Show all styles", FALSE),
       
       numericInput("num_clusters", "Number of Clusters:", 4),
       
