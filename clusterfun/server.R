@@ -14,25 +14,35 @@ source("./cluster_prep.R")
 
 
 
-# cluster data prepared in cluster.R
-# our same clustering function
-cluster_it <- function(df_preds, n_centers) {
-  clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
-  
-  clustered_df <- as_tibble(data.frame(
-    cluster_assignment = factor(clustered_df_out$cluster),
-    df_preds$outcome, df_preds$preds,
-    df_preds$df_for_clustering %>% select(abv, ibu, srm)))
-  
-  return(clustered_df)
-}
-
-# clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
-
-
 shinyServer(function(input, output) {
   
   output$cluster_plot <- renderPlot({
+    
+    
+    cluster_on <- input$cluster_on
+    
+    to_scale <- cluster_on
+    response_vars <- c("name", "style", "style_collapsed")
+    
+    cluster_prep <- prep_clusters(df = beer_totals,
+                                  preds = cluster_on,
+                                  to_scale = to_scale,
+                                  resp = response_vars)
+    
+    
+    
+    # cluster data prepared in cluster.R
+    # our same clustering function
+    cluster_it <- function(df_preds, n_centers) {
+      clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
+      
+      clustered_df <- as_tibble(data.frame(
+        cluster_assignment = factor(clustered_df_out$cluster),
+        df_preds$outcome, df_preds$preds,
+        df_preds$df_for_clustering %>% select(abv, ibu, srm)))
+      
+      return(clustered_df)
+    }
   
     
     # cluster the data with a number of centers specified by the user and filter to just the style

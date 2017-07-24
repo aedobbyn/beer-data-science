@@ -94,14 +94,7 @@ prep_clusters <- function(df, preds, to_scale, resp) {
   return(cluster_prep_out)
 }
 
-cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-response_vars <- c("name", "style", "style_collapsed")
 
-cluster_prep <- prep_clusters(df = beer_totals,
-                              preds = cluster_on,
-                              to_scale = to_scale,
-                              resp = response_vars)
 
 
 

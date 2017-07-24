@@ -38,6 +38,8 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 ```
 
+Check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/)!
+
 
 ### Motivation and Overview
 

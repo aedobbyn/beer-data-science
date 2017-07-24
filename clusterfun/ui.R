@@ -51,6 +51,9 @@ shinyUI(fluidPage(
       
       checkboxInput("show_centers", "Show style centers", FALSE),
       
+      checkboxInput("cluster_on", "Choose variables to cluster on: ",
+                    c("abv", "ibu", "srm", "total_hops", "total_malt")),
+      
       conditionalPanel(
         condition = "input.show_all == false",
         selectInput("style_collapsed", "Collapsed Style:",
