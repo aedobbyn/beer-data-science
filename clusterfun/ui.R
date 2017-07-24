@@ -7,9 +7,12 @@ library(rdrop2)
 library(shiny)
 library(shinythemes)
 
-beer_totals <- read_csv("./data/beer_totals.csv")
-style_centers <- read_csv("./data/style_centers.csv")
-popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
+source("./cluster_prep.R")
+
+
+# beer_totals <- read_csv("./data/beer_totals.csv")
+# style_centers <- read_csv("./data/style_centers.csv")
+# popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
 
 
 # so that we don't have to name each of the styles inside selectInput with 
@@ -39,7 +42,7 @@ shinyUI(fluidPage(
  
   sidebarLayout(
     sidebarPanel(
-      checkboxInput("show_all", "Show all styles", FALSE),
+      checkboxInput("show_all", "Show all styles", TRUE),
       
       numericInput("num_clusters", "Number of Clusters:", 4),
       

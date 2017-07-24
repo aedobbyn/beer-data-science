@@ -9,21 +9,6 @@ library(rdrop2)
 library(shiny)
 library(shinythemes)
 
-style_centers <- read_csv("./data/style_centers.csv")
-popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
-
-factorize_cols <- function(df) {
-  for(col_name in names(df)) {
-    if (grepl(("hops_name_|malt_name_|style|glass"), col_name) == TRUE) {
-      df[[col_name]] <- factor(df[[col_name]])
-    }
-  df <- as_tibble(df)
-  }
-  return(df)
-}
-
-style_centers <- factorize_cols(style_centers)
-popular_beer_dat <- factorize_cols(popular_beer_dat)
 
 source("./cluster_prep.R")
 
@@ -41,6 +26,8 @@ cluster_it <- function(df_preds, n_centers) {
   
   return(clustered_df)
 }
+
+# clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 
 
 shinyServer(function(input, output) {
@@ -65,20 +52,34 @@ shinyServer(function(input, output) {
     
     
     # if our checkbox is checked saying we do want style centers, show them. else, don't.
-    if (input$show_centers == TRUE) {
+    if (input$show_centers == TRUE & input$show_all == FALSE) {
       ggplot() +   
         geom_point(data = this_style_data,
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
         geom_point(data = this_style_center,
                    aes(mean_abv, mean_ibu), colour = "black") +
         geom_text_repel(data = this_style_center,
-                        aes(mean_abv, mean_ibu, label = input$style_collapsed), 
+                        aes(mean_abv, mean_ibu, label = input$style_collapsed),
                         box.padding = unit(0.45, "lines"),
                         family = "Calibri") +
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
         theme_minimal() 
+    } else if (input$show_centers == TRUE & input$show_all == TRUE) {
+      ggplot() +   
+        geom_point(data = this_style_data,
+                   aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+        geom_point(data = style_centers,
+                   aes(mean_abv, mean_ibu), colour = "black") +
+        geom_text_repel(data = this_style_center,
+                        aes(mean_abv, mean_ibu, label = style_collapsed),
+                        box.padding = unit(0.45, "lines"),
+                        family = "Calibri") +
+        ggtitle("k-Means Clustered Beer") +
+        labs(x = "ABV", y = "IBU") +
+        labs(colour = "Cluster Assignment") +
+        theme_minimal()
     } else {
       ggplot() +   
         geom_point(data = this_style_data,
