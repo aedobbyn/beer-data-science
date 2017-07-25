@@ -16,19 +16,21 @@ source("./cluster_prep.R")
 
 shinyServer(function(input, output) {
   
+  cluster_on <- reactive({input$cluster_on})
+  
+  response_vars <- reactive({input$response_vars})
+  
+  
   output$cluster_plot <- renderPlot({
     
+    # cluster_on <- input$cluster_on
     
-    cluster_on <- input$cluster_on
-    
-    to_scale <- cluster_on
-    response_vars <- c("name", "style", "style_collapsed")
+    # response_vars <- c("name", "style", "style_collapsed")
     
     cluster_prep <- prep_clusters(df = beer_totals,
-                                  preds = cluster_on,
-                                  to_scale = to_scale,
-                                  resp = response_vars)
-    
+                                  preds = cluster_on(),
+                                  to_scale = cluster_on(),
+                                  resp = response_vars())
     
     
     # cluster data prepared in cluster.R
@@ -39,7 +41,7 @@ shinyServer(function(input, output) {
       clustered_df <- as_tibble(data.frame(
         cluster_assignment = factor(clustered_df_out$cluster),
         df_preds$outcome, df_preds$preds,
-        df_preds$df_for_clustering %>% select(abv, ibu, srm)))
+        df_preds$df_for_clustering %>% select(cluster_on())))
       
       return(clustered_df)
     }

@@ -27,6 +27,10 @@ popular_beer_dat <- factorize_cols(popular_beer_dat)
 beer_totals <- factorize_cols(beer_totals)
 
 
+# take out srm
+style_centers <- style_centers %>% select(-mean_srm)
+
+
 
 # set types
 beer_totals$style <- factor(beer_totals$style)

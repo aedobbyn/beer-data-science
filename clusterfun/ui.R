@@ -10,9 +10,10 @@ library(shinythemes)
 source("./cluster_prep.R")
 
 
-# beer_totals <- read_csv("./data/beer_totals.csv")
-# style_centers <- read_csv("./data/style_centers.csv")
-# popular_beer_dat <- read_csv("./data/popular_beer_dat.csv")
+# ------ Molly Idea ----
+# It’d be fun if you could also look at individual beers (maybe with tooltips), 
+# or maybe even search for particular beers. You could then report how close a particular beer
+# is to the center of its cluster (i.e. how much of an IPA a particular IPA is).
 
 
 # so that we don't have to name each of the styles inside selectInput with 
@@ -29,7 +30,7 @@ shinyUI(fluidPage(
   theme = shinytheme("spacelab"),
   
   titlePanel("Clusterfun with Beer"),
-  p("Beers from the BreweryDB API. To drill down into a certain style, uncheck the 'Show all styles'
+  p("All beer data sourced from the BreweryDB API. To drill down into a certain style, uncheck the 'Show all styles'
   checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
   centers by changing the Number of Clusters."),
   br(),
@@ -51,8 +52,19 @@ shinyUI(fluidPage(
       
       checkboxInput("show_centers", "Show style centers", FALSE),
       
-      checkboxInput("cluster_on", "Choose variables to cluster on: ",
-                    c("abv", "ibu", "srm", "total_hops", "total_malt")),
+      checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
+                    c("ABV (alcohol)" = "abv", 
+                      "IBU (bitterness)" = "ibu", 
+                      "SRM (color)" ="srm", 
+                      "Total number of hops" = "total_hops", 
+                      "Total number of malts" = "total_malt"),
+                    selected = c("abv", "ibu", "srm")),
+      
+      checkboxGroupInput("response_vars", "Choose response variable(s): ",
+                         c("Name" = "name",
+                           "Style" = "style",
+                           "Collapsed style" = "style_collapsed"),
+                         selected = c("name", "style", "style_collapsed")),
       
       conditionalPanel(
         condition = "input.show_all == false",
