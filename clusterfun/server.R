@@ -25,7 +25,6 @@ shinyServer(function(input, output) {
     
     # cluster_on <- input$cluster_on
     
-    # response_vars <- c("name", "style", "style_collapsed")
     
     cluster_prep <- prep_clusters(df = beer_totals,
                                   preds = cluster_on(),

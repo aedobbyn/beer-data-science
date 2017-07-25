@@ -27,9 +27,6 @@ popular_beer_dat <- factorize_cols(popular_beer_dat)
 beer_totals <- factorize_cols(beer_totals)
 
 
-# take out srm
-style_centers <- style_centers %>% select(-mean_srm)
-
 
 
 # set types
@@ -61,11 +58,12 @@ beer_totals$malt_name <- factor(beer_totals$malt_name)
 
 
 
+response_vars <- c("name", "style", "style_collapsed")
 
 
 prep_clusters <- function(df, preds, to_scale, resp) {
   df_for_clustering <- df %>%
-    select_(.dots = c(response_vars, cluster_on)) %>%
+    select_(.dots = c(response_vars(), cluster_on())) %>%
     na.omit() %>%
     filter(
       abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
