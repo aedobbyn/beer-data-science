@@ -21,6 +21,14 @@ to_plot <- beer_necessities[which(!is.na(beer_necessities$abv) & !is.na(beer_nec
 
 # Define server logic required to draw a histogram
 shinyServer(function(input, output) {
+  
+  cluster_on <- reactive({input$cluster_on})
+  
+  response_vars <- reactive({input$response_vars})
+  
+  foo <- reactive({ to_plot %>%
+    select(response_vars(), cluster_on()) %>%
+    na.omit() })
    
   output$my_plot <- renderPlot({
     
@@ -30,6 +38,10 @@ shinyServer(function(input, output) {
       geom_histogram(binwidth = this_binwidth)
     
   })
+  
+  output$text <- renderText({names(foo())})
+  
+  output$table <- renderTable({foo()})
   
 })
 

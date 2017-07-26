@@ -24,33 +24,37 @@ names(style_names) <- levels(popular_beer_dat$style_collapsed)
 
 keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
 
-# Define UI for application that draws a histogram
 shinyUI(fluidPage(
   
   theme = shinytheme("spacelab"),
   
-  titlePanel("Clusterfun with Beer"),
+  titlePanel("Explore your Beer"),
   p("All beer data sourced from the BreweryDB API. To drill down into a certain style, uncheck the 'Show all styles'
   checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
   centers by changing the Number of Clusters."),
   br(),
-  p("More info and code at "), a("https://github.com/aedobbyn/beer-data-science/blob/master/compile.md"),
+  p("You must cluster on at least ABV and IBU. The only required outcome variable is collapsed style."),
+  p("For more info and code, see: "), a("https://github.com/aedobbyn/beer-data-science/blob/master/compile.md"),
   br(),
   br(),
   # p("Beers were collapsed into these styles using this function:"),
   # br(),
-  # pre(renderText("../keywords.txt")),
-  # br(),
-  # br(),
+  # pre(renderText("./keywords.txt")),
+  br(),
+  br(),
 
  
   sidebarLayout(
     sidebarPanel(
-      checkboxInput("show_all", "Show all styles", TRUE),
-      
-      numericInput("num_clusters", "Number of Clusters:", 4),
+      h4("Control Panel"),
+      br(),
+
+      checkboxInput("show_all", "Show all styles", TRUE),      
       
       checkboxInput("show_centers", "Show style centers", FALSE),
+
+      numericInput("num_clusters", "Number of Clusters:", 4),
+      
       
       checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
                     c("ABV (alcohol)" = "abv", 
@@ -61,15 +65,18 @@ shinyUI(fluidPage(
                     selected = c("abv", "ibu", "srm")),
       
       checkboxGroupInput("response_vars", "Choose response variable(s): ",
-                         c("Name" = "name",
-                           "Style" = "style",
-                           "Collapsed style" = "style_collapsed"),
-                         selected = c("name", "style", "style_collapsed")),
+                         c("Collapsed style" = "style_collapsed",
+                           "Specific style" = "style",
+                           "Name" = "name"
+                           ),
+                         selected = c("style", "style_collapsed")),
       
       conditionalPanel(
         condition = "input.show_all == false",
         selectInput("style_collapsed", "Collapsed Style:",
                     style_names)
+        
+      # actionButton("filter_outliers", "Remove Outliers")
       )
       
       
@@ -78,7 +85,12 @@ shinyUI(fluidPage(
     mainPanel(
        plotOutput("cluster_plot"),
        
+       br(), br(),
+       br(), br(),
+       h2("Data"),
+       
        tableOutput("this_style_data")
+       
     )
   )
 ))

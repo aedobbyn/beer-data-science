@@ -16,6 +16,8 @@ factorize_cols <- function(df) {
   for(col_name in names(df)) {
     if (grepl(("hops_name_|malt_name_|style|glass"), col_name) == TRUE) {
       df[[col_name]] <- factor(df[[col_name]])
+    } else if (grepl(("abv|ibu|srm|total"), col_name) == TRUE) {
+      df[[col_name]] <- as.numeric(df[[col_name]])
     }
     df <- as_tibble(df)
   }
@@ -28,6 +30,7 @@ beer_totals <- factorize_cols(beer_totals)
 
 
 
+<<<<<<< HEAD
 # set types
 beer_totals$style <- factor(beer_totals$style)
 beer_totals$glass <- factor(beer_totals$glass)
@@ -93,6 +96,11 @@ beer_totals$malt_name <- factor(beer_totals$malt_name)
 #   
 #   return(cluster_prep_out)
 # }
+=======
+# response_vars <- c("name", "style", "style_collapsed")
+
+
+>>>>>>> dev
 
 
 
