@@ -56,7 +56,6 @@ shinyServer(function(input, output) {
 
       clustered_df <- reactive({ as_tibble(data.frame(
         cluster_assignment = factor(clustered_df_out()$cluster),
-        df_outcome(), df_preds(),
         df_for_clustering())) })
 
     }
@@ -67,51 +66,67 @@ shinyServer(function(input, output) {
 
   # this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
   
+  this_style_data_pre <- cluster_it(input$num_clusters)
   
-  # reactive({  if (input$show_all == FALSE) {
-  #     this_style_data_pre <- cluster_it(input$num_clusters)
-  #     this_style_data <- reactive({ this_style_data_pre() %>%
-  #       filter(style_collapsed == input$style_collapsed) })
+  this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
+  
+  
+  this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
+  
+  
+  
+  # reactive({
+  #   this_style_data <- ifelse(input$show_all == FALSE, this_style_data_pre() %>%
+  #                       filter(style_collapsed == input$style_collapsed), 
+  #                              this_style_data_pre())
+  # })
+  
+  
+  # reactive({ if (input$show_all == FALSE) {
+  #     # this_style_data_pre <- cluster_it(input$num_clusters)
+  #     this_style_data <- this_style_data_pre() %>%
+  #       filter(style_collapsed == input$style_collapsed) 
   # 
   #     # this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
   # 
   #   } else {
-  #     this_style_data <- reactive({ cluster_it(input$num_clusters) })
+  #     this_style_data <- this_style_data_pre()
   # 
   #     # this_style_center <- style_centers
   #   }
   # })
-  # 
+
   output$cluster_plot <- renderPlot({
-
-
-    # cluster the data with a number of centers specified by the user and filter to just the style
-    # specified
-
-    if (input$show_all == FALSE) {
-      this_style_data <- cluster_it(n_centers = input$num_clusters) %>%
-        filter(style_collapsed == input$style_collapsed)
-
-      this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed)
-
-    } else {
-      this_style_data <- cluster_it(n_centers = input$num_clusters)
-
-      this_style_center <- style_centers
-    }
-
-
+  # 
+  # 
+  #   # cluster the data with a number of centers specified by the user and filter to just the style
+  #   # specified
+  # 
+  #   if (input$show_all == FALSE) {
+  #     this_style_data_pre <- cluster_it(n_centers = input$num_clusters) 
+  #     this_style_data <- this_style_data_pre() %>%
+  #       filter(style_collapsed == input$style_collapsed)
+  # 
+  #     this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed)
+  # 
+  #   } else {
+  #     this_style_data <- cluster_it(n_centers = input$num_clusters)
+  # 
+  #     this_style_center <- style_centers
+  #   }
+  # 
+  # 
     # if our checkbox is checked saying we do want style centers, show them. else, don't.
     if (input$show_centers == TRUE & input$show_all == FALSE) {
       ggplot() +
         geom_point(data = this_style_data(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-        # geom_point(data = this_style_center(),
-        #            aes(mean_abv, mean_ibu), colour = "black") +
-        # geom_text_repel(data = this_style_center,
-        #                 aes(mean_abv, mean_ibu, label = input$style_collapsed),
-        #                 box.padding = unit(0.45, "lines"),
-        #                 family = "Calibri") +
+        geom_point(data = this_style_center(),
+                   aes(mean_abv, mean_ibu), colour = "black") +
+        geom_text_repel(data = this_style_center(),
+                        aes(mean_abv, mean_ibu, label = input$style_collapsed),
+                        box.padding = unit(0.45, "lines"),
+                        family = "Calibri") +
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
@@ -120,12 +135,12 @@ shinyServer(function(input, output) {
       ggplot() +
         geom_point(data = this_style_data(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-        # geom_point(data = style_centers,
-        #            aes(mean_abv, mean_ibu), colour = "black") +
-        # geom_text_repel(data = this_style_center,
-        #                 aes(mean_abv, mean_ibu, label = style_collapsed),
-        #                 box.padding = unit(0.45, "lines"),
-        #                 family = "Calibri") +
+        geom_point(data = style_centers,
+                   aes(mean_abv, mean_ibu), colour = "black") +
+        geom_text_repel(data = style_centers,
+                        aes(mean_abv, mean_ibu, label = style_collapsed),
+                        box.padding = unit(0.45, "lines"),
+                        family = "Calibri") +
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
@@ -144,7 +159,7 @@ shinyServer(function(input, output) {
   
   
   output$this_style_data <- renderTable({
-    clustered_df_2()
+    this_style_data()
   
   })
   
