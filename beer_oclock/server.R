@@ -26,7 +26,7 @@ shinyServer(function(input, output) {
   
   response_vars <- reactive({input$response_vars})
   
-  foo <- reactive({ to_plot_2 <- to_plot %>%
+  foo <- reactive({ to_plot %>%
     select(response_vars(), cluster_on()) %>%
     na.omit() })
    
@@ -40,6 +40,8 @@ shinyServer(function(input, output) {
   })
   
   output$text <- renderText({names(foo())})
+  
+  output$table <- renderTable({foo()})
   
 })
 
