@@ -121,7 +121,7 @@ shinyServer(function(input, output) {
       ggplot() +
         geom_point(data = this_style_data(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-        geom_point(data = this_style_center(),
+        geom_point(data = this_style_data(),
                    aes(mean_abv, mean_ibu), colour = "black") +
         geom_text_repel(data = this_style_center(),
                         aes(mean_abv, mean_ibu, label = input$style_collapsed),
@@ -133,7 +133,7 @@ shinyServer(function(input, output) {
         theme_minimal()
     } else if (input$show_centers == TRUE & input$show_all == TRUE) {
       ggplot() +
-        geom_point(data = this_style_data(),
+        geom_point(data = this_style_data_pre(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
         geom_point(data = style_centers,
                    aes(mean_abv, mean_ibu), colour = "black") +
@@ -147,7 +147,7 @@ shinyServer(function(input, output) {
         theme_minimal()
     } else {
       ggplot() +
-        geom_point(data = this_style_data(),
+        geom_point(data = this_style_data_pre(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
