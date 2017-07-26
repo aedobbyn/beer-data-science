@@ -23,6 +23,12 @@ shinyServer(function(input, output) {
   
     df_for_clustering <- reactive({ beer_totals %>%
       select(response_vars(), cluster_on()) %>%
+        filter(
+          abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
+        ) %>%
+        filter(
+          ibu < 200    
+        ) %>% 
       na.omit() })
     
     # if (abv %in% cluster_on()) {
@@ -50,9 +56,11 @@ shinyServer(function(input, output) {
       select(response_vars()) %>%
       na.omit()
   })
+    
+  n_centers <- reactive({input$num_clusters})
 
-  cluster_it <- function(n_centers) {
-      clustered_df_out <- reactive({ kmeans(x = df_preds(), centers = n_centers, trace = FALSE) })
+  cluster_it <- function() {
+      clustered_df_out <- reactive({ kmeans(x = df_preds(), centers = n_centers(), trace = FALSE) })
 
       clustered_df <- reactive({ as_tibble(data.frame(
         cluster_assignment = factor(clustered_df_out()$cluster),
@@ -60,18 +68,23 @@ shinyServer(function(input, output) {
 
     }
   
-  clustered_df <- cluster_it(input$num_clusters) 
   
-  clustered_df_2 <- reactive({ clustered_df() %>% filter(style_collapsed == input$style_collapsed) })
-
-  # this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
+  this_style_data_pre <- cluster_it()
   
-  this_style_data_pre <- cluster_it(input$num_clusters)
+  # this_style_data_raw <- cluster_it()
+  # 
+  # observeEvent(input$filter_outliers, {
+  #   this_style_data_pre <- this_style_data_raw() %>% 
+  #     filter(
+  #       abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
+  #     ) %>%
+  #     filter(
+  #       ibu < 200    
+  #     )
+  # })
   
   this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
   
-  
-  this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
   
   
   
@@ -97,6 +110,8 @@ shinyServer(function(input, output) {
   # })
 
   output$cluster_plot <- renderPlot({
+    
+    
   # 
   # 
   #   # cluster the data with a number of centers specified by the user and filter to just the style
@@ -118,10 +133,12 @@ shinyServer(function(input, output) {
   # 
     # if our checkbox is checked saying we do want style centers, show them. else, don't.
     if (input$show_centers == TRUE & input$show_all == FALSE) {
+      this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
+      
       ggplot() +
         geom_point(data = this_style_data(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-        geom_point(data = this_style_data(),
+        geom_point(data = this_style_center(),
                    aes(mean_abv, mean_ibu), colour = "black") +
         geom_text_repel(data = this_style_center(),
                         aes(mean_abv, mean_ibu, label = input$style_collapsed),
@@ -145,9 +162,21 @@ shinyServer(function(input, output) {
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
         theme_minimal()
-    } else {
+    } else if (input$show_centers == FALSE & input$show_all == TRUE) {
+      this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
+      
       ggplot() +
         geom_point(data = this_style_data_pre(),
+                   aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+        ggtitle("k-Means Clustered Beer") +
+        labs(x = "ABV", y = "IBU") +
+        labs(colour = "Cluster Assignment") +
+        theme_minimal()
+    } else {
+      this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
+      
+      ggplot() +
+        geom_point(data = this_style_data(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
@@ -159,8 +188,12 @@ shinyServer(function(input, output) {
   
   
   output$this_style_data <- renderTable({
-    this_style_data()
-  
+    
+    if (input$show_all == TRUE) {
+    this_style_data_pre() } else {
+      this_style_data()
+    }
   })
+
   
 })
