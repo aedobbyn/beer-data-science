@@ -20,41 +20,67 @@ shinyServer(function(input, output) {
   
   response_vars <- reactive({input$response_vars})
   
+    df_for_clustering <- reactive({ beer_totals %>%
+      select(c(response_vars(), cluster_on())) %>%
+      na.omit() })
+    
+    # if (abv %in% cluster_on()) {
+    #   df_for_clustering <- df_for_clustering %>% 
+    #     filter(
+    #       abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
+    #     )
+    # }
+    # 
+    # if (ibu %in% cluster_on()) {
+    #   df_for_clustering <- df_for_clustering %>% 
+    #     filter(
+    #       ibu < 200    
+    #     )
+    # }
+    
+    df_preds <- reactive({ df_for_clustering %>%
+      select(cluster_on()) %>% 
+        scale() %>%
+        as_tibble() 
+      })
+    
+
+    df_outcome <- reactive({ df_for_clustering %>%
+      select(response_vars()) %>%
+      na.omit()
+  })
   
   output$cluster_plot <- renderPlot({
-    
-    # cluster_on <- input$cluster_on
-    
-    
-    cluster_prep <- prep_clusters(df = beer_totals,
-                                  preds = cluster_on(),
-                                  to_scale = cluster_on(),
-                                  resp = response_vars())
     
     
     # cluster data prepared in cluster.R
     # our same clustering function
-    cluster_it <- function(df_preds, n_centers) {
-      clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
+    cluster_it <- reactive({ function(n_centers) {
+      clustered_df_out <- kmeans(x = df_preds(), centers = n_centers, trace = FALSE)
       
       clustered_df <- as_tibble(data.frame(
         cluster_assignment = factor(clustered_df_out$cluster),
-        df_preds$outcome, df_preds$preds,
-        df_preds$df_for_clustering %>% select(cluster_on())))
+        df_outcome(), df_preds(),
+        df_for_clustering())))
       
       return(clustered_df)
     }
+    })
+    
   
     
     # cluster the data with a number of centers specified by the user and filter to just the style
     # specified
     
     if (input$show_all == FALSE) {
-      this_style_data <- cluster_it(df_preds = cluster_prep, n_centers = input$num_clusters) %>%
+      this_style_data <- cluster_it(n_centers = input$num_clusters) %>%
         filter(style_collapsed == input$style_collapsed)
+      
       this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed)
+      
     } else {
-      this_style_data <- cluster_it(df_preds = cluster_prep, n_centers = input$num_clusters)
+      this_style_data <- cluster_it(n_centers = input$num_clusters)
+      
       this_style_center <- style_centers 
     }
     
@@ -103,6 +129,10 @@ shinyServer(function(input, output) {
     
     
     
+  })
+  
+  output$this_style_data <- renderText({
+    names(df_preds)
   })
   
 })
