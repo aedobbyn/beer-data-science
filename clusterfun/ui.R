@@ -29,11 +29,12 @@ shinyUI(fluidPage(
   theme = shinytheme("spacelab"),
   
   titlePanel("Explore your Beer"),
-  p("All beer data sourced from the BreweryDB API. To drill down into a certain style, uncheck the 'Show all styles'
-    checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
-    centers by changing the Number of Clusters."),
+
+  p("All beer data sourced from the", a(href = "http://www.brewerydb.com/developers", "BreweryDB API"), "To drill down into a certain style, uncheck the 'Show all styles'
+  checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
+  centers by changing the Number of Clusters."),
   br(),
-  p("You must cluster on at least ABV and IBU. The only required outcome variable is collapsed style."),
+  p(strong("You must cluster on at least ABV and IBU. The only required outcome variable is collapsed style.")),
   p("For more info and code, see: "), a("https://github.com/aedobbyn/beer-data-science/blob/master/compile.md"),
   br(),
   br(),
@@ -83,14 +84,16 @@ shinyUI(fluidPage(
     ),
     
     mainPanel(
-      plotOutput("cluster_plot"),
-      
-      br(), br(),
-      br(), br(),
-      h2("Data"),
-      
-      tableOutput("this_style_data")
-      
+
+       plotOutput("cluster_plot"),
+       
+       br(), br(),
+       br(), br(),
+       hr(),
+       h2("Data"),
+       
+       tableOutput("this_style_data")
+       
     )
   )
   ))
