@@ -5,3 +5,4 @@
 *.log*
 key.R
 .ipynb_checkpoints/
+*.dcf
