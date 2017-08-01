@@ -1,0 +1,23 @@
+
+body {
+ background-color: white;
+ font-family: Arial;
+
+}
+
+.div {
+	padding: 15px, 15px, 15px, 15px;
+}
+
+#cluster_plot {
+	width: 50%;
+	height: 300px;
+}
+
+.col-sm-4 {
+	border: 5px;
+}
+
+#control-label {
+	width: 20%
+}
