@@ -71,7 +71,18 @@ shinyServer(function(input, output) {
   # All data with all styles
   this_style_data_pre <- cluster_it()
   
+  # Truncate total_hops and total_malt to ints
+  integerize_ingredients <- function(df) {
+    
+    for (i in seq_along(names(df))) {
+      if (names(df[, i]) %in% c("total_hops", "abv", "total_malt")) {
+        df[, i] <- df[, i] %>% round(digits = 0)
+      }
+    }
+    return(df)
+  }
   
+  # this_style_data_pre <- reactive ({ integerize_ingredients(this_style_data_pre_pre()) })
     
   
   # this_style_data_raw <- cluster_it()
@@ -107,15 +118,15 @@ shinyServer(function(input, output) {
         names(df)[i] <- name_df$new_names[i]
       }
     }
-    df
+    return(df)
   }
   
   # renamed <- rename_cols(popular_beer_dat)
   
   
-  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% rename_cols() })
+  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() %>% rename_cols()  })
   
-  this_style_data_format <- reactive({ this_style_data() %>% rename_cols() })
+  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() %>% rename_cols() })
   
   
   

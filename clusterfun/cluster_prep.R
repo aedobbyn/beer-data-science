@@ -36,8 +36,8 @@ beer_totals$glass <- factor(beer_totals$glass)
 beer_totals$ibu <- as.numeric(beer_totals$ibu)
 beer_totals$srm <- as.numeric(beer_totals$srm)
 beer_totals$abv <- as.numeric(beer_totals$abv)
-beer_totals$total_hops <- as.numeric(beer_totals$total_hops)
-beer_totals$total_malt <- as.numeric(beer_totals$total_malt)
+beer_totals$total_hops <- as.numeric(beer_totals$total_hops) %>% round(digits = 0)
+beer_totals$total_malt <- as.numeric(beer_totals$total_malt) %>% round(digits = 0)
 
 beer_totals$style_collapsed <- factor(beer_totals$style_collapsed)
 
