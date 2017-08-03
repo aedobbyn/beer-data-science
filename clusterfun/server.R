@@ -115,12 +115,18 @@ shinyServer(function(input, output) {
     
     name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
     
-    for (i in seq_along(names(df))) {
-      if (names(df)[i] %in% name_df$orig_names) {
-        names(df)[i] <- name_df$new_names[i]
-      }
-    }
+    name_indices <- which(names(df) %in% orig_names)
+    
+    names(df)[name_indices] <- new_names[name_indices]
+    
     return(df)
+    
+    # for (i in seq_along(names(df))) {
+    #   if (names(df)[i] %in% name_df$orig_names) {
+    #     names(df)[i] <- name_df$new_names[i]
+    #   }
+    # }
+    # return(df)
   }
   
   # renamed <- rename_cols(popular_beer_dat)
