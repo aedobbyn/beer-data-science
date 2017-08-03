@@ -68,8 +68,11 @@ shinyServer(function(input, output) {
     
   }
   
-  
+  # All data with all styles
   this_style_data_pre <- cluster_it()
+  
+  
+    
   
   # this_style_data_raw <- cluster_it()
   # 
@@ -83,13 +86,44 @@ shinyServer(function(input, output) {
   #     )
   # })
   
+  # Pared to a single style
   this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
   
+  yes_rename <- function(df) {
+    for (name in names(df)) {
+      # browser()
+      rename <- ifelse(name %in% names(df), "yes", "no")
+    }
+    rename
+  }
+  
+  should_rename <- function(x, y) { ifelse(x %in% names(y), TRUE, FALSE) }
+  
+  bar <- foo %>% rename_if(.vars = c(a, b), b = c, d = e)
+  
+  rename_cols <- function(df) {
+    df_rename <- df %>% 
+      rename_if(
+        should_rename(.),
+        `Cluster Assignment` = cluster_assignment,
+        `Collapsed Style` = style_collapsed,
+        Style = style,
+        ABV = abv,
+        IBU = ibu,
+        SRM = srm,
+        `Total N Hops` = total_hops,
+        `Total N Malts` = total_malt
+      )
+  }
+  
+  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% rename_cols() })
+  
+  this_style_data_format <- reactive({ this_style_data() %>% rename_cols() })
   
   
   
-  # reactive({
-  #   this_style_data <- ifelse(input$show_all == FALSE, this_style_data_pre() %>%
+
+  #   this_style_data <- reactive({ ifelse(input$show_all == FALSE, this_style_data_pre() %>%
   #                       filter(style_collapsed == input$style_collapsed), 
   #                              this_style_data_pre())
   # })
@@ -190,8 +224,8 @@ shinyServer(function(input, output) {
   output$this_style_data <- renderTable({
     
     if (input$show_all == TRUE) {
-      this_style_data_pre() } else {
-        this_style_data()
+      this_style_data_pre_format() } else {
+        this_style_data_format()
       }
   })
   
