@@ -88,33 +88,30 @@ shinyServer(function(input, output) {
   
   # Pared to a single style
   this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
+
   
-  yes_rename <- function(df) {
-    for (name in names(df)) {
-      # browser()
-      rename <- ifelse(name %in% names(df), "yes", "no")
-    }
-    rename
-  }
-  
-  should_rename <- function(x, y) { ifelse(x %in% names(y), TRUE, FALSE) }
-  
-  bar <- foo %>% rename_if(.vars = c(a, b), b = c, d = e)
+
   
   rename_cols <- function(df) {
-    df_rename <- df %>% 
-      rename_if(
-        should_rename(.),
-        `Cluster Assignment` = cluster_assignment,
-        `Collapsed Style` = style_collapsed,
-        Style = style,
-        ABV = abv,
-        IBU = ibu,
-        SRM = srm,
-        `Total N Hops` = total_hops,
-        `Total N Malts` = total_malt
-      )
+    
+    orig_names <- c("cluster_assignment", "style_collapsed", "style",
+                    "abv", "ibu", "srm", "total_hops", "total_malt")
+    
+    new_names <- c("Cluster Assignment", "Collapsed Style", "Style",
+                   "ABV", "IBU", "SRM", "Total N Hops", "Total N Malts")
+    
+    name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
+    
+    for (i in seq_along(names(df))) {
+      if (names(df)[i] %in% name_df$orig_names) {
+        names(df)[i] <- name_df$new_names[i]
+      }
+    }
+    df
   }
+  
+  # renamed <- rename_cols(popular_beer_dat)
+  
   
   this_style_data_pre_format <- reactive({ this_style_data_pre() %>% rename_cols() })
   
