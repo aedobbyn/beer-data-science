@@ -104,7 +104,6 @@ shinyServer(function(input, output) {
 
   
   
-  
   orig_names <- c("cluster_assignment", "style_collapsed", "style",
                   "abv", "ibu", "srm", "total_hops", "total_malt")
   
@@ -129,22 +128,40 @@ shinyServer(function(input, output) {
     # }
     # return(df)
   # }
-  
+  rename_cols <- function(df) {
+    
+    orig_names <- c("cluster_assignment", "style_collapsed", "style",
+                    "abv", "ibu", "srm", "total_hops", "total_malt")
+    
+    new_names <- c("Cluster Assignment", "Collapsed Style", "Style",
+                   "ABV", "IBU", "SRM", "Total N Hops", "Total N Malts")
+    
+    # name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
+    
+    name_indices <- reactive({ which(input$cluster_on %in% orig_names) })
+    
+    names(this_style_data_pre_format_2)[name_indices()] <- new_names[name_indices()]
+    
+    return(df)
+    
+    
+    # for (i in seq_along(names(df))) {
+    #   if (names(df)[i] %in% name_df$orig_names) {
+    #     names(df)[i] <- name_df$new_names[i]
+    #   }
+    # }
+    # return(df)
+  }
+
   # renamed <- rename_cols(popular_beer_dat)
   
   
-  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients()  })
+  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() %>% rename_cols()  })
   
-  this_style_data_pre_format_2 <- reactive ({ this_style_data_pre_format() %>% rename_cols() })
-  
-  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() })
-  
-  this_style_data_format_2 <- reactive ({ this_style_data_pre_format() %>% rename_cols() })
+  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() %>% rename_cols() })
   
   
-  name_indices <- reactive({ which(input$cluster_on %in% orig_names) })
-  
-  names(this_style_data_pre_format_2)[name_indices()] <- new_names[name_indices()]
+
 
   #   this_style_data <- reactive({ ifelse(input$show_all == FALSE, this_style_data_pre() %>%
   #                       filter(style_collapsed == input$style_collapsed), 
