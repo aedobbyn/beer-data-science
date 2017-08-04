@@ -13,9 +13,7 @@ library(shinythemes)
 source("./cluster_prep.R")
 
 
-
 shinyServer(function(input, output) {
-  
   
   cluster_on <- reactive({input$cluster_on})
   
@@ -30,20 +28,6 @@ shinyServer(function(input, output) {
         ibu < 200    
       ) %>% 
       na.omit() })
-  
-  # if (abv %in% cluster_on()) {
-  #   df_for_clustering <- df_for_clustering %>%
-  #     filter(
-  #       abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
-  #     )
-  # }
-  # 
-  # if (ibu %in% cluster_on()) {
-  #   df_for_clustering <- df_for_clustering %>%
-  #     filter(
-  #       ibu < 200
-  #     )
-  # }
   
   df_preds <- reactive({ df_for_clustering() %>%
       select(cluster_on()) %>%
@@ -84,8 +68,6 @@ shinyServer(function(input, output) {
     return(df)
   }
   
-  # this_style_data_pre <- reactive ({ integerize_ingredients(this_style_data_pre_pre()) })
-    
   
   # this_style_data_raw <- cluster_it()
   # 
@@ -99,35 +81,12 @@ shinyServer(function(input, output) {
   #     )
   # })
   
+  
   # Pared to a single style
   this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
 
-  
-  
-  orig_names <- c("cluster_assignment", "style_collapsed", "style",
-                  "abv", "ibu", "srm", "total_hops", "total_malt")
-  
-  new_names <- c("Cluster Assignment", "Collapsed Style", "Style",
-                 "ABV", "IBU", "SRM", "Total N Hops", "Total N Malts")
-  
-  name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
-  
-  
-  # rename_cols <- function(df) {
-    
-    # name_indices <- reactive({ which(input$cluster_on %in% orig_names) })
 
-    # names(this_style_data_pre_format_2)[name_indices()] <- new_names[name_indices()]
-    
-    # return(df)
-    
-    # for (i in seq_along(names(df))) {
-    #   if (names(df)[i] %in% name_df$orig_names) {
-    #     names(df)[i] <- name_df$new_names[i]
-    #   }
-    # }
-    # return(df)
-  # }
+  # not currently behaving as desired 
   rename_cols <- function(df) {
     
     orig_names <- c("cluster_assignment", "style_collapsed", "style",
@@ -136,76 +95,23 @@ shinyServer(function(input, output) {
     new_names <- c("Cluster Assignment", "Collapsed Style", "Style",
                    "ABV", "IBU", "SRM", "Total N Hops", "Total N Malts")
     
-    # name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
-    
     name_indices <- which(input$cluster_on %in% orig_names)
     
     names(df)[name_indices] <- new_names[name_indices]
     
-    
     return(df)
-    
-    
-    # for (i in seq_along(names(df))) {
-    #   if (names(df)[i] %in% name_df$orig_names) {
-    #     names(df)[i] <- name_df$new_names[i]
-    #   }
-    # }
-    # return(df)
   }
 
-  # renamed <- rename_cols(popular_beer_dat)
-  
-  
-  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() %>% rename_cols()  })
-  
-  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() %>% rename_cols() })
-  
-  
 
-
-  #   this_style_data <- reactive({ ifelse(input$show_all == FALSE, this_style_data_pre() %>%
-  #                       filter(style_collapsed == input$style_collapsed), 
-  #                              this_style_data_pre())
-  # })
+  
+  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() })
+  
+  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() })
   
   
-  # reactive({ if (input$show_all == FALSE) {
-  #     # this_style_data_pre <- cluster_it(input$num_clusters)
-  #     this_style_data <- this_style_data_pre() %>%
-  #       filter(style_collapsed == input$style_collapsed) 
-  # 
-  #     # this_style_center <- reactive({ style_centers %>% filter(style_collapsed == input$style_collapsed) })
-  # 
-  #   } else {
-  #     this_style_data <- this_style_data_pre()
-  # 
-  #     # this_style_center <- style_centers
-  #   }
-  # })
   
   output$cluster_plot <- renderPlot({
-    
-    
-    # 
-    # 
-    #   # cluster the data with a number of centers specified by the user and filter to just the style
-    #   # specified
-    # 
-    #   if (input$show_all == FALSE) {
-    #     this_style_data_pre <- cluster_it(n_centers = input$num_clusters) 
-    #     this_style_data <- this_style_data_pre() %>%
-    #       filter(style_collapsed == input$style_collapsed)
-    # 
-    #     this_style_center <- style_centers %>% filter(style_collapsed == input$style_collapsed)
-    # 
-    #   } else {
-    #     this_style_data <- cluster_it(n_centers = input$num_clusters)
-    # 
-    #     this_style_center <- style_centers
-    #   }
-    # 
-    # 
+  
     # if our checkbox is checked saying we do want style centers, show them. else, don't.
     if (input$show_centers == TRUE & input$show_all == FALSE) {
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
@@ -260,6 +166,7 @@ shinyServer(function(input, output) {
     }
     
   })
+  
   
   
   output$this_style_data <- renderTable({
