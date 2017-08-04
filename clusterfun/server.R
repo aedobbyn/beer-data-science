@@ -138,9 +138,10 @@ shinyServer(function(input, output) {
     
     # name_df <- list(orig_names = orig_names, new_names = new_names) %>% as_tibble()
     
-    name_indices <- reactive({ which(input$cluster_on %in% orig_names) })
+    name_indices <- which(input$cluster_on %in% orig_names)
     
-    names(this_style_data_pre_format_2)[name_indices()] <- new_names[name_indices()]
+    names(df)[name_indices] <- new_names[name_indices]
+    
     
     return(df)
     
@@ -267,8 +268,8 @@ shinyServer(function(input, output) {
                  "ABV", "IBU", "SRM", "Total N Hops", "Total N Malts") 
     
     if (input$show_all == TRUE) {
-      this_style_data_pre_format_2() } else {
-        this_style_data_format_2()
+      this_style_data_pre_format() } else {
+        this_style_data_format()
       }
   })
   
