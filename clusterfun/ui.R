@@ -63,7 +63,7 @@ shinyUI(fluidPage(
                            "SRM (color)" ="srm", 
                            "Total number of hops" = "total_hops", 
                            "Total number of malts" = "total_malt"),
-                         selected = c("abv", "ibu", "srm", "total_hops", "total_malt")),
+                         selected = c("abv", "ibu", "srm")),
       
       checkboxGroupInput("response_vars", "Choose response variable(s): ",
                          c("Collapsed style" = "style_collapsed",
