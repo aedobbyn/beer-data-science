@@ -8,9 +8,36 @@ library(ggrepel)
 library(rdrop2)
 library(shiny)
 library(shinythemes)
+library(Hmisc)
 
 
 source("./cluster_prep.R")
+
+
+simpleCap <- function(x) {
+  s <- strsplit(x, " ")[[1]]
+  paste(toupper(substring(s, 1,1)), substring(s, 2),
+        sep="", collapse=" ")
+}
+capitalize_this <- function(df, ...) {
+  out <- vector()
+  for (i in names(df)) {
+    if (i == "abv") {
+      i <- "ABV"
+    } else if (i == "ibu") {
+      i <- "IBU"
+    } else if (i == "srm") {
+      i <- "SRM"
+    } else if (grepl(pattern = "_", x = i) == TRUE) {
+      i <- simpleCap(gsub(x = i, pattern = "_", replacement = " "))
+    } else {
+      i <- capitalize(i)
+    }
+    out <- c(out, i)
+  }
+  names(df) <- out
+  df
+}
 
 
 shinyServer(function(input, output) {
@@ -104,9 +131,9 @@ shinyServer(function(input, output) {
 
 
   
-  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() })
+  this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() %>% capitalize_this() })
   
-  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() })
+  this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() %>% capitalize_this() })
   
   
   

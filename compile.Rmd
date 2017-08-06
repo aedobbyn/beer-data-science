@@ -2,7 +2,6 @@
 title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
-date: '`r format(Sys.time(), "%B %d, %Y")`'
 # output:
 #   html_notebook:
 #     toc: false
