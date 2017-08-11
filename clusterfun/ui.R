@@ -8,12 +8,10 @@ library(shiny)
 library(shinythemes)
 
 source("./cluster_prep.R")
+source("./keywords.txt")
 
+starting_n_clusters <- 5
 
-# ------ Molly Idea ----
-# It’d be fun if you could also look at individual beers (maybe with tooltips), 
-# or maybe even search for particular beers. You could then report how close a particular beer
-# is to the center of its cluster (i.e. how much of an IPA a particular IPA is).
 
 
 # so that we don't have to name each of the styles inside selectInput with 
@@ -21,26 +19,45 @@ source("./cluster_prep.R")
 style_names <- levels(popular_beer_dat$style_collapsed)
 names(style_names) <- levels(popular_beer_dat$style_collapsed)
 
-
-keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
-
 shinyUI(fluidPage(
   
   theme = shinytheme("spacelab"),
   
-  titlePanel("Explore your Beer"),
+  titlePanel("Cluster in Style"),
+  p("This tool was developed to explore how closely natural clusters in beer (as determined by 
+    measures like ABV and IBU) match up with those beers' styles. In other words, how well do style boundaries
+mirror the objective qualities of beers?"),
+  
+  p('The graph below depicts the results of running an unsupervised k-means clustering algorithm on 
+beers based on the variables selected below.'),
+  
+  br(),
+  
+  h5("How to work the controls:"),
+  
+  tags$ul(
+    tags$li('You can see how well styles match up to clusters by checking 
+"Show style centers"; the label will show you where the typical beer in a certain style sits.'),
+  
+    tags$li('To filter the graph down to a certain style and see whether most of the beers in that style fall 
+  into a certain cluster, uncheck the "Show all styles"
+  checkbox and choose a beer style from the dropdown. (Note that this does not re-run the algorithm on 
+    a new dataset of just the beers in that style -- it always clusters on all beers.)'),
+  
+    tags$li("We've started off with", starting_n_clusters, "clusters, but you can rerun the algorithm using any number of clusters
+by changing the Number of Clusters.")
+  
+  ), 
+  br(),
+  p(strong("Only rules are that you must cluster on at least ABV and IBU (because that's what we're graphing); 
+           the only required outcome variable is collapsed style.")),
+  
+  br(),  br(),
 
-  p("All beer data sourced from the", a(href = "http://www.brewerydb.com/developers", "BreweryDB API"), "To drill down into a certain style, uncheck the 'Show all styles'
-  checkbox and choose a beer style from the dropdown. Rerun the algorithm using any number of cluster
-  centers by changing the Number of Clusters."),
+  p("All beer data sourced from the", a(href = "http://www.brewerydb.com/developers", "BreweryDB API."), "For more 
+    info and code, see: ", a(href = "https://github.com/aedobbyn/beer-data-science/blob/master/compile.md", 
+                                       "the full report.")),
   br(),
-  p(strong("You must cluster on at least ABV and IBU. The only required outcome variable is collapsed style.")),
-  p("For more info and code, see: "), a("https://github.com/aedobbyn/beer-data-science/blob/master/compile.md"),
-  br(),
-  br(),
-  # p("Beers were collapsed into these styles using this function:"),
-  # br(),
-  # pre(renderText("./keywords.txt")),
   br(),
   br(),
   
@@ -48,13 +65,12 @@ shinyUI(fluidPage(
   sidebarLayout(
     sidebarPanel(
       h4("Control Panel"),
-      br(),
-      
+
       checkboxInput("show_all", "Show all styles", TRUE),      
       
       checkboxInput("show_centers", "Show style centers", FALSE),
       
-      numericInput("num_clusters", "Number of Clusters:", 4),
+      numericInput("num_clusters", "Number of Clusters:", starting_n_clusters),
       
       
       checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
@@ -89,6 +105,7 @@ shinyUI(fluidPage(
        
        br(), br(),
        br(), br(),
+       br(),
        hr(),
        h2("Data"),
        
