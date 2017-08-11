@@ -24,30 +24,11 @@ set_col_types <- function(df) {
   return(df)
 }
 
+
+# Set types 
 style_centers <- set_col_types(style_centers)
 popular_beer_dat <- set_col_types(popular_beer_dat)
 beer_totals <- set_col_types(beer_totals)
-
-
-# set types
-# beer_totals$style <- factor(beer_totals$style)
-# beer_totals$glass <- factor(beer_totals$glass)
-# 
-# beer_totals$ibu <- as.numeric(beer_totals$ibu)
-# beer_totals$srm <- as.numeric(beer_totals$srm)
-# beer_totals$abv <- as.numeric(beer_totals$abv)
-beer_totals$total_hops <- as.numeric(beer_totals$total_hops) %>% round(digits = 0)
-beer_totals$total_malt <- as.numeric(beer_totals$total_malt) %>% round(digits = 0)
-
-# beer_totals$style_collapsed <- factor(beer_totals$style_collapsed)
-
-# beer_totals$hops_name <- factor(beer_totals$hops_name)
-# beer_totals$malt_name <- factor(beer_totals$malt_name)
-
-
-
-# response_vars <- c("name", "style", "style_collapsed")
-
 
 
 

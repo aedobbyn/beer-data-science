@@ -12,40 +12,21 @@ library(Hmisc)
 
 
 source("./cluster_prep.R")
-
-
-simpleCap <- function(x) {
-  s <- strsplit(x, " ")[[1]]
-  paste(toupper(substring(s, 1,1)), substring(s, 2),
-        sep="", collapse=" ")
-}
-capitalize_this <- function(df, ...) {
-  out <- vector()
-  for (i in names(df)) {
-    if (i == "abv") {
-      i <- "ABV"
-    } else if (i == "ibu") {
-      i <- "IBU"
-    } else if (i == "srm") {
-      i <- "SRM"
-    } else if (grepl(pattern = "_", x = i) == TRUE) {
-      i <- simpleCap(gsub(x = i, pattern = "_", replacement = " "))
-    } else {
-      i <- capitalize(i)
-    }
-    out <- c(out, i)
-  }
-  names(df) <- out
-  df
-}
+source("./capitalize_this.R")
+source("./integerize_ingredients.R")
 
 
 shinyServer(function(input, output) {
   
+  # ------------------------------ Munge -----------------------------
+  
+  # Grab user-defined variables to cluster on, response variables, and number of clusters
   cluster_on <- reactive({input$cluster_on})
-  
   response_vars <- reactive({input$response_vars})
+  n_centers <- reactive({input$num_clusters})
   
+  # Create a dataframe from beer_totals and omit everything with an NA in either cluster_on columns
+  # or response_var columns. 
   df_for_clustering <- reactive({ beer_totals %>%
       select(response_vars(), cluster_on()) %>%
       filter(
@@ -56,20 +37,21 @@ shinyServer(function(input, output) {
       ) %>% 
       na.omit() })
   
+  # Get a dataframe of only the predictors and scale
   df_preds <- reactive({ df_for_clustering() %>%
       select(cluster_on()) %>%
-      scale() %>%
-      as_tibble()
+      scale() 
   })
   
-  
+  # Split out the response variables 
   df_outcome <- reactive({ df_for_clustering() %>%
-      select(response_vars()) %>%
-      na.omit()
+      select(response_vars())
   })
   
-  n_centers <- reactive({input$num_clusters})
+  # ------------------------------ Cluster -----------------------------
   
+  # Function for doing the clustering on the scaled predictors with number of centers defined by user
+  # Glue the cluster assignments to the original df_for_clustering 
   cluster_it <- function() {
     clustered_df_out <- reactive({ kmeans(x = df_preds(), centers = n_centers(), trace = FALSE) })
     
@@ -79,49 +61,27 @@ shinyServer(function(input, output) {
     
   }
   
-  # All data with all styles
+  # Get a clustered dataframe with all styles
   this_style_data_pre <- cluster_it()
   
-  # Truncate total_hops and total_malt to ints
-  integerize_ingredients <- function(df) {
-    
-    for (i in seq_along(names(df))) {
-      if (names(df[, i]) %in% c("total_hops", "total_malt")) {
-        # df[, i] <- df[, i] %>% unlist() %>% round(digits = 0)
-        df[, i] <- df[, i] %>% unlist() %>%  round(digits = 0) %>% as.integer()
-        
-      }
-    }
-    return(df)
-  }
-  
-  
-  # this_style_data_raw <- cluster_it()
-  # 
-  # observeEvent(input$filter_outliers, {
-  #   this_style_data_pre <- this_style_data_raw() %>% 
-  #     filter(
-  #       abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
-  #     ) %>%
-  #     filter(
-  #       ibu < 200    
-  #     )
-  # })
-  
-  
-  # Pared to a single style
+  # If user decides to filter to a single style, pare it down to just that style
   this_style_data <- reactive({ this_style_data_pre() %>% filter(style_collapsed == input$style_collapsed) })
   
   # Format correctly
+  # These functions sourced in above
   this_style_data_pre_format <- reactive({ this_style_data_pre() %>% integerize_ingredients() %>% capitalize_this() })
   this_style_data_format <- reactive({ this_style_data() %>% integerize_ingredients() %>% capitalize_this() })
   
   
-  
+  # ------------------------------ Plot -----------------------------
+
+  # Create the plot
+  # Account for all eventualities 
   output$cluster_plot <- renderPlot({
   
-    # if our checkbox is checked saying we do want style centers, show them. else, don't.
+    # If our checkbox is checked saying we do want style centers, show them. Else, don't.
     if (input$show_centers == TRUE & input$show_all == FALSE) {
+      
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
       
       ggplot() +
@@ -138,6 +98,7 @@ shinyServer(function(input, output) {
         labs(colour = "Cluster Assignment") +
         theme_minimal()
     } else if (input$show_centers == TRUE & input$show_all == TRUE) {
+      
       ggplot() +
         geom_point(data = this_style_data_pre(),
                    aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
@@ -152,6 +113,7 @@ shinyServer(function(input, output) {
         labs(colour = "Cluster Assignment") +
         theme_minimal()
     } else if (input$show_centers == FALSE & input$show_all == TRUE) {
+      
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
       
       ggplot() +
@@ -162,6 +124,7 @@ shinyServer(function(input, output) {
         labs(colour = "Cluster Assignment") +
         theme_minimal()
     } else {
+      
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
       
       ggplot() +
@@ -175,8 +138,7 @@ shinyServer(function(input, output) {
     
   })
   
-  
-  
+  # Get a table of data
   output$this_style_data <- renderTable({
     
     colnames = c("Cluster Assignment", "Collapsed Style", "Style",
@@ -187,6 +149,5 @@ shinyServer(function(input, output) {
         this_style_data_format()
       }
   })
-  
   
 })
