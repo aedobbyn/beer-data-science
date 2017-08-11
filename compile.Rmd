@@ -2,23 +2,23 @@
 title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
-# output:
-#   html_notebook:
-#     toc: false
-#     theme: yeti
-#   pdf_document:
-#     keep_tex: true
-#     toc: false
-#   github_document:
-#     toc: true
-    
 output:
-  html_document:
-    keep_md: true
+  html_notebook:
     toc: false
     theme: yeti
+  pdf_document:
+    keep_tex: true
+    toc: false
   github_document:
     toc: true
+    
+# output:
+#   html_document:
+#     keep_md: true
+#     toc: false
+#     theme: yeti
+#   github_document:
+#     toc: true
 ---
 
 ```{r, eval=FALSE, echo=FALSE}
