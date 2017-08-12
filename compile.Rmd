@@ -38,18 +38,18 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 ```
 
-For something less wordy and code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/)!
+For something less wordy/code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
 
 
 ### Motivation and Overview
 
-This is a first pass exploration of different aspects of beer. The data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable workplace beer consortium.
+This is a first pass exploration of different aspects of beer. The data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
 
-The main question this analysis is meant to tackle is: Are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? I took two approaches to this: unsupervised clustering and supervised prediction. 
+The main question this analysis is meant to tackle is: are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? Is an IPA an IPA because it's really distinguishable as such from other beers or is it an IPA because we call I took two approaches to this: unsupervised clustering and supervised prediction. 
 
 Clusters defined by the algorithm were compared to the style "centers" as defined by the mean ABV, IBU, and SRM. On the prediction side, predictor variables for include ABV (alcohol by volume), IBU (international bitterness units), SRM ([a measure of color](http://www.twobeerdudes.com/beer/srm)) as well as ingredients like hops and malts. The outcome variable is the style that beer was assigned.
 
-This document starts off with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database, specifically by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake as the code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
+This document starts off with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake. The code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
 
 It then moves into clustering (k-means) and prediction (neural net, random forest). Below is a more detailed overview of the general workflow.
 
@@ -58,31 +58,37 @@ It then moves into clustering (k-means) and prediction (neural net, random fores
 
 **1. Get and Prepare**
 
-When we first hit the BreweryDB API to iteratively pull in all beers and their ingredients along with other things we might want like breweries and glassware. Then we unnest the JSON responses, including all the ingredients columns, and dump this all into a MySQL database.
+The first step here is to hit the BreweryDB API and iteratively pull in all beers and their ingredients. We unnest the JSON responses, including all the ingredients columns (hops and malts), and dump this all into a MySQL database.
 
-Next, we create a `style_collapsed` column to reduce the number of levels of our outcome variable. We do this by `grep`ing through each beer's style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style; if it does, it gets that keyword in a `style_collapsed` column.
+Next, we create a `style_collapsed` column to reduce the number of levels of our outcome variable, style. We do this by `grep`ing through each beer's assigned style to determine if that style contains a keyword that qualifies it to be rolled into a collapsed style; if it does, it gets that keyword in a `style_collapsed` column. 
 
-Finally we unnest the ingredients `hops` and `malts` into a wide, sparse dataframe. Individual ingredients are now columns, with each beer still in its own rows; a cell gets a 1 if ingredient is present and 0 otherwise. This allows more granual inference into ingredients' effects on both style and bitterness (occasioning a short foray into hops).
+Finally we unnest the ingredients `hops` and `malts` into a wide, sparse dataframe. Individual ingredients like Cascade Hops now each occupy their own columns, with each beer still in its own row. A cell gets a 1 if that particular ingredient is present in the beer and 0 otherwise. This allows more granual inference into ingredients' effects on both style and bitterness (occasioning a short foray into hops).
 
 **2. Short foray into hops**
 
-A quick look at the most popular hops and an exploration of the relationship between hops and bitterness.
+We take a quick detour to look at what the most popular hops are and what the relationship is between hops and bitterness.
 
 
 **3. Infer**
 
-Cluster: unsupervised k-means clustering partitioning the entire dataset into ten clusters. Next, we cluster on a dataset composed of just five selected styles into five clusters. 
+Back to the question at hand: are styles arbitrary or not? Now to operationalize that we ask, how closely do styles match natural clusters in beer? Natural clusters can be defined in higher-dimensional space as ABV, IBU, SRM, and ingredients. We use the objective measures ABV, IBU, SRM, total number of hops, and total number of malts. Cluster: unsupervised k-means clustering partitioning the entire dataset into ten clusters. Next, we cluster on a dataset composed of just five selected styles into five clusters. 
 
-We then attempt to predict predict either `style` or `style_collapsed` using a neural net and a random forest. The main predictors are ABV, IBU, SRM, total number of hops, and total number of malts. The glass a beer is served in is also considered. 
+Another way to concretize the grand overarching question is, are objective measures of a beer good predictors of it's style? To that end, we feed those objective measures into a random forest and a neural net to try to predict `style` and `style_collapsed`. The main predictors are ABV, IBU, SRM, total number of hops, and total number of malts. The glass a beer is served in is also considered. 
 
 
-### Thoughts
+### Closing Thoughts
 
-The question of what should be a predictor variable for style is a bit murky here. What should be fair game for predicting style and what shouldn't? Characteristics of a beer that are defined *by* its style would seem to be "cheating" in a way. The only "inputs" to a beer we have in our dataset are its ingredients, primarly hops and malts. While these certainly have an effect on its flavor profile, I consider them semi-cheating because if style is determined beforehand it likely determines at least in part which ingredients are added. The main candidates in my mind are ABV, IBU, and SRM. These are "outputs" of a beer (in the sense that they can only be exactly determined once a beer is brewered) that meaningfully define it. While correlated ABV is correlated with both IBU and SRM, the three are theoretically orthogonal to each other. A style-defined attribute like glass type is a bad candidate for a predictor variable because it is completely decoupled from the beer itself and determined entirely by the style the beer has been assigned to.
+The question of what should be a predictor variable for style is a bit murky here. Using characteristics of a beer that are defined *by* its style to predict style would seem to be cheating in a way. In my opinion, a style-defined attribute like glass type is clearly a bad candidate for a predictor variable because it is determined entirely by the style the beer has been assigned to. It's an attribute of a particular style rather than of any given beer.
 
-The answer thus far seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depeends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+In determining what should and shouldn't be fair game to count as a predictor variable for style, we can think about "inputs" to a beer as the only things that can be directly controlled by a brewer and "outputs" as characteristics of a beer that can only be measured once the beer is actually brewed. The only inputs we have in our dataset are ingredients: hops and malts. While these certainly have an effect on flavor profile, you could make an argument that they're not good predictor variables. This because if a beer's style is settled on before its recipe is written, that style likely determines at least in part which ingredients are added. 
 
-Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB.
+To my mind the best candidates for predictor variables are ABV, IBU, and SRM. Taking the input-output paradigmn, these are outputs of a beer because they can only be exactly determined once a beer is brewered. They certainly all meaningfully define it. While ABV is correlated with both IBU and SRM, you could make the argument that the three are theoretically orthogonal to each other. 
+
+
+## Well what's the answer then?
+Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+
+Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this 
 
 
 ![](./taps.jpg)
@@ -100,11 +106,11 @@ source("./read_from_db.R")
 
 **GETting beer, the age-old dilemma**
 
-* The BreweryDB API returns a certain number of results per page; if we want more than just the first page, we'll have to string a bunch of responses together end to end
-* So, we hit the BreweryDB API and ask for `1:number_of_pages`
-    * We can change `number_of_pages` to, e.g., 3 if we only want the first 3 pages
-    * If there's only one page (as is the case for the glassware endpoint), numberOfPages won't be returned, so in this case we set number_of_pages to 1
-* The `addition` parameter can be an empty string if nothing else is needed
+After creating a BreweryDB API key, we can supply the API with a request and receive a JSON response in return. The function below allows you to supply an endpoint and any additions you want to the URL. You can find a list of available endpoints in the [BreweryDB documentation](http://www.brewerydb.com/developers/docs). You'll want to set the `key` to the API key you create.
+
+The API returns 50 results per page so if we want more than just the first 50 results, we'll have to string a bunch of responses together end to end. For a given endpoint, the API response will contain the total number of pages for that output. So, we use the function below to hit the BreweryDB API and ask for `1:number_of_pages`. This way, if we only want the first 3 pages, say, we can change `number_of_pages` to 3. 
+
+In the case that the response contains only one page (as is the case for the glassware endpoint), `numberOfPages` won't be returned, so we'll set our `number_of_pages` to 1. The `addition` parameter can be an empty string if nothing else is needed.
 
 ```{r, eval = FALSE, echo=TRUE}
 
@@ -135,9 +141,10 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 ```
 
 
-If you want to request just a certain parameter, you can use this little function factory here to create functions
-to GET any beer, brewery, category, etc. if you know its ID.
-```{r, eval = FALSE}
+
+If you want to request information associated with a single entity ID, you can use this little function factory here to create functions to GET any beer, brewery, category, etc. if you know its ID.
+
+```{r, eval = FALSE, echo=TRUE}
 endpoints <- c("beer", "brewery", "category", "event",
               "feature", "glass", "guild", "hop", "ingredient",
               "location", "socialsite", "style", "menu")
@@ -150,22 +157,20 @@ get_ <- function(id, ep) {
 # For each of the endoints, pipe each endpoint through
 # as .x, so both as the second half of the get_<ep> function name
 # and the second argument of the get_ function defined above (so the ep in the fromJSON() call) 
-
 endpoints %>% walk(~ assign(x = paste0("get_", .x),
                              value = partial(get_, ep = .x),
                              envir = .GlobalEnv))
 ```
 
 Now for instance we can get all the information on a single brewery from just its ID:
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=TRUE}
 get_brewery("pnLmiu")
 ```
 
 
-* Function for unnesting JSON used inside `paginated_request()` below
-    + Takes the column named `name` nested within a column in the data portion of the response
-        + If the `name` column doesn't exist, it takes the first nested column
-* We use something similar to unnest ingredient like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`
+Now that we've got all our raw data, we'll have to unnest it properly. We'll use this function `unnest_it()` inside `paginated_request()`. It takes the column named `name` nested within a column in the data portion of the response. If the `name` column doesn't exist, it takes the first nested column.
+
+We use something similar to unnest ingredients like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`.
 
 ```{r, eval=FALSE, echo=TRUE}
 unnest_it <- function(df) {
@@ -187,7 +192,10 @@ unnest_it <- function(df) {
 
 **Collapse Styles**
 
-* Save the most popular styles in `keywords`
+It'll be useful to reduce the number of levels in our outcome variable, style. To that end, we create a new variable, `style_collapsed` that uses keywords inside a style's name to lump it into a broader category. This way we can define broader styles with more beers in them than are otherwise available from the API. 
+
+The way we'll do this is we'll:
+* Save the most popular styles in the vector `keywords`
 * Loop through each keyword
     * For each beer, `grep` through its style column to see if it contains any one of these keywords
     * If it does, give it that keyword in a new column `style_collapsed`
