@@ -1,9 +1,10 @@
 # Data Science Musings on Beer
-`r format(Sys.time(), "%B %d, %Y")`  
 
 
 
 
+
+For something less wordy and code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/)!
 
 
 ### Motivation and Overview
@@ -66,7 +67,7 @@ source("./read_from_db.R")
 
 **GETting beer, the age-old dilemma**
 
-* The BreweryDB API returns a certain number of results per page; if we want 
+* The BreweryDB API returns a certain number of results per page; if we want more than just the first page, we'll have to string a bunch of responses together end to end
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
     * We can change `number_of_pages` to, e.g., 3 if we only want the first 3 pages
     * If there's only one page (as is the case for the glassware endpoint), numberOfPages won't be returned, so in this case we set number_of_pages to 1
@@ -99,6 +100,13 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 ```
+
+
+If you want to request just a certain parameter, you can use this little function factory here to create functions
+to GET any beer, brewery, category, etc. if you know its ID.
+
+
+Now for instance we can get all the information on a single brewery from just its ID:
 
 
 
@@ -373,15 +381,17 @@ nrow(popular_beer_dat)
 
 Now we find what I'm calling the "style centers" for each of these most popular styles. The center is defined by the mean ABV, mean IBU, and mean SRM of all of the beers in that style. 
 
+Styles that appear here that did not appear in the keywords that we collapsed to are the most popular styles that did not contain one of those keywords. 
+
 ```r
 # Find the centers (mean abv, ibu, srm) of the most popular styles
 style_centers <- popular_beer_dat %>% 
   group_by(style_collapsed) %>% 
   add_count() %>% 
   summarise(
-    mean_abv = mean(abv, na.rm = TRUE),
-    mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_srm = mean(srm, na.rm = TRUE),
+    mean_abv = mean(abv, na.rm = TRUE) %>% round(., digits = 2),
+    mean_ibu = mean(ibu, na.rm = TRUE) %>% round(., digits = 2), 
+    mean_srm = mean(srm, na.rm = TRUE) %>% round(., digits = 2),
     n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
   ) %>% 
   arrange(desc(n)) %>% 
@@ -403,38 +413,38 @@ style_centers_rename <- style_centers %>%
 Take a look at the table, ordered by number of beers in that style, descending.      
 
 
-|Collapsed Style          |  Mean ABV| Mean IBU|  Mean SRM| Numer of Beers|
-|:------------------------|---------:|--------:|---------:|--------------:|
-|India Pale Ale           |  6.578468| 66.04268|  9.989313|           6524|
-|Pale Ale                 |  5.695480| 40.86930|  8.890306|           4280|
-|Stout                    |  7.991841| 43.89729| 36.300000|           4238|
-|Wheat                    |  5.158040| 17.47168|  5.861842|           3349|
-|Double India Pale Ale    |  8.930599| 93.48142| 11.006873|           2525|
-|Red                      |  5.742565| 33.81127| 16.178862|           2521|
-|Lager                    |  5.453718| 30.64361|  8.457447|           2230|
-|Saison                   |  6.400189| 27.25114|  7.053476|           2167|
-|Blonde                   |  5.595298| 22.39432|  5.625000|           2044|
-|Porter                   |  6.182049| 33.25369| 32.197605|           1973|
-|Brown                    |  6.159212| 32.21577| 23.592000|           1462|
-|Pilsener                 |  5.227593| 33.51346|  4.413462|           1268|
-|Specialty Beer           |  6.446402| 33.77676| 15.520548|           1044|
-|Bitter                   |  5.322364| 38.28175| 12.460526|            939|
-|Fruit Beer               |  5.195222| 19.24049|  8.666667|            905|
-|Herb and Spice Beer      |  6.621446| 27.77342| 18.166667|            872|
-|Sour                     |  6.224316| 18.88869| 10.040816|            797|
-|Strong Ale               |  8.826425| 36.74233| 22.547945|            767|
-|Tripel                   |  9.029775| 32.51500|  7.680556|            734|
-|Black                    |  6.958714| 65.50831| 31.080000|            622|
-|Barley Wine              | 10.781600| 74.04843| 19.561404|            605|
-|Kölsch                   |  4.982216| 23.37183|  4.371795|            593|
-|Barrel-Aged              |  9.002506| 39.15789| 18.133333|            540|
-|Other Belgian-Style Ales |  7.516318| 37.55812| 17.549020|            506|
-|Pumpkin Beer             |  6.712839| 23.48359| 17.918033|            458|
-|Dubbel                   |  7.509088| 25.05128| 22.940000|            399|
-|Scotch Ale               |  7.620233| 26.36909| 24.222222|            393|
-|German-Style Doppelbock  |  8.045762| 28.88692| 25.696970|            376|
-|Fruit Cider              |  6.205786| 25.60000| 12.000000|            370|
-|German-Style Märzen      |  5.746102| 25.63796| 14.322581|            370|
+|Collapsed Style          | Mean ABV| Mean IBU| Mean SRM| Numer of Beers|
+|:------------------------|--------:|--------:|--------:|--------------:|
+|India Pale Ale           |     6.58|    66.04|     9.99|           6524|
+|Pale Ale                 |     5.70|    40.87|     8.89|           4280|
+|Stout                    |     7.99|    43.90|    36.30|           4238|
+|Wheat                    |     5.16|    17.47|     5.86|           3349|
+|Double India Pale Ale    |     8.93|    93.48|    11.01|           2525|
+|Red                      |     5.74|    33.81|    16.18|           2521|
+|Lager                    |     5.45|    30.64|     8.46|           2230|
+|Saison                   |     6.40|    27.25|     7.05|           2167|
+|Blonde                   |     5.60|    22.39|     5.62|           2044|
+|Porter                   |     6.18|    33.25|    32.20|           1973|
+|Brown                    |     6.16|    32.22|    23.59|           1462|
+|Pilsener                 |     5.23|    33.51|     4.41|           1268|
+|Specialty Beer           |     6.45|    33.78|    15.52|           1044|
+|Bitter                   |     5.32|    38.28|    12.46|            939|
+|Fruit Beer               |     5.20|    19.24|     8.67|            905|
+|Herb and Spice Beer      |     6.62|    27.77|    18.17|            872|
+|Sour                     |     6.22|    18.89|    10.04|            797|
+|Strong Ale               |     8.83|    36.74|    22.55|            767|
+|Tripel                   |     9.03|    32.52|     7.68|            734|
+|Black                    |     6.96|    65.51|    31.08|            622|
+|Barley Wine              |    10.78|    74.05|    19.56|            605|
+|Kölsch                   |     4.98|    23.37|     4.37|            593|
+|Barrel-Aged              |     9.00|    39.16|    18.13|            540|
+|Other Belgian-Style Ales |     7.52|    37.56|    17.55|            506|
+|Pumpkin Beer             |     6.71|    23.48|    17.92|            458|
+|Dubbel                   |     7.51|    25.05|    22.94|            399|
+|Scotch Ale               |     7.62|    26.37|    24.22|            393|
+|German-Style Doppelbock  |     8.05|    28.89|    25.70|            376|
+|Fruit Cider              |     6.21|    25.60|    12.00|            370|
+|German-Style Märzen      |     5.75|    25.64|    14.32|            370|
 
 
 
@@ -813,9 +823,9 @@ From the resulting histogram (not run here for computational ), 10 seemed an opt
 
 
 ```r
-nb <- NbClust(cluster_prep$preds, distance = "euclidean",
-              min.nc = 2, max.nc = 15, method = "kmeans")
-hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
+# nb <- NbClust(cluster_prep$preds, distance = "euclidean",
+#               min.nc = 2, max.nc = 15, method = "kmeans")
+# hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
 ```
 
 
@@ -936,7 +946,7 @@ clustered_beer_plot_abv_ibu <- ggplot(data = clustered_beer, aes(x = abv, y = ib
 clustered_beer_plot_abv_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-24-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
 
 ```r
 clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = srm, colour = cluster_assignment)) + 
@@ -947,7 +957,7 @@ clustered_beer_plot_abv_srm <- ggplot(data = clustered_beer, aes(x = abv, y = sr
 clustered_beer_plot_abv_srm
 ```
 
-![](compile_files/figure-html/unnamed-chunk-24-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-26-2.png)<!-- -->
 
 
 
@@ -968,11 +978,11 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   ggtitle("Popular Styles vs. k-Means Clustering of Beer by ABV, IBU, SRM") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster Assignment") +
-  theme_bw()
+  theme_minimal()
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-25-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
 
 
 The clustering above used a smaller number of clusters (10) than there are `styles_collapsed`. That makes it difficult to determine whether a given style fits snugly into a cluster or not.
@@ -1052,7 +1062,7 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-![](compile_files/figure-html/unnamed-chunk-28-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
 
 
 
@@ -1092,7 +1102,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-29-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
 
 
 Regressing total number of hops on bitterness (IBU):
@@ -1120,7 +1130,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5)
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-33-1.png)<!-- -->
 
 
 ```r
@@ -1220,7 +1230,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-36-1.png)<!-- -->
 
 
 ```r
@@ -1232,7 +1242,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
 
 
 # Neural Net
@@ -1567,31 +1577,34 @@ sessionInfo()
 ## [1] stats     graphics  grDevices utils     datasets  methods   base     
 ## 
 ## other attached packages:
-##  [1] stringr_1.1.0   ranger_0.7.0    caret_6.0-73    lattice_0.20-34
-##  [5] nnet_7.3-12     ggrepel_0.6.5   NbClust_3.0     bindrcpp_0.1   
-##  [9] forcats_0.1.1   dplyr_0.7.0     purrr_0.2.2     readr_1.1.0    
-## [13] tidyr_0.6.1     tibble_1.3.3    ggplot2_2.2.1   tidyverse_1.0.0
-## [17] RMySQL_0.10.11  DBI_0.6-1       broom_0.4.1     knitr_1.15.1   
+##  [1] stringr_1.2.0   ranger_0.8.0    caret_6.0-76    lattice_0.20-35
+##  [5] nnet_7.3-12     ggrepel_0.6.5   NbClust_3.0     bindrcpp_0.2   
+##  [9] forcats_0.2.0   dplyr_0.7.2     purrr_0.2.3     readr_1.1.1    
+## [13] tidyr_0.6.3     tibble_1.3.3    ggplot2_2.2.1   tidyverse_1.1.1
+## [17] RMySQL_0.10.12  DBI_0.7         jsonlite_1.5    broom_0.4.2    
+## [21] knitr_1.16     
 ## 
 ## loaded via a namespace (and not attached):
-##  [1] reshape2_1.4.2     splines_3.3.3      colorspace_1.3-2  
-##  [4] stats4_3.3.3       htmltools_0.3.6    mgcv_1.8-17       
-##  [7] yaml_2.1.14        rlang_0.1.1        e1071_1.6-7       
-## [10] nloptr_1.0.4       ModelMetrics_1.1.0 foreign_0.8-67    
-## [13] glue_1.0.0         foreach_1.4.3      plyr_1.8.4        
-## [16] bindr_0.1          MatrixModels_0.4-1 munsell_0.4.3     
-## [19] gtable_0.2.0       codetools_0.2-15   psych_1.6.12      
-## [22] evaluate_0.10      labeling_0.3       SparseM_1.74      
-## [25] class_7.3-14       quantreg_5.29      pbkrtest_0.4-6    
-## [28] parallel_3.3.3     highr_0.6          Rcpp_0.12.11      
-## [31] scales_0.4.1       backports_1.0.5    lme4_1.1-12       
-## [34] mnormt_1.5-5       hms_0.3            digest_0.6.12     
-## [37] stringi_1.1.2      grid_3.3.3         rprojroot_1.2     
-## [40] tools_3.3.3        magrittr_1.5       lazyeval_0.2.0    
-## [43] car_2.1-4          pkgconfig_2.0.1    Matrix_1.2-8      
-## [46] MASS_7.3-45        minqa_1.2.4        assertthat_0.2.0  
-## [49] rmarkdown_1.3      iterators_1.0.8    R6_2.2.1          
-## [52] nlme_3.1-131
+##  [1] Rcpp_0.12.12       lubridate_1.6.0    class_7.3-14      
+##  [4] assertthat_0.2.0   rprojroot_1.2      digest_0.6.12     
+##  [7] psych_1.7.5        foreach_1.4.3      R6_2.2.2          
+## [10] cellranger_1.1.0   plyr_1.8.4         MatrixModels_0.4-1
+## [13] backports_1.1.0    stats4_3.3.3       e1071_1.6-8       
+## [16] evaluate_0.10.1    httr_1.2.1         highr_0.6         
+## [19] rlang_0.1.1        lazyeval_0.2.0     readxl_1.0.0      
+## [22] SparseM_1.74       minqa_1.2.4        car_2.1-5         
+## [25] nloptr_1.0.4       Matrix_1.2-8       rmarkdown_1.6     
+## [28] labeling_0.3       splines_3.3.3      lme4_1.1-13       
+## [31] foreign_0.8-69     munsell_0.4.3      modelr_0.1.1      
+## [34] pkgconfig_2.0.1    mnormt_1.5-5       mgcv_1.8-17       
+## [37] htmltools_0.3.6    codetools_0.2-15   MASS_7.3-47       
+## [40] ModelMetrics_1.1.0 grid_3.3.3         nlme_3.1-131      
+## [43] gtable_0.2.0       magrittr_1.5       scales_0.4.1      
+## [46] stringi_1.1.5      reshape2_1.4.2     xml2_1.1.1        
+## [49] iterators_1.0.8    tools_3.3.3        glue_1.1.1        
+## [52] hms_0.3            parallel_3.3.3     pbkrtest_0.4-7    
+## [55] yaml_2.1.14        colorspace_1.3-2   rvest_0.3.2       
+## [58] bindr_0.1          haven_1.1.0        quantreg_5.29
 ```
 
 

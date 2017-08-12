@@ -2,23 +2,23 @@
 title: Data Science Musings on Beer
 author:
   name: Amanda Dobbyn
-output:
-  html_notebook:
-    toc: false
-    theme: yeti
-  pdf_document:
-    keep_tex: true
-    toc: false
-  github_document:
-    toc: true
-    
 # output:
-#   html_document:
-#     keep_md: true
+#   html_notebook:
 #     toc: false
 #     theme: yeti
+#   pdf_document:
+#     keep_tex: true
+#     toc: false
 #   github_document:
 #     toc: true
+    
+output:
+  html_document:
+    keep_md: true
+    toc: false
+    theme: yeti
+  github_document:
+    toc: true
 ---
 
 ```{r, eval=FALSE, echo=FALSE}
@@ -29,6 +29,7 @@ lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
 ```{r setup, include=FALSE}
 library(knitr)
 library(broom)
+library(jsonlite)
 
 # knitr::opts_chunk$set(cache=TRUE)
 # knitr::opts_knit$set(root.dir=normalizePath('../'))
@@ -37,7 +38,7 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 ```
 
-Check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/)!
+For something less wordy and code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/)!
 
 
 ### Motivation and Overview
@@ -99,7 +100,7 @@ source("./read_from_db.R")
 
 **GETting beer, the age-old dilemma**
 
-* The BreweryDB API returns a certain number of results per page; if we want 
+* The BreweryDB API returns a certain number of results per page; if we want more than just the first page, we'll have to string a bunch of responses together end to end
 * So, we hit the BreweryDB API and ask for `1:number_of_pages`
     * We can change `number_of_pages` to, e.g., 3 if we only want the first 3 pages
     * If there's only one page (as is the case for the glassware endpoint), numberOfPages won't be returned, so in this case we set number_of_pages to 1
@@ -133,6 +134,32 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 ```
 
+
+If you want to request just a certain parameter, you can use this little function factory here to create functions
+to GET any beer, brewery, category, etc. if you know its ID.
+```{r, eval = FALSE}
+endpoints <- c("beer", "brewery", "category", "event",
+              "feature", "glass", "guild", "hop", "ingredient",
+              "location", "socialsite", "style", "menu")
+
+# Base function
+get_ <- function(id, ep) {
+  fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+}
+
+# For each of the endoints, pipe each endpoint through
+# as .x, so both as the second half of the get_<ep> function name
+# and the second argument of the get_ function defined above (so the ep in the fromJSON() call) 
+
+endpoints %>% walk(~ assign(x = paste0("get_", .x),
+                             value = partial(get_, ep = .x),
+                             envir = .GlobalEnv))
+```
+
+Now for instance we can get all the information on a single brewery from just its ID:
+```{r, eval=FALSE}
+get_brewery("pnLmiu")
+```
 
 
 * Function for unnesting JSON used inside `paginated_request()` below
@@ -697,9 +724,9 @@ Before clustering, we can determine an optimal number of clusters by setting the
 From the resulting histogram (not run here for computational ), 10 seemed an optimal number of clusters. 
 
 ```{r, echo=TRUE, eval=FALSE}
-nb <- NbClust(cluster_prep$preds, distance = "euclidean",
-              min.nc = 2, max.nc = 15, method = "kmeans")
-hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
+# nb <- NbClust(cluster_prep$preds, distance = "euclidean",
+#               min.nc = 2, max.nc = 15, method = "kmeans")
+# hist(nb$Best.nc[1,], breaks = max(na.omit(nb$Best.nc[1,])))
 ```
 
 

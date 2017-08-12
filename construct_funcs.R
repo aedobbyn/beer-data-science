@@ -8,6 +8,10 @@ source("./run_it/get_beer.R")
 # https://stackoverflow.com/questions/44223711/use-assign-to-create-multiple-functions-inside-of-a-function-in-r/44223805?noredirect=1#comment75477312_44223805
 
 
+single_param_endpoints <- c("beer", "brewery", "category", "event",
+                            "feature", "glass", "guild", "hop", "ingredient",
+                            "location", "socialsite", "style", "menu")
+
 # set up the base function
 get_ <- function(id, ep) {
   fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
