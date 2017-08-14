@@ -1,5 +1,5 @@
 ---
-title: Data Science Musings on Beer
+title: Beer-in-Hand Data Science
 author:
   name: Amanda Dobbyn
   email: amanda.e.dobbyn@gmail.com
@@ -40,7 +40,10 @@ knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 ```
 
+***
+
 For something less wordy/code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
+
 
 
 ### Motivation and Overview
@@ -1179,7 +1182,7 @@ nn_notcollapsed_out$most_important_vars
 ```
 
 
-And now if we add `glass` as a predictor?
+What happens to our accuracty measure if we add `glass` as a predictor? The type of glass that a beer is served in is determined 
 ```{r, echo=TRUE, error=TRUE}
 
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
@@ -1246,13 +1249,6 @@ bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity", s
 ```
 
 
-To quantify error we'll use out of bag (OOB) prediction error which is calculated from tree samples constructed but not used in training set; these trees become effectively part of test set.
-    
-```{r}
-bi_rf$prediction.error
-```
-
-
 Now we compare predicted classification on the test set to their actual style classification.
 ```{r, echo=TRUE}
 pred_bi_rf <- predict(bi_rf, dat = bi_test)
@@ -1260,11 +1256,28 @@ kable(table(bi_test$style_collapsed, pred_bi_rf$predictions))
 ```
 
 
+To quantify accuracy we could compare predicted style to true style in the test set. Another method is to use out of bag (OOB) prediction error, which is calculated from tree samples constructed but not used in training set. In calculating error, these trees become effectively part of test set allowing us to compute classification error. Percent accuracy, then, is $1 - OOB error * 100$.
+    
+```{r}
+(1 - bi_rf$prediction.error)*100
+```
+
+
+
 *Variable importance*
+
 The model output provides us with a measure of which variables contributed most to each tree's creation. Here we're just takin the top 10.
 Interestingly, ABV, IBU, and SRM are all much more important here than are `total_hops` and `total_malt`.
 ```{r, echo=TRUE}
-importance(bi_rf)[1:10]
+get_importance <- function(rf_df) {
+  importance_sorted <- importance(rf_df) %>% sort(., decreasing = TRUE)
+  importance_names <- names(importance_sorted)
+  importance_vals <- importance(rf_df) %>% as.numeric()
+  importance_df <- cbind(`Variable Name` = importance_names, "Importance" = importance_sorted) %>% as_tibble()
+  return(importance_df)
+}
+
+get_importance(bi_rf) %>% kable()
 ```
 
 
@@ -1300,12 +1313,12 @@ bi_pared_rf <- ranger(style_collapsed ~ ., data = bi_pared_train, importance = "
 
 OOB error compared to that of the full random forest model, `r bi_rf$prediction.error`:
 ```{r}
-bi_pared_rf$prediction.error
+(1 - bi_pared_rf$prediction.error)*100
 ```
 
 And variable importance, once again.
 ```{r, echo=TRUE}
-importance(bi_rf)[1:10]
+get_importance(bi_pared_rf) %>% kable()
 ```
 
 ***
@@ -1324,7 +1337,7 @@ One reason that style is not a cut and dry divider between different beers might
 
 *Future Directions*
 
-Potential places to take this analysis further:
+Potential places to take this analysis further include but are not limited to:
 
 * Incorporate flavor profiles for beers sourced/scraped from somewhere
 * Implement hierarchical clustering; what style is the mother of all styles?
