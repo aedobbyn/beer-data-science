@@ -1155,17 +1155,24 @@ nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed",
 
 How accurate was it?
 ```{r, echo=TRUE, eval=TRUE}
-nn_collapsed_out$nn_accuracy
+nn_collapsed_out$nn_accuracy[1]
 ```
 
 What were the most important variables?
 ```{r, echo=TRUE, eval=TRUE}
-nn_collapsed_out$most_important_vars
+get_nn_importance <- function(imp_vec) {
+  vals <- imp_vec
+  names <- rownames(vals)
+  out <- cbind("Variable" = names, vals) %>% arrange(desc(Overall)) %>% rename(Importance = Overall)
+  rownames(out) <- 1:nrow(out)
+  return(out)
+}
 
+nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% print()
 ```
 
 
-#### Now we can change some parameters and see if we get 
+#### Change up some parameters
 
 Now what if we predcit `style` instead of `style_collapsed`?
 
@@ -1175,14 +1182,14 @@ We'll run the model and again find accuracy and variable importance.
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
-nn_notcollapsed_out$nn_accuracy
+nn_notcollapsed_out$nn_accuracy[1]
 
-nn_notcollapsed_out$most_important_vars
-
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print()
 ```
+So style is harder to predict than collapsed style, which makes sense. 
 
 
-What happens to our accuracty measure if we add `glass` as a predictor? The type of glass that a beer is served in is determined 
+Now we can ask the question of what happens to our accuracty measure if we add `glass` as a predictor. The type of glass that a beer is served in is a property of the beer's style rather than of the beer itself. We'd imagine then that glass should be a good predictor of style. It's not a perfect predictor, though, as styles are served in the same glass type.
 ```{r, echo=TRUE, error=TRUE}
 
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
@@ -1190,10 +1197,13 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
-nn_collapsed_out_add_glass$nn_accuracy
+nn_collapsed_out_add_glass$nn_accuracy[1]
+```
+So indeed, glass does improve the accuracy of the model. 
 
+
+```{r, echo=TRUE}
 nn_collapsed_out_add_glass$most_important_vars
-
 ```
 
 
@@ -1311,7 +1321,7 @@ bi_pared_rf <- ranger(style_collapsed ~ ., data = bi_pared_train, importance = "
 ```
 
 
-OOB error compared to that of the full random forest model, `r bi_rf$prediction.error`:
+Accuracy compared to that of the full random forest model, `r (1 - bi_rf$prediction.error)*100`:
 ```{r}
 (1 - bi_pared_rf$prediction.error)*100
 ```
