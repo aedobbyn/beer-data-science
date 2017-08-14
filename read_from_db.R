@@ -38,6 +38,8 @@ beer_necessities <- factorize_ingredients(beer_necessities)
 
 
 
+keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel", "Altbier")
+
 # ------ read in from csv
 
 # beer_necessities <- read_csv("./beer_necessities.csv")

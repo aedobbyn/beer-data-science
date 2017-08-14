@@ -1,10 +1,19 @@
-# Data Science Musings on Beer
+# Beer-in-Hand Data Science
 
 
 
 
+
+***
 
 For something less wordy/code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
+
+
+
+
+```r
+source("./read_from_db.R")
+```
 
 
 ### Motivation and Overview
@@ -18,6 +27,11 @@ Clusters defined by the algorithm were compared to the style "centers" as define
 This document gets very much in the weeds in the hopes that anyone else interested in using the same tools to explore questions about beer will have a solid jumping-off point. It starts off with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake. The code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
 
 It then moves into clustering (k-means) and prediction (neural net, random forest). Below is a more detailed overview of the general workflow.
+
+But first, a density plot of the alcohol vs. bitterness landscape, colored by style. What follows is something of a sanity check that our interpetation of this plot is more or less accurate.
+
+![](compile_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+
 
 
 ### Workflow
@@ -51,7 +65,9 @@ To my mind the best candidates for predictor variables are ABV, IBU, and SRM. Ta
 
 
 ### Provisional Answer
-Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. 
+
+Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
 
 Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this 
 
@@ -61,11 +77,6 @@ Of course, other important aspects of the flavor, body, smell, etc. of the beers
 
 
 ***
-
-
-```r
-source("./read_from_db.R")
-```
 
 
 ## Get and Prepare Data
@@ -869,7 +880,6 @@ kable(clustered_beer[1:20, ])
 |6                  |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661| -0.3513760|  1.1486219|  3.4551463| 9.5| 22.0|  10|
 |9                  |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel          |  1.6413088| -0.7465661|  2.4677869| -0.2502903| -0.2274607| 9.5| 22.0|  40|
 
-Join the clustered beer on `beer_ingredients_join`
 
 
 
@@ -909,7 +919,9 @@ We can get an idea of how cleanly styles were fit into clusters by looking at a 
 |Wheat                    |  16|   0| 257|  11|  0| 13|   4| 11|  2|   3|
 
 
-And we can plot the clusters. There are 3 dimensions, ABV, IBU, and SRM, so we choose two at a time to graph. 
+Now we can plot the clusters. There are 3 dimensions, ABV, IBU, and SRM, so we choose two at a time to graph. 
+We add in the style centers (means) for each `style_collapsed`.
+Anecdotally, style centers match up approximately to where we'd expect them to fall.
 
 
 ```r
@@ -929,7 +941,7 @@ clustered_beer_plot_srm_ibu <- ggplot() +
 clustered_beer_plot_srm_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-26-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
 
 ```r
 clustered_beer_plot_srm_abv <- ggplot() +   
@@ -943,17 +955,13 @@ clustered_beer_plot_srm_abv <- ggplot() +
                   family = "Calibri",
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. ABV") +
-  labs(x = "ABV", y = "SRM") +
+  labs(x = "SRM", y = "ABV") +
   labs(colour = "Cluster Assignment")
 clustered_beer_plot_srm_abv
 ```
 
-![](compile_files/figure-html/unnamed-chunk-26-2.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-27-2.png)<!-- -->
 
-
-
-Now we can add in the style centers (means) for each `style_collapsed` and label it.
-Anecdotally, style centers match up approximately to where we'd expect them to fall.
 
 
 ```r
@@ -973,7 +981,7 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-28-1.png)<!-- -->
 
 
 That's one way to get a sense of the data. However, one snag is that the clustering above used a smaller number of clusters (10) than there are `styles_collapsed` (30). That makes it difficult to determine whether a given style fits snugly into a cluster or not.
@@ -1034,7 +1042,7 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 
 
 
-Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left the left facet would be entirely blue, second from left entirely green, etc.)
+Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left the left facet would be entirely blue, second from left entirely green, etc.) Style centers are denoted by the black circle.
 
 
 
@@ -1045,7 +1053,7 @@ by_style_plot <- ggplot() +
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
   geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu),shape = 1, colour = "black", fill="black", size = 8, solid=TRUE) +
+           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4, solid=TRUE) +
   ggtitle("Selected Styles Cluster Assignment") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster") +
@@ -1053,7 +1061,7 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-![](compile_files/figure-html/unnamed-chunk-30-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
 
 
 
@@ -1098,7 +1106,7 @@ ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-32-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-33-1.png)<!-- -->
 
 
 Regressing total number of hops on bitterness (IBU):
@@ -1126,7 +1134,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5)
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-34-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
 
 The trend holds even with 5 or more hops, with a slightly smaller effect size.
 
@@ -1230,7 +1238,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-37-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
 
 
 ```r
@@ -1242,7 +1250,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
+![](compile_files/figure-html/unnamed-chunk-39-1.png)<!-- -->
 
 
 ***
@@ -1343,31 +1351,49 @@ nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed",
 How accurate was it?
 
 ```r
-nn_collapsed_out$nn_accuracy
+nn_collapsed_out$nn_accuracy[1]
 ```
 
 ```
-##  Accuracy     Kappa 
-## 0.4236641 0.3727983
+##  Accuracy 
+## 0.4236641
 ```
 
 What were the most important variables?
 
 ```r
-nn_collapsed_out$most_important_vars
+get_nn_importance <- function(imp_vec) {
+  vals <- imp_vec
+  names <- rownames(vals)
+  out <- cbind("Variable" = names, vals) %>% arrange(desc(Overall)) %>% rename(Importance = Overall)
+  rownames(out) <- 1:nrow(out)
+  return(out)
+}
+
+nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
 ```
 
 ```
-##              Overall
-## total_hops 39.319742
-## total_malt 12.639015
-## abv        40.186818
-## ibu         3.038473
-## srm         3.952394
+##     Variable Importance
+## 1        abv  40.186818
+## 2 total_hops  39.319742
+## 3 total_malt  12.639015
+## 4        srm   3.952394
+## 5        ibu   3.038473
 ```
 
 
-#### Now we can change some parameters and see if we get 
+
+|Variable   | Importance|
+|:----------|----------:|
+|abv        |  40.186818|
+|total_hops |  39.319742|
+|total_malt |  12.639015|
+|srm        |   3.952394|
+|ibu        |   3.038473|
+
+
+#### Change up some parameters
 
 Now what if we predcit `style` instead of `style_collapsed`?
 
@@ -1377,29 +1403,40 @@ We'll run the model and again find accuracy and variable importance.
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
-nn_notcollapsed_out$nn_accuracy
+nn_notcollapsed_out$nn_accuracy[1]
 ```
 
 ```
-##  Accuracy     Kappa 
-## 0.3341804 0.2966287
+##  Accuracy 
+## 0.3341804
 ```
 
 ```r
-nn_notcollapsed_out$most_important_vars
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
 ```
 
 ```
-##              Overall
-## total_hops 342.86618
-## total_malt 239.40596
-## abv         95.45879
-## ibu         14.80483
-## srm         26.00669
+##     Variable Importance
+## 1 total_hops  342.86618
+## 2 total_malt  239.40596
+## 3        abv   95.45879
+## 4        srm   26.00669
+## 5        ibu   14.80483
 ```
 
 
-And now if we add `glass` as a predictor?
+
+|Variable   | Importance|
+|:----------|----------:|
+|total_hops |  342.86618|
+|total_malt |  239.40596|
+|abv        |   95.45879|
+|srm        |   26.00669|
+|ibu        |   14.80483|
+So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
+
+
+Now we can ask the question of what happens to our accuracty measure if we add `glass` as a predictor. The type of glass that a beer is served in is a property of the beer's style rather than of the beer itself. We'd imagine then that glass should be a good predictor of style. It's not a perfect predictor, though, as styles are served in the same glass type.
 
 ```r
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
@@ -1407,38 +1444,42 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
-nn_collapsed_out_add_glass$nn_accuracy
+nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
 ```
-##  Accuracy     Kappa 
-## 0.4509804 0.4081541
+##  Accuracy 
+## 0.4509804
 ```
+So indeed, glass does improve the accuracy of the model. 
+
+
 
 ```r
-nn_collapsed_out_add_glass$most_important_vars
+nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable()
 ```
 
-```
-##                               Overall
-## total_hops                 194.235636
-## total_malt                 112.939211
-## abv                         23.532293
-## ibu                          3.467844
-## srm                          4.161502
-## glassGoblet               1131.652525
-## glassMug                  1171.518521
-## glassOversized Wine Glass  423.727416
-## glassPilsner               952.071472
-## glassPint                 1012.238307
-## glassSnifter              1050.860918
-## glassStange                566.550117
-## glassThistle              1358.029802
-## glassTulip                1000.668781
-## glassWeizen                468.460583
-## glassWilli                1099.604517
-```
 
+
+|Variable                  |  Importance|
+|:-------------------------|-----------:|
+|glassThistle              | 1358.029802|
+|glassMug                  | 1171.518521|
+|glassGoblet               | 1131.652525|
+|glassWilli                | 1099.604517|
+|glassSnifter              | 1050.860919|
+|glassPint                 | 1012.238307|
+|glassTulip                | 1000.668781|
+|glassPilsner              |  952.071472|
+|glassStange               |  566.550117|
+|glassWeizen               |  468.460583|
+|glassOversized Wine Glass |  423.727416|
+|total_hops                |  194.235636|
+|total_malt                |  112.939211|
+|abv                       |   23.532293|
+|srm                       |    4.161502|
+|ibu                       |    3.467844|
+And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
 
 
 
@@ -1451,10 +1492,11 @@ What does it mean if including specific ingredients in the model improves its ac
 
 Glass type certainly isn't fair game to include as a predictor, so we omit it here.
 
-We'll use the `ranger` package to train on 80% of the data an test on the remaining 20%.
 
 
-First we'll train on everything we've got: ABV, IBU, SRM, total hops, total malts, and whether each individual hop and malt was present.
+**Full Random Forest**
+
+We'll use the `ranger` package to train on 80% of the data an test on the remaining 20%. First we'll train on everything we've got: ABV, IBU, SRM, total hops, total malts, and whether each individual hop and malt was present.
 
 
 ```r
@@ -1489,14 +1531,6 @@ bi_train <- bi_train %>%
   select(-`#06300`)
 
 bi_rf <- ranger(style_collapsed ~ ., data = bi_train, importance = "impurity", seed = 11)
-```
-
-
-To quantify error we'll use out of bag (OOB) prediction error which is calculated from tree samples constructed but not used in training set; these trees become effectively part of test set.
-    
-
-```
-## [1] 0.6835242
 ```
 
 
@@ -1543,24 +1577,391 @@ kable(table(bi_test$style_collapsed, pred_bi_rf$predictions))
 |Wheat                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        2|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    51|
 
 
+To quantify accuracy we could compare predicted style to true style in the test set. Another method is to use out of bag (OOB) prediction error, which is calculated from tree samples constructed but not used in training set. In calculating error, these trees become effectively part of test set allowing us to compute classification error. Percent accuracy, then, is $1 - OOB error * 100$.
+    
+
+```
+## [1] 31.64758
+```
+
+
+
 *Variable importance*
-The model output provides us with a measure of which variables contributed most to each tree's creation. Here we're just takin the top 10.
-Interestingly, ABV, IBU, and SRM are all much more important here than are `total_hops` and `total_malt`.
+
+The model output provides us with a measure of which variables contributed most to each tree's creation. Here we'll look at just the top 10.
 
 ```r
-importance(bi_rf)[1:10]
+get_rf_importance <- function(rf_df) {
+  importance_sorted <- importance(rf_df) %>% sort(., decreasing = TRUE)
+  importance_names <- names(importance_sorted)
+  importance_vals <- importance(rf_df) %>% as.numeric()
+  importance_df <- cbind(`Variable Name` = importance_names, "Importance" = importance_sorted) %>% as_tibble()
+  return(importance_df)
+}
+
+bi_rf %>% get_rf_importance() %>% kable()
 ```
 
-```
-##               total_hops               total_malt                      abv 
-##                6.6322015                5.0172293               83.8789022 
-##                      ibu                      srm                  admiral 
-##              128.1278415               82.5469819                0.0000000 
-## ageddebitteredhopslambic                  ahtanum                  alchemy 
-##                0.2376472                0.6450460                0.2377433 
-##                 amarillo 
-##                2.0809754
-```
+
+
+|Variable Name                    |Importance         |
+|:--------------------------------|:------------------|
+|ibu                              |128.127841516451   |
+|abv                              |83.8789022033913   |
+|srm                              |82.5469818507542   |
+|total_hops                       |6.63220154819431   |
+|cascade                          |5.17661598449075   |
+|total_malt                       |5.01722932603998   |
+|chocolatemalt                    |2.54077913266083   |
+|centennial                       |2.38691109144636   |
+|amarillo                         |2.08097539237574   |
+|simcoe                           |2.07455019858463   |
+|tworowpalemalt                   |2.01210666803902   |
+|columbus                         |1.9973200349696    |
+|wheatmalt                        |1.98265447096378   |
+|chinook                          |1.88231038694247   |
+|munichmalt                       |1.86579813483358   |
+|caramelcrystalmalt               |1.8128439590017    |
+|citra                            |1.64659115495405   |
+|pilsnermalt                      |1.5499923837188    |
+|eastkentgolding                  |1.50046716691956   |
+|palemalt                         |1.48410432321599   |
+|wheatmaltwhite                   |1.38559877025913   |
+|magnum                           |1.29361823860276   |
+|carapilsdextrinmalt              |1.27216981010125   |
+|tworowbarleymalt                 |1.12037927136331   |
+|viennamalt                       |1.11617543513933   |
+|ryemalt                          |1.11314809102461   |
+|hallertaueramerican              |1.10034223366331   |
+|saazamerican                     |1.0889868413259    |
+|styriangoldings                  |1.08530533126519   |
+|marisotter                       |1.06734377436294   |
+|nugget                           |1.0519780446977    |
+|barleyroasted                    |0.991530876780035  |
+|victorymalt                      |0.982403612746572  |
+|apollo                           |0.93035493113996   |
+|willamette                       |0.913822544013447  |
+|mounthood                        |0.820081277035963  |
+|tettnangtettnanger               |0.814607233659904  |
+|caramelcrystalmalt80l            |0.807165158476472  |
+|hops                             |0.76965925602171   |
+|northernbreweramerican           |0.70931986984078   |
+|aromaticmalt                     |0.683966770850515  |
+|ahtanum                          |0.645045969951908  |
+|goldingamerican                  |0.632659185222538  |
+|bravo                            |0.621925650751488  |
+|mosaic                           |0.615788546134043  |
+|carahell                         |0.610936182487452  |
+|summit                           |0.60225551344218   |
+|liberty                          |0.595018131370459  |
+|warrior                          |0.580981219453005  |
+|oatsmalted                       |0.573016319517303  |
+|tettnangeramerican               |0.570551421377974  |
+|caramunich                       |0.549378451219953  |
+|sterling                         |0.527852384711513  |
+|spaltspalter                     |0.514625839777508  |
+|acidulatedmalt                   |0.508758245321775  |
+|challenger                       |0.506063429237559  |
+|barleymalted                     |0.501343685849923  |
+|fuggleamerican                   |0.501137338840245  |
+|oatsflaked                       |0.496072878821533  |
+|galena                           |0.495316630299375  |
+|hallertauerhersbrucker           |0.49293543823884   |
+|galaxy                           |0.485162219076271  |
+|midnightwheat                    |0.484169714359017  |
+|nelsonsauvin                     |0.47739500235703   |
+|pacificjade                      |0.472237330067939  |
+|caramelcrystalmalt60l            |0.453476131428932  |
+|specialbmalt                     |0.437642783175888  |
+|crystal                          |0.43395367109314   |
+|blackmalt                        |0.433823229654762  |
+|wheatraw                         |0.428933829716645  |
+|caramelcrystalmalt45l            |0.419200101030399  |
+|barleyflaked                     |0.415993354674616  |
+|tworowpalemaltorganic            |0.415218583703552  |
+|caramelcrystalmalt40l            |0.414707939737765  |
+|caramelcrystalmalt120l           |0.409973518665271  |
+|carared                          |0.407997507334934  |
+|pacifica                         |0.390358066039051  |
+|carafoam                         |0.378847138699041  |
+|fuggles                          |0.373618244401116  |
+|glacier                          |0.356134803253717  |
+|honeymalt                        |0.352686931828547  |
+|tworowpilsnermalt                |0.34306556541133   |
+|tradition                        |0.340981789985117  |
+|zythos                           |0.335063863586383  |
+|eldorado                         |0.332596645964245  |
+|palisades                        |0.329746657310766  |
+|cherrywoodsmokemalt              |0.324057923928942  |
+|phoenix                          |0.323235052022876  |
+|cluster                          |0.319712714348932  |
+|motueka                          |0.305737736807553  |
+|saphirgermanorganic              |0.305579805971052  |
+|gladfieldpale                    |0.30463202993563   |
+|blackpatent                      |0.294641607551393  |
+|sorachiace                       |0.287700869231272  |
+|carafaiii                        |0.287647769444943  |
+|germanmagnum                     |0.286699980557059  |
+|rice                             |0.284365695824652  |
+|perleamerican                    |0.282910654950529  |
+|roastmalt                        |0.28283159887474   |
+|harrington2rowbasemalt           |0.277667578677569  |
+|palemaltorganic                  |0.277587887603168  |
+|hallertauhallertauertradition    |0.265451043364905  |
+|target                           |0.26318729521372   |
+|maltedrye                        |0.258636446680051  |
+|strisselspalt                    |0.258016198318829  |
+|calypso                          |0.247864398787058  |
+|carafaii                         |0.238522652385014  |
+|alchemy                          |0.237743278095433  |
+|ageddebitteredhopslambic         |0.23764719390132   |
+|abbeymalt                        |0.236072450625012  |
+|biscuitmalt                      |0.233602065418554  |
+|caramelcrystalmalt20l            |0.231928835719394  |
+|ricered                          |0.231117186996463  |
+|goldenpromise                    |0.23084206169311   |
+|ctz                              |0.228107703430064  |
+|spalt                            |0.224338049087102  |
+|kentgoldings                     |0.223751245681873  |
+|ambermalt                        |0.220709249880892  |
+|caramelcrystalmalt30l            |0.218406884669736  |
+|crisp77                          |0.215807214650739  |
+|darkchocolate                    |0.209316729296969  |
+|toastedmalt                      |0.208392957690777  |
+|sixrowpalemalt                   |0.206956873068345  |
+|rahrspecialpale                  |0.206761898664914  |
+|marynka                          |0.201130838464232  |
+|caraamber                        |0.199089184886834  |
+|munichmalttypei                  |0.192039398932045  |
+|aramis                           |0.191331871140955  |
+|caramelcrystalmalt10l            |0.190746203043658  |
+|northdown                        |0.186295162575953  |
+|pilgrim                          |0.183021206487668  |
+|caraviennemalt                   |0.180516375070391  |
+|munichmalt20l                    |0.178858543209084  |
+|cornflaked                       |0.175107668112263  |
+|carastan                         |0.17015650910146   |
+|caramunichii                     |0.168928276942768  |
+|sugaralbion                      |0.168514932545391  |
+|caramelcrystalmaltdark           |0.168496317775573  |
+|falconersflight                  |0.166178291765129  |
+|hallertauhallertauermittelfrüher |0.16205055502362   |
+|spaltselect                      |0.161430387790851  |
+|lemondrop                        |0.16067294306977   |
+|munichmalttypeii                 |0.156680995333544  |
+|tworowpalemalttoasted            |0.155452113489659  |
+|horizon                          |0.154539692725314  |
+|riceflaked                       |0.153438095624292  |
+|blackmaltdebittered              |0.151474146018785  |
+|saazczech                        |0.150322321742541  |
+|caramelcrystalmaltorganic        |0.14943496324672   |
+|munichmaltorganic                |0.146644144207518  |
+|germantradition                  |0.144303218282081  |
+|munichmalt40l                    |0.143002060265466  |
+|ricehulls                        |0.142852344096216  |
+|corngrits                        |0.142825520248168  |
+|brewersgold                      |0.141814852494245  |
+|meridian                         |0.140878723476331  |
+|ryeflaked                        |0.1392929684403    |
+|samueladamstworowpalemaltblend   |0.134962596466029  |
+|carafai                          |0.134112923667791  |
+|germanperle                      |0.132918295313621  |
+|smokedmalt                       |0.132643660856323  |
+|caramunichiii                    |0.130610048002189  |
+|specialroast                     |0.129779258336703  |
+|mildmalt                         |0.127183915310717  |
+|jarrylo                          |0.126417345317255  |
+|wyermannvienna                   |0.125390038556442  |
+|celeia                           |0.125314704024216  |
+|caramelcrystalmalt50l            |0.124672302393981  |
+|melanoidinmalt                   |0.123599921914962  |
+|palev                            |0.122022367540893  |
+|caramelcrystalmalt8l             |0.120041983630879  |
+|wheatflaked                      |0.119634063428638  |
+|caramelcrystalmaltmedium         |0.119244010071394  |
+|rahr2rowmalt                     |0.113230489838301  |
+|bonlander                        |0.112758941159601  |
+|caramelcrystalmalt55l            |0.112113038573241  |
+|caramelcrystalmaltheritage       |0.108903801288428  |
+|brownsugar                       |0.108469348395696  |
+|asheburnemildmalt                |0.102768178772444  |
+|caramelcrystalmalt75l            |0.10223690486394   |
+|southerncross                    |0.101228104737088  |
+|extraspecialmalt                 |0.0992914762476259 |
+|bambergsmokedmalt                |0.0988964372313282 |
+|carafaspecial                    |0.0940181124105064 |
+|carolinaryemalt                  |0.0936744676083647 |
+|wheatred                         |0.0931631169402074 |
+|caramelcrystalmalt300l           |0.0911117620478272 |
+|corn                             |0.0899448058217156 |
+|topaz                            |0.0777853289352147 |
+|crystal77                        |0.0766453108403652 |
+|brownmalt                        |0.072228342641213  |
+|yakimawillamette                 |0.0693191048059366 |
+|caramelcrystalmalt15l            |0.0662772894904114 |
+|germanpolaris                    |0.063917089239282  |
+|frenchstrisserspalt              |0.057782784053799  |
+|carawheat                        |0.0565734463345406 |
+|munichwheat                      |0.054361593498651  |
+|wheattoasted                     |0.0492837830853224 |
+|honey                            |0.0457040342429733 |
+|canesugar                        |0.0447140703998832 |
+|newzealandmotueka                |0.043662922353448  |
+|comet                            |0.0416112567999385 |
+|caramelcrystalmaltlight          |0.0377700710038378 |
+|wheattorrified                   |0.0314571320291803 |
+|admiral                          |0                  |
+|amarillogold                     |0                  |
+|aquila                           |0                  |
+|argentinecascade                 |0                  |
+|athanum                          |0                  |
+|aurora                           |0                  |
+|australiandrrudi                 |0                  |
+|azacca                           |0                  |
+|azzeca                           |0                  |
+|belma                            |0                  |
+|bobek                            |0                  |
+|bramlingcross                    |0                  |
+|brewersgoldamerican              |0                  |
+|cobb                             |0                  |
+|columbustomahawk                 |0                  |
+|delta                            |0                  |
+|ella                             |0                  |
+|enigma                           |0                  |
+|equinox                          |0                  |
+|eureka                           |0                  |
+|experimental05256                |0                  |
+|experimental06277                |0                  |
+|firstgold                        |0                  |
+|frenchtriskel                    |0                  |
+|fuggleenglish                    |0                  |
+|germanmandarinabavaria           |0                  |
+|germanopal                       |0                  |
+|germanselect                     |0                  |
+|greenbullet                      |0                  |
+|hallertaunorthernbrewer          |0                  |
+|hallertauerherkules              |0                  |
+|hallertauerperle                 |0                  |
+|hallertauerselect                |0                  |
+|helga                            |0                  |
+|hopextract                       |0                  |
+|huellmelon                       |0                  |
+|idaho7                           |0                  |
+|kohatu                           |0                  |
+|millenium                        |0                  |
+|mtrainier                        |0                  |
+|newzealandhallertauer            |0                  |
+|newzealandsauvin                 |0                  |
+|newport                          |0                  |
+|noble                            |0                  |
+|orbit                            |0                  |
+|pacificgem                       |0                  |
+|premiant                         |0                  |
+|prideofringwood                  |0                  |
+|rakau                            |0                  |
+|revolution                       |0                  |
+|santiam                          |0                  |
+|sladeksaaz                       |0                  |
+|sovereign                        |0                  |
+|sticklebract                     |0                  |
+|styrianaurora                    |0                  |
+|styrianbobeks                    |0                  |
+|supergalena                      |0                  |
+|tomahawk                         |0                  |
+|ultra                            |0                  |
+|vanguard                         |0                  |
+|vicsecret                        |0                  |
+|waimea                           |0                  |
+|wakatu                           |0                  |
+|zeus                             |0                  |
+|barleyblack                      |0                  |
+|barleylightlyroasted             |0                  |
+|barleyraw                        |0                  |
+|barleyroasteddehusked            |0                  |
+|beechwoodsmoked                  |0                  |
+|belgianpale                      |0                  |
+|belgianpilsner                   |0                  |
+|blackmaltorganic                 |0                  |
+|blackroast                       |0                  |
+|blackprinzmalt                   |0                  |
+|blueagavenectar                  |0                  |
+|bluecorn                         |0                  |
+|briess2rowchocolatemalt          |0                  |
+|briessblackprinzmalt             |0                  |
+|britishpalemalt                  |0                  |
+|buckwheatroasted                 |0                  |
+|c15                              |0                  |
+|canada2rowsilo                   |0                  |
+|caramalt                         |0                  |
+|caraaroma                        |0                  |
+|carabrown                        |0                  |
+|caramelcrystalmaltextradark      |0                  |
+|caramelcrystalmalt150l           |0                  |
+|caramelcrystalmalt70l            |0                  |
+|caramelcrystalmalt85l            |0                  |
+|caramelcrystalmalt90l            |0                  |
+|caramunich120l                   |0                  |
+|caramunich20l                    |0                  |
+|caramunich40l                    |0                  |
+|caramunich60l                    |0                  |
+|caramunichi                      |0                  |
+|cararye                          |0                  |
+|cereal                           |0                  |
+|cherrysmoked                     |0                  |
+|chitmalt                         |0                  |
+|chocolateryemalt                 |0                  |
+|chocolatewheatmalt               |0                  |
+|coffeemalt                       |0                  |
+|cornfield                        |0                  |
+|crisp120                         |0                  |
+|dememerasugar                    |0                  |
+|dextrinmalt                      |0                  |
+|dextrosesyrup                    |0                  |
+|fawcettcrystalrye                |0                  |
+|fawcettrye                       |0                  |
+|germancologne                    |0                  |
+|gleneaglemarisotter              |0                  |
+|highfructosecornsyrup            |0                  |
+|hughbairdpalealemalt             |0                  |
+|kilnamber                        |0                  |
+|lactose                          |0                  |
+|lagermalt                        |0                  |
+|maltextract                      |0                  |
+|maltofrancobelgepilsmalt         |0                  |
+|maplesyrup                       |0                  |
+|metcalfe                         |0                  |
+|millet                           |0                  |
+|munichmaltdark                   |0                  |
+|munichmaltlight                  |0                  |
+|munichmaltsmoked                 |0                  |
+|munichmalt10l                    |0                  |
+|oatsgoldennaked                  |0                  |
+|oatsrolled                       |0                  |
+|oatssteelcutpinheadoats          |0                  |
+|oatstoasted                      |0                  |
+|palechocolatemalt                |0                  |
+|palemalthalcyon                  |0                  |
+|palemaltoptic                    |0                  |
+|palewheat                        |0                  |
+|pearlmalt                        |0                  |
+|peatedmaltsmoked                 |0                  |
+|piloncillo                       |0                  |
+|pilsnermaltorganic               |0                  |
+|rauchmalz                        |0                  |
+|ricewhite                        |0                  |
+|specialwmalt                     |0                  |
+|speltmalt                        |0                  |
+|torrefiedwheat                   |0                  |
+|tworowpilsnermaltbelgian         |0                  |
+|tworowpilsnermaltgermany         |0                  |
+|weyermannrye                     |0                  |
+|wheatmaltdark                    |0                  |
+|wheatmaltgerman                  |0                  |
+|wheatmaltlight                   |0                  |
+|wheatmaltorganic                 |0                  |
+|wheatmaltred                     |0                  |
+|wheatmaltsmoked                  |0                  |
+|whitewheat                       |0                  |
 
 
 **Pared down Random Forest**
@@ -1594,28 +1995,28 @@ bi_pared_rf <- ranger(style_collapsed ~ ., data = bi_pared_train, importance = "
 ```
 
 
-OOB error compared to that of the full random forest model, 0.6835242:
+Accuracy compared to that of the full random forest model, 31.6475827:
 
 ```
-## [1] 0.5553435
+## [1] 44.46565
 ```
 
 And variable importance, once again.
+Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 
 ```r
-importance(bi_rf)[1:10]
+bi_pared_rf %>% get_rf_importance() %>% kable()
 ```
 
-```
-##               total_hops               total_malt                      abv 
-##                6.6322015                5.0172293               83.8789022 
-##                      ibu                      srm                  admiral 
-##              128.1278415               82.5469819                0.0000000 
-## ageddebitteredhopslambic                  ahtanum                  alchemy 
-##                0.2376472                0.6450460                0.2377433 
-##                 amarillo 
-##                2.0809754
-```
+
+
+|Variable Name |Importance       |
+|:-------------|:----------------|
+|ibu           |793.122684248739 |
+|abv           |695.245152906264 |
+|srm           |615.65211002436  |
+|total_hops    |49.362145481998  |
+|total_malt    |45.1172265430781 |
 
 ***
 
@@ -1633,7 +2034,7 @@ One reason that style is not a cut and dry divider between different beers might
 
 *Future Directions*
 
-Potential places to take this analysis further:
+Potential places to take this analysis further include but are not limited to:
 
 * Incorporate flavor profiles for beers sourced/scraped from somewhere
 * Implement hierarchical clustering; what style is the mother of all styles?
@@ -1668,7 +2069,7 @@ sessionInfo()
 ## 
 ## other attached packages:
 ##  [1] stringr_1.2.0   ranger_0.8.0    caret_6.0-76    lattice_0.20-35
-##  [5] nnet_7.3-12     NbClust_3.0     bindrcpp_0.2    forcats_0.2.0  
+##  [5] nnet_7.3-12     NbClust_3.0     forcats_0.2.0   bindrcpp_0.2   
 ##  [9] dplyr_0.7.2     purrr_0.2.3     readr_1.1.1     tidyr_0.6.3    
 ## [13] tibble_1.3.3    tidyverse_1.1.1 RMySQL_0.10.12  DBI_0.7        
 ## [17] ggrepel_0.6.5   ggplot2_2.2.1   jsonlite_1.5    broom_0.4.2    

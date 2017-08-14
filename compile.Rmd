@@ -5,7 +5,7 @@ author:
   email: amanda.e.dobbyn@gmail.com
 # output:
 #   html_notebook:
-#     toc: false
+#     toc: true
 #     theme: yeti
 #   pdf_document:
 #     keep_tex: true
@@ -36,7 +36,7 @@ library(ggrepel)
 # knitr::opts_chunk$set(cache=TRUE)
 # knitr::opts_knit$set(root.dir=normalizePath('../'))
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
-knitr::opts_chunk$set(fig.width=12, fig.height=8) 
+knitr::opts_chunk$set(fig.width=24, fig.height=16)
 options(knitr.table.format = 'markdown')
 ```
 
@@ -44,6 +44,11 @@ options(knitr.table.format = 'markdown')
 
 For something less wordy/code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
 
+
+
+```{r, echo=TRUE, message=FALSE}
+source("./read_from_db.R")
+```
 
 
 ### Motivation and Overview
@@ -57,6 +62,20 @@ Clusters defined by the algorithm were compared to the style "centers" as define
 This document gets very much in the weeds in the hopes that anyone else interested in using the same tools to explore questions about beer will have a solid jumping-off point. It starts off with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake. The code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
 
 It then moves into clustering (k-means) and prediction (neural net, random forest). Below is a more detailed overview of the general workflow.
+
+But first, a density plot of the alcohol vs. bitterness landscape, colored by style. What follows is something of a sanity check that our interpetation of this plot is more or less accurate.
+
+```{r}
+ggplot() +   
+  geom_density2d(data = beer_necessities %>% filter(style_collapsed %in% keywords) %>% 
+               filter(abv < 20 & abv > 3 & ibu < 200), 
+             aes(x = abv, y = ibu, colour = style_collapsed), alpha = 0.5) +
+  ggtitle("Beer Styles, ABV vs. IBU") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Collapsed Style") +
+  theme_minimal()
+```
+
 
 
 ### Workflow
@@ -90,7 +109,9 @@ To my mind the best candidates for predictor variables are ABV, IBU, and SRM. Ta
 
 
 ### Provisional Answer
-Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. 
+
+Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
 
 Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this 
 
@@ -100,10 +121,6 @@ Of course, other important aspects of the flavor, body, smell, etc. of the beers
 
 
 ***
-
-```{r, echo=TRUE, message=FALSE}
-source("./read_from_db.R")
-```
 
 
 ## Get and Prepare Data
@@ -787,8 +804,8 @@ We take a look at the top of the resulting clustered data. The cluster assignmen
 kable(clustered_beer[1:20, ])
 ```
 
-Join the clustered beer on `beer_ingredients_join`
 ```{r}
+# Join the clustered beer on `beer_ingredients_join`
 beer_ingredients_join_clustered <- left_join(beer_ingredients_join, clustered_beer, 
                                              by = "name")
 ```
@@ -802,7 +819,9 @@ kable(cluster_table_counts)
 ```
 
 
-And we can plot the clusters. There are 3 dimensions, ABV, IBU, and SRM, so we choose two at a time to graph. 
+Now we can plot the clusters. There are 3 dimensions, ABV, IBU, and SRM, so we choose two at a time to graph. 
+We add in the style centers (means) for each `style_collapsed`.
+Anecdotally, style centers match up approximately to where we'd expect them to fall.
 
 ```{r, echo=TRUE}
 clustered_beer_plot_srm_ibu <- ggplot() +
@@ -831,15 +850,11 @@ clustered_beer_plot_srm_abv <- ggplot() +
                   family = "Calibri",
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. ABV") +
-  labs(x = "ABV", y = "SRM") +
+  labs(x = "SRM", y = "ABV") +
   labs(colour = "Cluster Assignment")
 clustered_beer_plot_srm_abv
 ```
 
-
-
-Now we can add in the style centers (means) for each `style_collapsed` and label it.
-Anecdotally, style centers match up approximately to where we'd expect them to fall.
 
 ```{r, echo=TRUE}
 abv_ibu_clusters_vs_style_centers <- ggplot() +   
@@ -905,7 +920,7 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 
 
 
-Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left the left facet would be entirely blue, second from left entirely green, etc.)
+Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left the left facet would be entirely blue, second from left entirely green, etc.) Style centers are denoted by the black circle.
 
 
 ```{r, echo=TRUE}
@@ -915,7 +930,7 @@ by_style_plot <- ggplot() +
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
   geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu),shape = 1, colour = "black", fill="black", size = 8, solid=TRUE) +
+           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4, solid=TRUE) +
   ggtitle("Selected Styles Cluster Assignment") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster") +
@@ -1168,7 +1183,7 @@ get_nn_importance <- function(imp_vec) {
   return(out)
 }
 
-nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% print()
+nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
 ```
 
 
@@ -1184,9 +1199,9 @@ nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style",
 
 nn_notcollapsed_out$nn_accuracy[1]
 
-nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print()
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
 ```
-So style is harder to predict than collapsed style, which makes sense. 
+So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
 
 
 Now we can ask the question of what happens to our accuracty measure if we add `glass` as a predictor. The type of glass that a beer is served in is a property of the beer's style rather than of the beer itself. We'd imagine then that glass should be a good predictor of style. It's not a perfect predictor, though, as styles are served in the same glass type.
@@ -1203,9 +1218,9 @@ So indeed, glass does improve the accuracy of the model.
 
 
 ```{r, echo=TRUE}
-nn_collapsed_out_add_glass$most_important_vars
+nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable()
 ```
-
+And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
 
 
 
@@ -1218,10 +1233,11 @@ What does it mean if including specific ingredients in the model improves its ac
 
 Glass type certainly isn't fair game to include as a predictor, so we omit it here.
 
-We'll use the `ranger` package to train on 80% of the data an test on the remaining 20%.
 
 
-First we'll train on everything we've got: ABV, IBU, SRM, total hops, total malts, and whether each individual hop and malt was present.
+**Full Random Forest**
+
+We'll use the `ranger` package to train on 80% of the data an test on the remaining 20%. First we'll train on everything we've got: ABV, IBU, SRM, total hops, total malts, and whether each individual hop and malt was present.
 
 ```{r, echo=TRUE}
 
@@ -1276,10 +1292,9 @@ To quantify accuracy we could compare predicted style to true style in the test 
 
 *Variable importance*
 
-The model output provides us with a measure of which variables contributed most to each tree's creation. Here we're just takin the top 10.
-Interestingly, ABV, IBU, and SRM are all much more important here than are `total_hops` and `total_malt`.
+The model output provides us with a measure of which variables contributed most to each tree's creation. Here we'll look at just the top 10.
 ```{r, echo=TRUE}
-get_importance <- function(rf_df) {
+get_rf_importance <- function(rf_df) {
   importance_sorted <- importance(rf_df) %>% sort(., decreasing = TRUE)
   importance_names <- names(importance_sorted)
   importance_vals <- importance(rf_df) %>% as.numeric()
@@ -1287,7 +1302,7 @@ get_importance <- function(rf_df) {
   return(importance_df)
 }
 
-get_importance(bi_rf) %>% kable()
+bi_rf %>% get_rf_importance() %>% kable()
 ```
 
 
@@ -1327,8 +1342,9 @@ Accuracy compared to that of the full random forest model, `r (1 - bi_rf$predict
 ```
 
 And variable importance, once again.
+Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 ```{r, echo=TRUE}
-get_importance(bi_pared_rf) %>% kable()
+bi_pared_rf %>% get_rf_importance() %>% kable()
 ```
 
 ***

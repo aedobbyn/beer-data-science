@@ -245,6 +245,15 @@ ggplot(data = pop_hops_beer_stats) +
 
 
 
-
+# by style density
+ggplot() +   
+  geom_density2d(data = beer_necessities %>% filter(style_collapsed %in% keywords) %>% 
+               filter(abv < 20 & abv > 3 & ibu < 200), 
+             aes(x = abv, y = ibu, colour = style_collapsed), alpha = 0.5) +
+  ggtitle("Beer Styles, ABV vs. IBU") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Collapsed Style") +
+  theme_minimal()
+  
 
 
