@@ -1,0 +1,22 @@
+beer_necessities
+	Our original df from the db
+
+popular_beer_dat
+	beer_necessities filtered to levels in popular_styles$style
+
+beer_ingredients_join
+	beer_necessities turned into sparse matrix with all individual ingredients filtered to levels in style_centers$style_collapsed (30 levels)
+	Includes total_hops and total_malt
+
+beer_totals
+	Same as beer_ingredients_join without all the sparsity
+
+clustered_beer
+	Clustered on beer_totals
+
+certain_styles_clustered
+	From beer_totals, keep the styles "Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat" and cluster
+
+
+Neural net run on beer_totals
+RF run on beer_ingredients_join

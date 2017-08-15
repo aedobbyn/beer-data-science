@@ -3,9 +3,9 @@ title:
 account: amandadobbyn
 server: shinyapps.io
 appId: 198425
-bundleId: 936615
+bundleId: 941042
 url: https://amandadobbyn.shinyapps.io/clusterfun/
-when: 1502413071.24123
+when: 1502752294.69831
 asMultiple: FALSE
 asStatic: FALSE
 ignoredFiles: www/index.html

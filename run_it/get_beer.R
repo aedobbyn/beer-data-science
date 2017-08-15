@@ -31,10 +31,10 @@ single_param_endpoints <- c("beer", "brewery", "category", "event",
 # ----------- multiple pagination
 # find the total number of pages and use that to loop through
 
-source("./munge.R")   # for unnest_it()
+source("./analyze/munge.R")   # for unnest_it()
 
 # including ingredients in here and flattening
-# full url: http://api.brewerydb.com/v2/beers/?key=29db4ead6450247d3e56108b2559071a&withIngredients=Y
+# full url: http://api.brewerydb.com/v2/beers/?key=<yourkeyhere>a&withIngredients=Y
 
 paginated_request <- function(ep, addition) {
   full_request <- NULL

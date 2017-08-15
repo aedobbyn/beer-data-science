@@ -3,7 +3,8 @@
 .RData
 .Ruserdata
 *.log*
-key.R
+*key.R
 .ipynb_checkpoints/
 *.dcf
 *ideas.txt
+other
