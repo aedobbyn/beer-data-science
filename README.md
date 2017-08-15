@@ -15,7 +15,7 @@ I set about answering this with a mix of clustering (k-means) and classification
 
 To grab the data yourself, you can create an API key on BreweryDB run the `run_it.R` script inside the `run_it` folder. For a quicker but less up-to-date solution (the BreweryDB database is updated pretty frequently), feel free to download `beer_necessities.csv`.
 
-This analysis deals mainly with beer and its consituent components like ingredients (hops, malts) and other characteristics like bitterness and alcohol content. However, you can easily construct your own function for grabbing other things like breweries, glassware, locations, etc. by running the function generator in `construct_funcs.R`.
+This analysis deals mainly with beer and its consituent components like ingredients (hops, malts) and other characteristics like bitterness and alcohol content. However, you can easily construct your own function for grabbing other things like breweries, glassware, locations, etc. by running the function generator in `analyze/construct_funcs.R`.
 
 
 Any and all feedback is more than welcome. Cheers!

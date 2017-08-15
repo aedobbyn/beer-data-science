@@ -36,7 +36,7 @@ library(ggrepel)
 # knitr::opts_chunk$set(cache=TRUE)
 # knitr::opts_knit$set(root.dir=normalizePath('../'))
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
-knitr::opts_chunk$set(fig.width=24)
+knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 ```
 
@@ -114,7 +114,9 @@ To my mind the best candidates for predictor variables are ABV, IBU, and SRM. Ta
 ### Provisional Answer
 Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. 
 
-Beer-intrinsic attributes like bitterness aren't great predictors of style. The relative importance of different variables depends on the prediction method used. However, one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially.
+Beer-intrinsic attributes like bitterness aren't great predictors of style. We could only get to around 30-40% accuracy using both a neural net and a random forest, even using all the possible ingredient data available at the most granular level. In fact, including such sparse ingredient data was detrimental to the accuracy of the model, perhaps because it encouraged overfitting.
+
+The relative importance of different variables depended on the prediction method used. Though one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially, it still didn't allow the model to break 50% accuracy. 
 
 Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this analysis and probably make the prediction task much easier.
 
@@ -637,7 +639,7 @@ beer_ingredients_join_all <- beer_ingredients_join_all %>%
 
 # Keep only beers that fall into a style_collapsed bucket
 # We're not filtering by levels in beer_necessities$style_collapsed because those levels contain more than what's in just the keywords of collapse_styles()
-beer_ingredients_join <- beer_ingredients_join_all %>% 
+beer_dat_sparse <- beer_ingredients_join_all %>% 
   filter(
     style_collapsed %in% levels(style_centers$style_collapsed)
   ) %>% 
@@ -651,7 +653,7 @@ beer_totals_all <- beer_ingredients_join_all %>%
   )
 
 # And just styles in style_collapsed
-beer_totals <- beer_ingredients_join %>% 
+beer_dat <- beer_dat_sparse %>% 
   filter(
     style_collapsed %in% levels(style_centers$style_collapsed)
   ) %>% 
@@ -666,7 +668,7 @@ beer_totals <- beer_ingredients_join %>%
 
 Now we're left with something of a sparse matrix of all the ingredients compared to all the beers. Scroll right to see the extent of the granularity this affords us.
 ```{r, echo=TRUE}
-kable(beer_ingredients_join[1:20, ])
+kable(beer_dat_sparse[1:20, ])
 ```
 
 
@@ -747,7 +749,7 @@ cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 response_vars <- c("name", "style", "style_collapsed")
 
-cluster_prep <- prep_clusters(df = beer_totals,
+cluster_prep <- prep_clusters(df = beer_dat,
                    preds = cluster_on,
                    to_scale = to_scale,
                    resp = response_vars)
@@ -797,12 +799,6 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 We take a look at the top of the resulting clustered data. The cluster assignment column appears on the far left.
 ```{r, echo=TRUE}
 kable(clustered_beer[1:20, ])
-```
-
-```{r}
-# Join the clustered beer on `beer_ingredients_join`
-beer_ingredients_join_clustered <- left_join(beer_ingredients_join, clustered_beer, 
-                                             by = "name")
 ```
 
 
@@ -869,7 +865,7 @@ abv_ibu_clusters_vs_style_centers
 ```
 
 
-That's one way to get a sense of the data. However, one snag is that the clustering above used a smaller number of clusters (10) than there are `styles_collapsed` (`r length(levels(beer_ingredients_join$style_collapsed))`). That makes it difficult to determine whether a given style fits snugly into a cluster or not.
+That's one way to get a sense of the data. However, one snag is that the clustering above used a smaller number of clusters (10) than there are `styles_collapsed` (`r length(levels(beer_dat_sparse$style_collapsed))`). That makes it difficult to determine whether a given style fits snugly into a cluster or not.
 
 
 
@@ -883,7 +879,7 @@ Arguably, of these five styles Blondes and Wheats are the closest. We can see wh
 
 ```{r, echo=TRUE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bt_certain_styles <- beer_totals %>%
+bd_certain_styles <- beer_dat %>%
   filter(
     style_collapsed %in% styles_to_keep
   ) %>% 
@@ -893,12 +889,12 @@ cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 response_vars <- c("name", "style", "style_collapsed")
 
-bt_cluster_prep <- prep_clusters(df = bt_certain_styles,
+bd_cluster_prep <- prep_clusters(df = bd_certain_styles,
                    preds = cluster_on,
                    to_scale = to_scale,
                    resp = response_vars)
 
-certain_styles_clustered <- cluster_it(df_preds = bt_cluster_prep, n_centers = 5)
+certain_styles_clustered <- cluster_it(df_preds = bd_cluster_prep, n_centers = 5)
 
 style_centers_certain_styles <- style_centers %>% 
   filter(style_collapsed %in% styles_to_keep)
@@ -963,13 +959,13 @@ Quick intermission from our main question to do a quick dive into hops. First qu
 **Do more hops always mean more bitterness?**
 
 ```{r, echo=FALSE, eval=TRUE}
-hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join) %>% broom::tidy()
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse) %>% broom::tidy()
 ```
 
 
 Initial answer: it would appear so, from this graph (considering only beer in the most popular styles) and this regression ($\beta$ = `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 3)`). Assuming a linear relationship between hops and bitterness, we'd expect an increase in around `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 0)` IBU for every 1 extra hop.
 ```{r, echo=TRUE}
-ggplot(data = beer_ingredients_join, aes(total_hops, ibu)) +
+ggplot(data = beer_dat_sparse, aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") + 
   ggtitle("Hops Per Beer vs. Bitterness") +
@@ -987,7 +983,7 @@ kable(hops_ibu_lm)
 
 Are there diminishing returns on bitterness as you increase the number of hops?
 ```{r, echo=TRUE}
-ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5), ], aes(total_hops, ibu)) +
+ggplot(data = beer_dat_sparse[which(beer_dat_sparse$total_hops >= 5), ], aes(total_hops, ibu)) +
   geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
   geom_smooth(method = lm, se = FALSE, colour = "black") +
   ggtitle("5+ Hops Per Beer vs. Bitterness") +
@@ -997,7 +993,7 @@ ggplot(data = beer_ingredients_join[which(beer_ingredients_join$total_hops >= 5)
 
 The trend holds even with 5 or more hops, with a slightly smaller effect size (probably due to smaller sample size).
 ```{r, echo = TRUE}
-five_plus_hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_ingredients_join[which(beer_ingredients_join$total_hops > 5), ]) %>% broom::tidy()
+five_plus_hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse[which(beer_dat_sparse$total_hops > 5), ]) %>% broom::tidy()
 five_plus_hops_ibu_lm
 ```
 
@@ -1152,7 +1148,7 @@ On this first pass we'll use ABV, IBU, SRM, total hops, and total malts as predi
 First we'll take our dataframe and drop any rows that have missing values in any of the columns we're using for prediction or response. 
 ```{r, echo=TRUE}
 # Take out NAs
-bt_omit <- beer_totals %>% drop_na(total_hops, total_malt, abv, ibu, srm, style_collapsed)
+bt_omit <- beer_dat %>% drop_na(total_hops, total_malt, abv, ibu, srm, style_collapsed)
 ```
 
 Then we run the model and save its output.
@@ -1178,7 +1174,7 @@ get_nn_importance <- function(imp_vec) {
   return(out)
 }
 
-nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
+nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
 ```
 
 
@@ -1205,7 +1201,7 @@ Now we can ask the question of what happens to our accuracty measure if we add `
 
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_ingredients_join, outcome = "style_collapsed", 
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat_sparse, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
 nn_collapsed_out_add_glass$nn_accuracy[1]
@@ -1222,7 +1218,7 @@ And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we'r
 
 ## Random Forest
 
-Earlier we prepared a sparse dataframe, `beer_totals`, specifying the presence or abscence of every single hop and malt in each beer. This dataframe contained too many features for the neural net we just ran; however, a random forest model is able to handle this very high density of inputs. 
+Earlier we prepared a sparse dataframe, `beer_dat`, specifying the presence or abscence of every single hop and malt in each beer. This dataframe contained too many features for the neural net we just ran; however, a random forest model is able to handle this very high density of inputs. 
 
 The relative accuracy of a random forest model that does compared to one that doesn't include ingredients in its set of predictors may or may not be interesting to you depending on where you come down on the discussion raised at the very beginning in the "Predictor Discussion" section. 
 What does it mean if including specific ingredients in the model improves its accuracy? Potentially not much if most brewers determine a beer's style before they choose the ingredients that will go into it. If that is the typical direction of causality then it should be less surprising to us that including ingredients in a model improves its predictive power. 
@@ -1241,7 +1237,7 @@ library(ranger)
 library(stringr)
 
 # Take out columns we don't need and remove rows with missing values from the ones we do
-bi <- beer_ingredients_join %>% 
+bi <- beer_dat_sparse %>% 
   select(-c(id, name, style, hops_name, malt_name,
             glass)) %>% 
   mutate(row = 1:nrow(.)) %>% 
@@ -1280,7 +1276,7 @@ kable(table(bi_test$style_collapsed, pred_bi_rf$predictions))
 
 To quantify accuracy we could compare predicted style to true style in the test set. Another method is to use out of bag (OOB) prediction error, which is calculated from tree samples constructed but not used in training set. In calculating error, these trees become effectively part of test set allowing us to compute classification error. Percent accuracy, then, is $1 - OOB error * 100$.
     
-```{r}
+```{r, echo=TRUE}
 (1 - bi_rf$prediction.error)*100
 ```
 
@@ -1298,8 +1294,10 @@ get_rf_importance <- function(rf_df) {
   return(importance_df)
 }
 
-bi_rf %>% get_rf_importance() %>% print(n = 20) %>% kable()
+bi_rf_imp <- bi_rf %>% get_rf_importance() 
+kable(bi_rf_imp[1:20, ])
 ```
+Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 
 
 **Pared down Random Forest**
@@ -1308,7 +1306,7 @@ And what if we exclude the individual ingredient columns? Again we'll try to pre
 
 ```{r, echo=TRUE}
 # Take out columns we don't need and remove rows with missing values from the ones we do
-bi_pared <- beer_ingredients_join %>% 
+bi_pared <- beer_dat_sparse %>% 
   select(total_hops, total_malt, abv, ibu, srm, style_collapsed) %>% 
   mutate(row = 1:nrow(.)) %>% 
   na.omit()
@@ -1337,12 +1335,14 @@ Accuracy compared to that of the full random forest model, `r round((1 - bi_rf$p
 (1 - bi_pared_rf$prediction.error)*100
 ```
 
+Why is the pared-down random forest more accurate than the model including sparse, granular ingredient data? It's possible the latter encouraged overfitting, negatively impacting the model's ability to predict accurately.
 
-And we find variable importance, once again.
-Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
+And we find variable importance. 
 ```{r, echo=TRUE}
 bi_pared_rf %>% get_rf_importance() %>% kable()
 ```
+
+Once again, in the random forest model IBU, ABV, and SRM are more important than total hops and total malts. In fact, variable importance in the random forest is almost the inverse of variable importance in the neural net. Perhaps this is a reflection of intrinsic differences in the models; it's possible they leaned on different features to come to similar conclusions. The random forest performed overall somewhat better than the neural net, though neither was able to conclusively predict style with accuracy above 50%. 
 
 ***
 
@@ -1368,7 +1368,7 @@ Suffice it to say, the question is far from settled. But there are many other pl
 * Implementing a GAN ([generative adversarial network](https://en.wikipedia.org/wiki/Generative_adversarial_networks)) to come up with beer names
 * Going deeper on the hops deep dive: which hops are used most often in which styles?
 
-I'd love to hear other ideas! Please don't hesitate to reach out.
+Please don't hesitate to reach out with other ideas. Cheers.
 
 
 ![](../img/pour.jpg)
