@@ -68,7 +68,7 @@ It then moves into clustering (k-means) and prediction (neural net, random fores
 But first, a density plot of the alcohol vs. bitterness landscape, colored by style. What follows is something of a sanity check that our interpetation of this plot is more or less accurate.
 
 
-```{r}
+```{r density_abv_ibu, echo=FALSE}
 ggplot() +   
   geom_density2d(data = beer_necessities %>% filter(style_collapsed %in% keywords) %>% 
                filter(abv < 20 & abv > 3 & ibu < 200), 
@@ -320,7 +320,7 @@ names(beer_necessities)
 ```
 
 
-\newpage
+
 
 
 **Find the Most Popualar Styles**
@@ -414,7 +414,7 @@ kable(style_centers_rename)
 
 ***
 
-\newpage
+
 
 
 
@@ -667,13 +667,16 @@ beer_dat <- beer_dat_sparse %>%
   
 
 Now we're left with something of a sparse matrix of all the ingredients compared to all the beers. Scroll right to see the extent of the granularity this affords us.
+
+For instance, if certain hops or malts are very predictive of style, we can incorporate this easily into a model.
+
 ```{r, echo=TRUE}
 kable(beer_dat_sparse[1:20, ])
 ```
 
 
 
-\newpage
+
 
 ***
 
@@ -814,9 +817,9 @@ Now we can plot the clusters. There are 3 dimensions, ABV, IBU, and SRM, so we c
 We add in the style centers (means) for each `style_collapsed`.
 Anecdotally, style centers match up approximately to where we'd expect them to fall.
 
-```{r, echo=TRUE}
+```{r cluster_srm_ibu, echo=TRUE}
 clustered_beer_plot_srm_ibu <- ggplot() +
-  geom_point(data = clustered_beer, 
+  geom_jitter(data = clustered_beer, 
              aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_srm, mean_ibu), colour = "black") +
@@ -830,8 +833,12 @@ clustered_beer_plot_srm_ibu <- ggplot() +
   labs(colour = "Cluster Assignment")
 clustered_beer_plot_srm_ibu
 
+```
+
+```{r cluster_srm_abv, echo=TRUE}
+
 clustered_beer_plot_srm_abv <- ggplot() +   
-  geom_point(data = clustered_beer, 
+  geom_jitter(data = clustered_beer, 
              aes(x = srm, y = abv, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_srm, mean_abv), colour = "black") +
@@ -847,7 +854,7 @@ clustered_beer_plot_srm_abv
 ```
 
 
-```{r, echo=TRUE}
+```{r cluster_abv_ibu, echo=TRUE}
 abv_ibu_clusters_vs_style_centers <- ggplot() +   
   geom_point(data = clustered_beer, 
              aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
@@ -914,7 +921,7 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 Now that we have a manageable number of styles, we can see how well fit each cluster is to each style. If the features we clustered on perfectly predicted style, there would each color (cluster) would be unique to each facet of the plot. (E.g., left the left facet would be entirely blue, second from left entirely green, etc.) Style centers are denoted by the black circle.
 
 
-```{r, echo=TRUE}
+```{r cluster_certain_styles, echo=TRUE}
 by_style_plot <- ggplot() +   
   geom_point(data = certain_styles_clustered, 
              aes(x = abv, y = ibu,
@@ -952,22 +959,26 @@ by_style_plot
 
 
 
-# Random Asides into Hops
+# Short Foray into Hops
 
-Quick intermission from our main question to do a quick dive into hops. First question:
+Quick intermission from our main question to do a quick dive into hops.
+
+First question:
 
 **Do more hops always mean more bitterness?**
 
+Let's look at beers that have at least one hop.
 ```{r, echo=FALSE, eval=TRUE}
-hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse) %>% broom::tidy()
+hops_ibu_lm <- lm(ibu ~ total_hops %>% filter(total_hops > 0), data = beer_dat_sparse) %>% broom::tidy()
 ```
 
 
-Initial answer: it would appear so, from this graph (considering only beer in the most popular styles) and this regression ($\beta$ = `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 3)`). Assuming a linear relationship between hops and bitterness, we'd expect an increase in around `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 0)` IBU for every 1 extra hop.
-```{r, echo=TRUE}
-ggplot(data = beer_dat_sparse, aes(total_hops, ibu)) +
-  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
-  geom_smooth(method = lm, se = FALSE, colour = "black") + 
+Initial answer: it would appear so, from this jittered graph (considering only beer in the most popular styles) and this regression ($\beta$ = `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 3)`). Assuming a linear relationship between hops and bitterness, we'd expect an increase in around `r hops_ibu_lm[["statistic"]][2] %>% round(digits = 0)` IBU for every 1 extra hop.
+
+```{r hops_ibu, echo=TRUE}
+ggplot(data = beer_dat_sparse %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
   ggtitle("Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
@@ -982,10 +993,10 @@ kable(hops_ibu_lm)
 
 
 Are there diminishing returns on bitterness as you increase the number of hops?
-```{r, echo=TRUE}
+```{r five_plus_hops_ibu, echo=TRUE}
 ggplot(data = beer_dat_sparse[which(beer_dat_sparse$total_hops >= 5), ], aes(total_hops, ibu)) +
-  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
-  geom_smooth(method = lm, se = FALSE, colour = "black") +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") +
   ggtitle("5+ Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
@@ -1048,7 +1059,7 @@ beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
 
 
 Are there certian hops that are used more often in very high IBU or ABV beers? It's hard to detect a pattern.
-```{r, echo = TRUE}
+```{r abv_ibu_hopname, echo = TRUE}
 ggplot(data = beer_necessities_w_popular_hops) + 
   geom_point(aes(abv, ibu, colour = hop_name)) +
   ggtitle("Beers Containing most Popular Hops") +
@@ -1056,7 +1067,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-```{r, echo=TRUE}
+```{r abv_ibu_hopsize, echo=TRUE}
 ggplot(data = pop_hops_beer_stats) + 
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
@@ -1068,7 +1079,7 @@ ggplot(data = pop_hops_beer_stats) +
 
 ***
 
-\newpage
+
 
 # Prediction
 
@@ -1343,6 +1354,8 @@ bi_pared_rf %>% get_rf_importance() %>% kable()
 ```
 
 Once again, in the random forest model IBU, ABV, and SRM are more important than total hops and total malts. In fact, variable importance in the random forest is almost the inverse of variable importance in the neural net. Perhaps this is a reflection of intrinsic differences in the models; it's possible they leaned on different features to come to similar conclusions. The random forest performed overall somewhat better than the neural net, though neither was able to conclusively predict style with accuracy above 50%. 
+
+A potentially future direction to take the sparse dataframe in would be to only incorporate either a) certain very popular hops or malts or b) ingredients that are present exclusively in one style into the models to see if they produce a measurable increase in accuracy.
 
 ***
 

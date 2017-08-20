@@ -8,3 +8,7 @@
 *.dcf
 *ideas.txt
 other
+.DS_Store
+compile_cache
+*.html
+*rsconnect

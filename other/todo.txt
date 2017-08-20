@@ -1,4 +1,3 @@
-- add a readme
 
 - turn clustering into a function that accepts a df and vector of columns to cluster on
 - cluster with the same number of clusters as style_collapsed and compare

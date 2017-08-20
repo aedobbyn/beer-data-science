@@ -26,7 +26,7 @@ shinyUI(fluidPage(
   
   theme = shinytheme("spacelab"),
   
-  titlePanel("Beer Adventures in Style"),
+  titlePanel("Clusters in Beer"),
   
   fluidRow(
       column(width = 12,
@@ -38,12 +38,12 @@ shinyUI(fluidPage(
              
              p(strong("The only rules are that you must cluster on at least ABV and IBU; 
                the only required outcome variable is collapsed style."), "More details
-               on how to tune the paratmeters below."),
+               on how to tune the parameters below."),
              
              br(),  
              
              p("All beer data sourced from the", a(href = "http://www.brewerydb.com/developers", "BreweryDB API."), "For more 
-                info and code, see: ", a(href = "https://github.com/aedobbyn/beer-data-science/blob/master/compile.md", 
+                info and code, see: ", a(href = "https://github.com/aedobbyn/beer-data-science/blob/master/compile/compile.md", 
                                           "the full report.")),
              br()
       )
