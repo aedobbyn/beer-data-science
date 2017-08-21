@@ -972,7 +972,7 @@ First question:
 
 Let's look at beers that have at least one hop.
 ```{r, echo=FALSE, eval=TRUE}
-hops_ibu_lm <- lm(ibu ~ total_hops %>% filter(total_hops > 0), data = beer_dat_sparse) %>% broom::tidy()
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse %>% filter(total_hops > 0)) %>% broom::tidy()
 ```
 
 

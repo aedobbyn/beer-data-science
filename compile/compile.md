@@ -29,7 +29,7 @@ It then moves into clustering (k-means) and prediction (neural net, random fores
 But first, a density plot of the alcohol vs. bitterness landscape, colored by style. What follows is something of a sanity check that our interpetation of this plot is more or less accurate.
 
 
-![](compile_files/figure-html/unnamed-chunk-3-1.png)<!-- -->
+![](compile_files/figure-html/density_abv_ibu-1.png)<!-- -->
 
 
 
@@ -393,7 +393,7 @@ names(beer_necessities)
 ```
 
 
-\newpage
+
 
 
 **Find the Most Popualar Styles**
@@ -524,7 +524,7 @@ Take a look at the table, ordered by number of beers in that style, descending.
 
 ***
 
-\newpage
+
 
 
 
@@ -778,6 +778,9 @@ beer_dat <- beer_dat_sparse %>%
 
 Now we're left with something of a sparse matrix of all the ingredients compared to all the beers. Scroll right to see the extent of the granularity this affords us.
 
+For instance, if certain hops or malts are very predictive of style, we can incorporate this easily into a model.
+
+
 ```r
 kable(beer_dat_sparse[1:20, ])
 ```
@@ -809,7 +812,7 @@ kable(beer_dat_sparse[1:20, ])
 
 
 
-\newpage
+
 
 ***
 
@@ -1009,7 +1012,7 @@ Anecdotally, style centers match up approximately to where we'd expect them to f
 
 ```r
 clustered_beer_plot_srm_ibu <- ggplot() +
-  geom_point(data = clustered_beer, 
+  geom_jitter(data = clustered_beer, 
              aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_srm, mean_ibu), colour = "black") +
@@ -1020,15 +1023,17 @@ clustered_beer_plot_srm_ibu <- ggplot() +
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. IBU") +
   labs(x = "SRM", y = "IBU") +
-  labs(colour = "Cluster Assignment")
+  labs(colour = "Cluster Assignment") +
+  theme(legend.position="none")
 clustered_beer_plot_srm_ibu
 ```
 
-![](compile_files/figure-html/unnamed-chunk-27-1.png)<!-- -->
+![](compile_files/figure-html/cluster_srm_ibu-1.png)<!-- -->
+
 
 ```r
 clustered_beer_plot_srm_abv <- ggplot() +   
-  geom_point(data = clustered_beer, 
+  geom_jitter(data = clustered_beer, 
              aes(x = srm, y = abv, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_srm, mean_abv), colour = "black") +
@@ -1039,11 +1044,12 @@ clustered_beer_plot_srm_abv <- ggplot() +
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. ABV") +
   labs(x = "SRM", y = "ABV") +
-  labs(colour = "Cluster Assignment")
+  labs(colour = "Cluster Assignment") +
+  theme(legend.position="none")
 clustered_beer_plot_srm_abv
 ```
 
-![](compile_files/figure-html/unnamed-chunk-27-2.png)<!-- -->
+![](compile_files/figure-html/cluster_srm_abv-1.png)<!-- -->
 
 
 
@@ -1060,11 +1066,12 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   ggtitle("Popular Styles vs. k-Means Clustering of Beer: ABV vs. IBU") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster Assignment") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position="none")
 abv_ibu_clusters_vs_style_centers
 ```
 
-![](compile_files/figure-html/unnamed-chunk-28-1.png)<!-- -->
+![](compile_files/figure-html/cluster_abv_ibu-1.png)<!-- -->
 
 
 That's one way to get a sense of the data. However, one snag is that the clustering above used a smaller number of clusters (10) than there are `styles_collapsed` (30). That makes it difficult to determine whether a given style fits snugly into a cluster or not.
@@ -1144,7 +1151,7 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-![](compile_files/figure-html/unnamed-chunk-31-1.png)<!-- -->
+![](compile_files/figure-html/cluster_certain_styles-1.png)<!-- -->
 
 
 
@@ -1169,27 +1176,31 @@ by_style_plot
 
 
 
-# Random Asides into Hops
+# Short Foray into Hops
 
-Quick intermission from our main question to do a quick dive into hops. First question:
+Quick intermission from our main question to do a quick dive into hops.
+
+First question:
 
 **Do more hops always mean more bitterness?**
 
+Let's look at beers that have at least one hop.
 
 
 
-Initial answer: it would appear so, from this graph (considering only beer in the most popular styles) and this regression ($\beta$ = 9.393). Assuming a linear relationship between hops and bitterness, we'd expect an increase in around 9 IBU for every 1 extra hop.
+Initial answer: it would appear so, from this jittered graph (considering only beer in the most popular styles) and this regression ($\beta$ = 17.678). Assuming a linear relationship between hops and bitterness, we'd expect an increase in around 18 IBU for every 1 extra hop.
+
 
 ```r
-ggplot(data = beer_dat_sparse, aes(total_hops, ibu)) +
-  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
-  geom_smooth(method = lm, se = FALSE, colour = "black") + 
+ggplot(data = beer_dat_sparse %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
   ggtitle("Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-33-1.png)<!-- -->
+![](compile_files/figure-html/hops_ibu-1.png)<!-- -->
 
 
 Regressing total number of hops on bitterness (IBU):
@@ -1200,24 +1211,24 @@ kable(hops_ibu_lm)
 
 
 
-|term        |  estimate| std.error|  statistic| p.value|
-|:-----------|---------:|---------:|----------:|-------:|
-|(Intercept) | 42.323200| 0.1965995| 215.276192|       0|
-|total_hops  |  2.859859| 0.3044686|   9.392953|       0|
+|term        |  estimate| std.error| statistic| p.value|
+|:-----------|---------:|---------:|---------:|-------:|
+|(Intercept) | 23.735809| 1.3683898|  17.34580|       0|
+|total_hops  |  8.635235| 0.4884861|  17.67755|       0|
 
 
 Are there diminishing returns on bitterness as you increase the number of hops?
 
 ```r
 ggplot(data = beer_dat_sparse[which(beer_dat_sparse$total_hops >= 5), ], aes(total_hops, ibu)) +
-  geom_point(aes(total_hops, ibu, colour = style_collapsed)) +
-  geom_smooth(method = lm, se = FALSE, colour = "black") +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") +
   ggtitle("5+ Hops Per Beer vs. Bitterness") +
   labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-35-1.png)<!-- -->
+![](compile_files/figure-html/five_plus_hops_ibu-1.png)<!-- -->
 
 The trend holds even with 5 or more hops, with a slightly smaller effect size (probably due to smaller sample size).
 
@@ -1321,7 +1332,7 @@ ggplot(data = beer_necessities_w_popular_hops) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-38-1.png)<!-- -->
+![](compile_files/figure-html/abv_ibu_hopname-1.png)<!-- -->
 
 
 ```r
@@ -1333,12 +1344,12 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-![](compile_files/figure-html/unnamed-chunk-39-1.png)<!-- -->
+![](compile_files/figure-html/abv_ibu_hopsize-1.png)<!-- -->
 
 
 ***
 
-\newpage
+
 
 # Prediction
 
@@ -1438,8 +1449,8 @@ nn_collapsed_out$nn_accuracy[1]
 ```
 
 ```
-##  Accuracy 
-## 0.4236641
+## Accuracy 
+## 0.407878
 ```
 
 What were the most important variables?
@@ -1460,11 +1471,11 @@ nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
 
 |Variable   | Importance|
 |:----------|----------:|
-|abv        |  40.186818|
-|total_hops |  39.319742|
-|total_malt |  12.639015|
-|srm        |   3.952394|
-|ibu        |   3.038473|
+|total_hops |  63.215251|
+|abv        |  30.684992|
+|total_malt |  18.148870|
+|srm        |   4.024936|
+|ibu        |   2.910466|
 
 
 **Change up some Parameters**
@@ -1482,7 +1493,7 @@ nn_notcollapsed_out$nn_accuracy[1]
 
 ```
 ##  Accuracy 
-## 0.3341804
+## 0.3557814
 ```
 
 ```r
@@ -1491,22 +1502,22 @@ nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% 
 
 ```
 ##     Variable Importance
-## 1 total_hops  342.86618
-## 2 total_malt  239.40596
-## 3        abv   95.45879
-## 4        srm   26.00669
-## 5        ibu   14.80483
+## 1 total_hops  333.67139
+## 2 total_malt  211.31915
+## 3        abv   96.52767
+## 4        srm   26.33015
+## 5        ibu   15.88744
 ```
 
 
 
 |Variable   | Importance|
 |:----------|----------:|
-|total_hops |  342.86618|
-|total_malt |  239.40596|
-|abv        |   95.45879|
-|srm        |   26.00669|
-|ibu        |   14.80483|
+|total_hops |  333.67139|
+|total_malt |  211.31915|
+|abv        |   96.52767|
+|srm        |   26.33015|
+|ibu        |   15.88744|
 
 So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
 
@@ -1524,7 +1535,7 @@ nn_collapsed_out_add_glass$nn_accuracy[1]
 
 ```
 ##  Accuracy 
-## 0.4509804
+## 0.4195804
 ```
 So indeed, glass does improve the accuracy of the model. 
 
@@ -1536,24 +1547,24 @@ nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable
 
 
 
-|Variable                  |  Importance|
-|:-------------------------|-----------:|
-|glassThistle              | 1358.029802|
-|glassMug                  | 1171.518521|
-|glassGoblet               | 1131.652525|
-|glassWilli                | 1099.604517|
-|glassSnifter              | 1050.860919|
-|glassPint                 | 1012.238307|
-|glassTulip                | 1000.668781|
-|glassPilsner              |  952.071472|
-|glassStange               |  566.550117|
-|glassWeizen               |  468.460583|
-|glassOversized Wine Glass |  423.727416|
-|total_hops                |  194.235636|
-|total_malt                |  112.939211|
-|abv                       |   23.532293|
-|srm                       |    4.161502|
-|ibu                       |    3.467844|
+|Variable                  | Importance|
+|:-------------------------|----------:|
+|glassStange               | 657.060279|
+|glassThistle              | 551.760753|
+|glassGoblet               | 342.630017|
+|glassSnifter              | 311.893999|
+|glassTulip                | 291.322576|
+|glassPint                 | 270.638446|
+|glassMug                  | 265.072344|
+|glassWeizen               | 239.270347|
+|glassWilli                | 234.977895|
+|glassOversized Wine Glass | 231.483618|
+|glassPilsner              | 224.978944|
+|total_hops                |  74.048098|
+|total_malt                |  63.617171|
+|abv                       |  33.047124|
+|ibu                       |   4.473419|
+|srm                       |   4.234599|
 And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
 
 
@@ -1620,36 +1631,36 @@ kable(table(bi_test$style_collapsed, pred_bi_rf$predictions))
 
 |                         | Barley Wine| Barrel-Aged| Bitter| Black| Blonde| Brown| Double India Pale Ale| Dubbel| Fruit Beer| Fruit Cider| German-Style Doppelbock| German-Style Märzen| Herb and Spice Beer| India Pale Ale| Kölsch| Lager| Other Belgian-Style Ales| Pale Ale| Pilsener| Porter| Pumpkin Beer| Red| Saison| Scotch Ale| Sour| Specialty Beer| Stout| Strong Ale| Tripel| Wheat|
 |:------------------------|-----------:|-----------:|------:|-----:|------:|-----:|---------------------:|------:|----------:|-----------:|-----------------------:|-------------------:|-------------------:|--------------:|------:|-----:|------------------------:|--------:|--------:|------:|------------:|---:|------:|----------:|----:|--------------:|-----:|----------:|------:|-----:|
-|Barley Wine              |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             12|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
-|Barrel-Aged              |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        1|        0|      0|            0|   0|      1|          0|    0|              0|     3|          0|      0|     2|
-|Bitter                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        9|        0|      0|            0|   1|      0|          0|    0|              0|     0|          0|      0|     2|
-|Black                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              7|      0|     0|                        0|        0|        0|      1|            0|   0|      0|          0|    0|              0|     2|          0|      0|     0|
-|Blonde                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              6|      0|     0|                        0|        3|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      1|    19|
-|Brown                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              9|      0|     0|                        0|        5|        0|      5|            0|   8|      0|          0|    0|              0|     4|          0|      0|     5|
-|Double India Pale Ale    |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|             47|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     0|
-|Dubbel                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        0|        0|      1|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
-|Fruit Beer               |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        1|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    10|
+|Barley Wine              |           0|           0|      0|     0|      0|     0|                     2|      0|          0|           0|                       0|                   0|                   0|              8|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
+|Barrel-Aged              |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     2|
+|Bitter                   |           0|           0|      0|     0|      0|     1|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        8|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     3|
+|Black                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              9|      0|     0|                        0|        0|        0|      1|            0|   0|      0|          0|    0|              0|     0|          0|      0|     0|
+|Blonde                   |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              5|      0|     0|                        0|        4|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    17|
+|Brown                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        9|        0|      7|            0|   1|      0|          0|    0|              0|     2|          0|      0|     2|
+|Double India Pale Ale    |           0|           0|      0|     0|      0|     0|                    18|      0|          0|           0|                       0|                   0|                   0|             23|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     2|          0|      0|     0|
+|Dubbel                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              7|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
+|Fruit Beer               |           0|           0|      0|     0|      0|     0|                     3|      0|          0|           0|                       0|                   0|                   0|              2|      0|     0|                        0|        0|        0|      2|            0|   0|      0|          0|    0|              0|     0|          0|      0|     5|
 |Fruit Cider              |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              0|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     0|
-|German-Style Doppelbock  |           0|           0|      0|     0|      0|     1|                     0|      0|          0|           0|                       0|                   0|                   0|              5|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
-|German-Style Märzen      |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              0|      0|     1|                        0|        0|        0|      0|            0|   3|      0|          0|    0|              0|     0|          0|      0|     2|
-|Herb and Spice Beer      |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        2|        0|      1|            0|   2|      0|          0|    0|              0|     0|          0|      0|     1|
-|India Pale Ale           |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|            103|      0|     0|                        0|       14|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|     8|
-|Kölsch                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              0|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    14|
-|Lager                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             13|      0|     1|                        0|        6|        0|      0|            0|   0|      0|          0|    0|              0|     1|          0|      0|    26|
-|Other Belgian-Style Ales |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              6|      0|     0|                        0|        1|        0|      0|            0|   0|      0|          0|    0|              0|     2|          0|      0|     1|
-|Pale Ale                 |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             18|      0|     0|                        0|       47|        0|      0|            0|   4|      0|          0|    0|              0|     0|          0|      0|    12|
-|Pilsener                 |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        3|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    16|
-|Porter                   |           0|           1|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              2|      0|     0|                        0|        1|        0|     16|            0|   2|      0|          0|    0|              0|    18|          0|      0|     3|
-|Pumpkin Beer             |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              6|      0|     0|                        0|        5|        0|      0|            0|   3|      0|          0|    0|              0|     1|          0|      0|     3|
-|Red                      |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             22|      0|     0|                        0|        7|        0|      2|            0|   5|      0|          0|    0|              0|     3|          0|      0|     9|
-|Saison                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             14|      0|     0|                        0|        3|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     7|
-|Scotch Ale               |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              2|      0|     0|                        0|        0|        0|      0|            0|   2|      0|          0|    0|              0|     2|          0|      0|     0|
-|Sour                     |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              1|      0|     0|                        0|        0|        0|      1|            0|   0|      0|          0|    0|              0|     4|          0|      0|     0|
-|Specialty Beer           |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              6|      0|     0|                        0|        0|        0|      3|            0|   0|      0|          0|    0|              0|     1|          0|      0|     1|
-|Stout                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              5|      0|     0|                        0|        0|        0|      6|            0|   0|      0|          0|    0|              0|    32|          0|      0|     1|
-|Strong Ale               |           0|           0|      0|     0|      0|     1|                     0|      0|          0|           0|                       0|                   0|                   0|             10|      0|     0|                        0|        1|        0|      0|            0|   0|      0|          0|    0|              0|     2|          0|      0|     0|
-|Tripel                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|             11|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     0|
-|Wheat                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        2|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    51|
+|German-Style Doppelbock  |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              2|      0|     0|                        0|        0|        0|      2|            0|   0|      0|          0|    0|              0|     1|          0|      0|     0|
+|German-Style Märzen      |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              1|      0|     1|                        0|        1|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     3|
+|Herb and Spice Beer      |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              5|      0|     0|                        0|        1|        0|      3|            0|   0|      0|          0|    0|              0|     0|          0|      0|     1|
+|India Pale Ale           |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|            125|      0|     0|                        0|        7|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     2|
+|Kölsch                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              0|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    13|
+|Lager                    |           0|           0|      0|     0|      0|     0|                     3|      0|          0|           0|                       0|                   0|                   0|             15|      0|     1|                        0|       12|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    31|
+|Other Belgian-Style Ales |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        1|        0|      1|            0|   0|      0|          0|    0|              0|     2|          0|      0|     1|
+|Pale Ale                 |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|             26|      0|     0|                        0|       42|        0|      1|            0|   0|      0|          0|    0|              0|     0|          0|      0|    10|
+|Pilsener                 |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              1|      0|     0|                        0|        6|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    15|
+|Porter                   |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              1|      0|     0|                        0|        3|        0|     24|            0|   0|      0|          0|    0|              0|     5|          0|      0|     0|
+|Pumpkin Beer             |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              1|      0|     0|                        0|        0|        0|      2|            0|   0|      0|          0|    0|              0|     0|          0|      0|     3|
+|Red                      |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|             18|      0|     0|                        0|       15|        0|      2|            0|   0|      0|          0|    0|              0|     1|          0|      0|    11|
+|Saison                   |           0|           0|      0|     0|      1|     0|                     3|      0|          0|           0|                       0|                   0|                   0|             18|      0|     0|                        0|        6|        0|      1|            0|   0|      0|          0|    0|              0|     0|          0|      0|     6|
+|Scotch Ale               |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              1|      0|     0|                        0|        0|        0|      3|            0|   0|      0|          0|    0|              0|     3|          0|      0|     0|
+|Sour                     |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        0|        0|      3|            0|   0|      0|          0|    0|              0|     0|          0|      0|     2|
+|Specialty Beer           |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        2|        0|      5|            0|   0|      0|          0|    0|              0|     0|          0|      0|     3|
+|Stout                    |           0|           0|      0|     0|      0|     0|                     0|      0|          0|           0|                       0|                   0|                   0|              7|      0|     0|                        0|        0|        0|     24|            0|   0|      0|          0|    0|              0|    15|          0|      0|     0|
+|Strong Ale               |           0|           0|      0|     0|      0|     0|                    12|      0|          0|           0|                       0|                   0|                   0|              3|      0|     0|                        0|        1|        0|      2|            0|   1|      0|          0|    0|              0|     3|          0|      1|     0|
+|Tripel                   |           0|           0|      0|     0|      0|     0|                     8|      0|          0|           0|                       0|                   0|                   0|              4|      0|     0|                        0|        0|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|     2|
+|Wheat                    |           0|           0|      0|     0|      0|     0|                     1|      0|          0|           0|                       0|                   0|                   0|              5|      0|     0|                        0|        3|        0|      0|            0|   0|      0|          0|    0|              0|     0|          0|      0|    44|
 
 
 To quantify accuracy we could compare predicted style to true style in the test set. Another method is to use out of bag (OOB) prediction error, which is calculated from tree samples constructed but not used in training set. In calculating error, these trees become effectively part of test set allowing us to compute classification error. Percent accuracy, then, is $1 - OOB error * 100$.
@@ -1660,7 +1671,7 @@ To quantify accuracy we could compare predicted style to true style in the test 
 ```
 
 ```
-## [1] 31.64758
+## [1] 32.66539
 ```
 
 
@@ -1686,26 +1697,26 @@ kable(bi_rf_imp[1:20, ])
 
 |Variable Name      |Importance       |
 |:------------------|:----------------|
-|ibu                |128.127841516451 |
-|abv                |83.8789022033913 |
-|srm                |82.5469818507542 |
-|total_hops         |6.63220154819431 |
-|cascade            |5.17661598449075 |
-|total_malt         |5.01722932603998 |
-|chocolatemalt      |2.54077913266083 |
-|centennial         |2.38691109144636 |
-|amarillo           |2.08097539237574 |
-|simcoe             |2.07455019858463 |
-|tworowpalemalt     |2.01210666803902 |
-|columbus           |1.9973200349696  |
-|wheatmalt          |1.98265447096378 |
-|chinook            |1.88231038694247 |
-|munichmalt         |1.86579813483358 |
-|caramelcrystalmalt |1.8128439590017  |
-|citra              |1.64659115495405 |
-|pilsnermalt        |1.5499923837188  |
-|eastkentgolding    |1.50046716691956 |
-|palemalt           |1.48410432321599 |
+|ibu                |133.23805651003  |
+|srm                |82.1330830847161 |
+|abv                |77.6321388103711 |
+|total_hops         |5.60525274350915 |
+|total_malt         |4.29584001973546 |
+|cascade            |4.09349689613152 |
+|centennial         |2.23054244826829 |
+|chocolatemalt      |2.19405452077647 |
+|columbus           |2.10053776164705 |
+|pilsnermalt        |1.76825888896042 |
+|tworowpalemalt     |1.72528082389746 |
+|amarillo           |1.72256786462498 |
+|simcoe             |1.71540463945306 |
+|caramelcrystalmalt |1.66761252242292 |
+|munichmalt         |1.65993674170809 |
+|wheatmalt          |1.52970494454204 |
+|palemalt           |1.43177611688928 |
+|citra              |1.39570105517908 |
+|eastkentgolding    |1.36517519936371 |
+|chinook            |1.34376826042328 |
 Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 
 
@@ -1740,10 +1751,10 @@ bi_pared_rf <- ranger(style_collapsed ~ ., data = bi_pared_train, importance = "
 ```
 
 
-Accuracy compared to that of the full random forest model, 31.65%:
+Accuracy compared to that of the full random forest model, 32.67%:
 
 ```
-## [1] 44.46565
+## [1] 44.6883
 ```
 
 Why is the pared-down random forest more accurate than the model including sparse, granular ingredient data? It's possible the latter encouraged overfitting, negatively impacting the model's ability to predict accurately.
@@ -1758,13 +1769,15 @@ bi_pared_rf %>% get_rf_importance() %>% kable()
 
 |Variable Name |Importance       |
 |:-------------|:----------------|
-|ibu           |793.122684248739 |
-|abv           |695.245152906264 |
-|srm           |615.65211002436  |
-|total_hops    |49.362145481998  |
-|total_malt    |45.1172265430781 |
+|ibu           |795.416009395711 |
+|abv           |691.426330812771 |
+|srm           |621.517396319976 |
+|total_hops    |47.009127934829  |
+|total_malt    |41.9568154760899 |
 
 Once again, in the random forest model IBU, ABV, and SRM are more important than total hops and total malts. In fact, variable importance in the random forest is almost the inverse of variable importance in the neural net. Perhaps this is a reflection of intrinsic differences in the models; it's possible they leaned on different features to come to similar conclusions. The random forest performed overall somewhat better than the neural net, though neither was able to conclusively predict style with accuracy above 50%. 
+
+A potentially future direction to take the sparse dataframe in would be to only incorporate either a) certain very popular hops or malts or b) ingredients that are present exclusively in one style into the models to see if they produce a measurable increase in accuracy.
 
 ***
 
@@ -1829,7 +1842,7 @@ sessionInfo()
 ## [10] cellranger_1.1.0   plyr_1.8.4         MatrixModels_0.4-1
 ## [13] backports_1.1.0    stats4_3.3.3       e1071_1.6-8       
 ## [16] evaluate_0.10.1    httr_1.2.1         highr_0.6         
-## [19] rlang_0.1.1        lazyeval_0.2.0     curl_2.8.1        
+## [19] rlang_0.1.2        lazyeval_0.2.0     curl_2.8.1        
 ## [22] readxl_1.0.0       SparseM_1.74       minqa_1.2.4       
 ## [25] nloptr_1.0.4       car_2.1-5          Matrix_1.2-8      
 ## [28] rmarkdown_1.6      labeling_0.3       splines_3.3.3     
