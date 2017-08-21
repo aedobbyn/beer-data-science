@@ -9,7 +9,8 @@
 *ideas.txt
 other
 .DS_Store
-compile_cache
+*compile_cache
 *.html
 *rsconnect
 todo.txt
+.httr-oauth
