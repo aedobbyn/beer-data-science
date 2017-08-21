@@ -830,7 +830,8 @@ clustered_beer_plot_srm_ibu <- ggplot() +
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. IBU") +
   labs(x = "SRM", y = "IBU") +
-  labs(colour = "Cluster Assignment")
+  labs(colour = "Cluster Assignment") +
+  theme(legend.position="none")
 clustered_beer_plot_srm_ibu
 
 ```
@@ -849,7 +850,8 @@ clustered_beer_plot_srm_abv <- ggplot() +
                   label.size = 0.3) +
   ggtitle("k-Means Clustering of Beer: SRM vs. ABV") +
   labs(x = "SRM", y = "ABV") +
-  labs(colour = "Cluster Assignment")
+  labs(colour = "Cluster Assignment") +
+  theme(legend.position="none")
 clustered_beer_plot_srm_abv
 ```
 
@@ -867,7 +869,8 @@ abv_ibu_clusters_vs_style_centers <- ggplot() +
   ggtitle("Popular Styles vs. k-Means Clustering of Beer: ABV vs. IBU") +
   labs(x = "ABV", y = "IBU") +
   labs(colour = "Cluster Assignment") +
-  theme_minimal()
+  theme_minimal() +
+  theme(legend.position="none")
 abv_ibu_clusters_vs_style_centers
 ```
 
