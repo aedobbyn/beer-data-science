@@ -83,7 +83,7 @@ shinyUI(fluidPage(
     ),
     
     mainPanel(
-       plotOutput("cluster_plot", width = "100%")
+       plotOutput("cluster_plot", width = "80%")
     )
   ),
   

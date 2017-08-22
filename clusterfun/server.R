@@ -96,7 +96,8 @@ shinyServer(function(input, output) {
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
-        theme_minimal()
+        theme_minimal() +
+        theme(legend.position="none")
     } else if (input$show_centers == TRUE & input$show_all == TRUE) {
       
       ggplot() +
@@ -111,7 +112,8 @@ shinyServer(function(input, output) {
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
-        theme_minimal()
+        theme_minimal() +
+        theme(legend.position="none")
     } else if (input$show_centers == FALSE & input$show_all == TRUE) {
       
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
@@ -122,7 +124,8 @@ shinyServer(function(input, output) {
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
-        theme_minimal()
+        theme_minimal() +
+        theme(legend.position="none")
     } else {
       
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
@@ -133,7 +136,8 @@ shinyServer(function(input, output) {
         ggtitle("k-Means Clustered Beer") +
         labs(x = "ABV", y = "IBU") +
         labs(colour = "Cluster Assignment") +
-        theme_minimal()
+        theme_minimal() +
+        theme(legend.position="none")
     }
     
   })
