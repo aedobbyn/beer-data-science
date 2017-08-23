@@ -28,7 +28,7 @@ shinyServer(function(input, output) {
   # Create a dataframe from beer_totals and omit everything with an NA in either cluster_on columns
   # or response_var columns. 
   df_for_clustering <- reactive({ beer_totals %>%
-      select(response_vars(), cluster_on()) %>%
+      select(name, response_vars(), cluster_on()) %>%
       filter(
         abv < 20 & abv > 3    # Only keep beers with ABV between 3 and 20 and an IBU less than 200
       ) %>%

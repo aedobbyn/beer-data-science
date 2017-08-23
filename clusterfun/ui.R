@@ -69,10 +69,9 @@ shinyUI(fluidPage(
       
       checkboxGroupInput("response_vars", "Choose response variable(s): ",
                          c("Collapsed style" = "style_collapsed",
-                           "Specific style" = "style",
-                           "Name" = "name"
+                           "Specific style" = "style"
                          ),
-                         selected = c("style", "style_collapsed")),
+                         selected = c("style_collapsed")),
       
       conditionalPanel(
         condition = "input.show_all == false",
@@ -90,17 +89,21 @@ shinyUI(fluidPage(
   fluidRow(
     column(width = 12, 
            
-           h5("How to work the controls"),
+           h5("How to work the controls:"),
            
            tags$ul(
              
              tags$li('You can see how well styles match up to clusters by checking 
                      "Show style centers"; the label will show you where the typical beer in a certain style sits.'),
              
+           
+             
              tags$li('To filter the graph down to a certain style and see whether most of the beers in that style fall 
                      into a certain cluster, uncheck the "Show all styles"
-                     checkbox and choose a beer style from the dropdown. (Note that this does not re-run the algorithm on 
-                     a new dataset of just the beers in that style -- it always clusters on all beers.)'),
+                     checkbox and choose a beer style from the dropdown.'),
+             
+                     tags$ul(tags$li('Note that this does not re-run the algorithm on 
+                     a new dataset of just the beers in that style -- it always clusters on all available beers.')),
              
              tags$li("We've started off with", starting_n_clusters, "clusters, but you can rerun the algorithm using any number of clusters
                      by changing the Number of Clusters.")
@@ -118,7 +121,7 @@ shinyUI(fluidPage(
              
         hr(),
         
-        h2("Data"),
+        h3("Clustering Data"),
         
         tableOutput("this_style_data")
       )
