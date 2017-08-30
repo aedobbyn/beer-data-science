@@ -57,7 +57,7 @@ For something less wordy/code-heavy, check out the [clustering Shiny app](https:
 
 This is a first pass exploration of different aspects of beer. The data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
 
-The main question this analysis is meant to tackle is: are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? Is an IPA an IPA because it's really distinguishable as such from other beers or is it an IPA because we call I took two approaches to this: unsupervised clustering and supervised prediction. 
+The main question this analysis is meant to tackle is: are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? Is an IPA an IPA because it's really distinguishable as such from other beers or is it an IPA because we call it an IPA? I took two approaches to answer this question: unsupervised clustering and supervised prediction.
 
 Clusters defined by the algorithm were compared to the style "centers" as defined by the mean ABV, IBU, and SRM. On the prediction side, predictor variables for include ABV (alcohol by volume), IBU (international bitterness units), SRM ([a measure of color](http://www.twobeerdudes.com/beer/srm)) as well as ingredients like hops and malts. The outcome variable is the style that beer was assigned.
 
