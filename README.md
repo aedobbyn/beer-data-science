@@ -2,7 +2,7 @@
 
 This is a preliminary, strictly for-fun foray into beer data. Pairs well with most session IPAs.
 
-All beer data was grabbed from the [BreweryDB API](http://www.brewerydb.com/developers) and dumped into a MySQL database. You can find the **main report in [`compile.md`](https://github.com/aedobbyn/beer-data-science/blob/master/compile.md)**. 
+All beer data was grabbed from the [BreweryDB API](http://www.brewerydb.com/developers) and dumped into a MySQL database. You can find the **main report in [`compile.md`](https://github.com/aedobbyn/beer-data-science/blob/master/compile/compile.md)**. 
 
 The main question I went into the analysis with was: how well do beer styles actually describe the characteristics of beers within each style? In other words, do natural clusters in beer align well with style boundaries?
 
