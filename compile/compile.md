@@ -10,13 +10,13 @@
 
 ***
 
-For something less wordy/code-heavy, check out the [clustering Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
+For some interactive clustering, check out the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
 
 
 
 # Motivation and Overview
 
-This is a first pass exploration of different aspects of beer. The data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
+This is a first pass exploration of different aspects of beer. The 63495 or so beers worth of data data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
 
 The main question this analysis is meant to tackle is: are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? Is an IPA an IPA because it's really distinguishable as such from other beers, or is it an IPA because that's what it says on the label? I took two approaches to answer this question: unsupervised clustering and supervised prediction. 
 
@@ -66,13 +66,13 @@ To my mind, the best candidates for predictor variables are ABV, IBU, and SRM. I
 
 
 ### Provisional Answer
-Thus far, the answer to the question of whether styles are social constructs seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. 
+Thus far, the answer to the question seems to be that the beer landscape is more of a spectrum than a collection of neatly differentiated styles. That is, style seems to be a construct with little relationship to meaningful attributes of beer.
 
-Beer-intrinsic attributes like bitterness aren't great predictors of style. We could only get to around 30-40% accuracy using both a neural net and a random forest, even using all the possible ingredient data available at the most granular level. In fact, including such sparse ingredient data was detrimental to the accuracy of the model, perhaps because it encouraged overfitting.
+Beer-intrinsic features like bitterness aren't great predictors of style. We could only reach around 30-40% accuracy with a neural net and a random forest, even using all the possible ingredient data available at the most granular level. In fact, including such sparse ingredient data actually proved detrimental to the accuracy of the model, perhaps because it encouraged overfitting.
 
-The relative importance of different variables depended on the prediction method used. Though one style-defined attribute, the glass a beer is served in, increased the accuracy of prediction substantially, it still didn't allow the model to break 50% accuracy. 
+The relative importance of different variables depended on the prediction method used. Though one style-defined attribute, the glass a beer is served in, did increase the accuracy of prediction substantially, it still didn't push the model accuracy above 50%. 
 
-Of course, other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is not available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this analysis and probably make the prediction task much easier.
+Of course it's important to note that other important aspects of the flavor, body, smell, etc. of the beers could not be considered because this data is was available from BreweryDB. Such a publicly-available database of flavor profiles for beers would certainly enrich this analysis and likely make the prediction task much easier.
 
 
 ![](../img/such_taps.jpg)
@@ -84,9 +84,11 @@ Of course, other important aspects of the flavor, body, smell, etc. of the beers
 
 ## Get and Prepare Data
 
-**GETting beer, the age-old dilemma**
+**GETting beer (the age-old dilemma)**
 
-After creating a BreweryDB API key, we can supply the API with a request and receive a JSON response in return. The function below allows you to supply an endpoint and any additions you want to the URL. You can find a list of available endpoints in the [BreweryDB documentation](http://www.brewerydb.com/developers/docs). You'll want to set the `key` to the API key you create.
+All of the beer data was sourced from BreweryDB, a service that allows developers to request up-to-date beer data from the database of 
+
+In order to do that yourself, the first step is to create your BreweryDB API key. Once you have that in hand, you can supply the API with a request and receive a JSON response in return. The function below allows you to specify an endpoint and any additional requests to the URL. You can find a list of available endpoints in the [BreweryDB documentation](http://www.brewerydb.com/developers/docs). You'll want to set the `key` variable used inside the `paginated_request()` function to the API key you create.
 
 
 ```r
@@ -94,7 +96,7 @@ base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 ```
 
-The API returns 50 results per page so if we want more than just the first 50 results, we'll have to string a bunch of responses together end to end. For a given endpoint, the API response will contain the total number of pages for that output. So, we use the function below to hit the BreweryDB API and ask for `1:number_of_pages`. This way, if we only want the first 3 pages, say, we can change `number_of_pages` to 3. 
+The API returns 50 results per page so if we want more than just the first 50 results, we'll have to string a bunch of responses together end to end. For a given endpoint, the API response will specify the total number of pages for that output in `numberOfPages`. So, we use the function below to hit the BreweryDB API and ask for `1:number_of_pages`. This way, if we only want the first 3 pages, say, we can change `number_of_pages` to 3. 
 
 In the case that the response contains only one page (as is the case for the glassware endpoint), `numberOfPages` won't be returned, so we'll set our `number_of_pages` to 1. The `addition` parameter can be an empty string if nothing else is needed.
 
@@ -146,106 +148,36 @@ endpoints %>% walk(~ assign(x = paste0("get_", .x),
                              envir = .GlobalEnv))
 ```
 
-Now for instance we can get all the information on a single brewery from just its ID:
+Now for instance we can get all the information on a single brewery from just its ID (only first part of response shown):
 
 ```r
-get_hop("3")
+get_hop("3")$data %>% head()
 ```
 
 ```
-## $message
-## [1] "READ ONLY MODE: Request Successful"
-## 
-## $data
-## $data$id
+## $id
 ## [1] 3
 ## 
-## $data$name
+## $name
 ## [1] "Ahtanum"
 ## 
-## $data$description
+## $description
 ## [1] "An open-pollinated aroma variety developed in Washington, Ahtanum is used for its distinctive, somewhat Cascade-like aroma and for moderate bittering."
 ## 
-## $data$countryOfOrigin
+## $countryOfOrigin
 ## [1] "US"
 ## 
-## $data$alphaAcidMin
+## $alphaAcidMin
 ## [1] 5.7
 ## 
-## $data$betaAcidMin
+## $betaAcidMin
 ## [1] 5
-## 
-## $data$betaAcidMax
-## [1] 6.5
-## 
-## $data$humuleneMin
-## [1] 16
-## 
-## $data$humuleneMax
-## [1] 20
-## 
-## $data$caryophylleneMin
-## [1] 9
-## 
-## $data$caryophylleneMax
-## [1] 12
-## 
-## $data$cohumuloneMin
-## [1] 30
-## 
-## $data$cohumuloneMax
-## [1] 35
-## 
-## $data$myrceneMin
-## [1] 50
-## 
-## $data$myrceneMax
-## [1] 55
-## 
-## $data$farneseneMax
-## [1] 1
-## 
-## $data$category
-## [1] "hop"
-## 
-## $data$categoryDisplay
-## [1] "Hops"
-## 
-## $data$createDate
-## [1] "2013-06-24 16:07:26"
-## 
-## $data$updateDate
-## [1] "2013-06-24 16:10:37"
-## 
-## $data$country
-## $data$country$isoCode
-## [1] "US"
-## 
-## $data$country$name
-## [1] "UNITED STATES"
-## 
-## $data$country$displayName
-## [1] "United States"
-## 
-## $data$country$isoThree
-## [1] "USA"
-## 
-## $data$country$numberCode
-## [1] 840
-## 
-## $data$country$createDate
-## [1] "2012-01-03 02:41:33"
-## 
-## 
-## 
-## $status
-## [1] "success"
 ```
 
 
-Now that we've got all our raw data, we'll have to unnest it properly. We'll use this function `unnest_it()` inside `paginated_request()`. It takes the column named `name` nested within a column in the data portion of the response. If the `name` column doesn't exist, it takes the first nested column.
+Now that we've got all our raw data, we'll have to unnest it properly. We'll use this function `unnest_it()` inside `paginated_request()`. It takes the column named `name` nested within a column in the data portion of the response. (You'll see above that was "Ahtanum.") If the `name` column doesn't exist, it takes the first nested column.
 
-We use something similar to unnest ingredients like all of a beer's hops and malts into a long string contained in `hops_name` and `malt_name`.
+We use something similar to unnest ingredients like all of a beer's hops and malts into a comma-delimited string contained in `hops_name` and `malt_name`.
 
 
 ```r
@@ -264,11 +196,12 @@ unnest_it <- function(df) {
 }
 ```
 
+Cool. So we'll save our new dataframe as `beer_necessities` and do some further processing on it.
 
 
 **Collapse Styles**
 
-It'll be useful to reduce the number of levels in our outcome variable, style. To that end, we create a new variable, `style_collapsed` that uses keywords inside a style's name to lump it into a broader category. This way we can define broader styles with more beers in them than are otherwise available from the API using the text of the styles themselves. 
+It'll be useful to reduce the number of levels in our outcome variable, style. To that end, we create a new variable, `style_collapsed` that uses keywords inside a style's name to lump it into a broader category. This way we can use the text of the styles themselves to define broader styles with more beers in them than are otherwise available from the API. 
 
 The way we'll do this is we'll save our overarching collapsed styles in the vector `keywords`. 
 
@@ -284,7 +217,7 @@ Then we loop through each keyword. For each beer in our dataset, we `grep` throu
 
 Importantly, if a beer's name matches multiple keywords, e.g., American Double India Pale Ale would match Double India Pale Ale, India Pale Ale, and Pale Ale, its `style_collapsed` is the **last** of those that appear in keyword; this is why keywords are intentionally ordered from most general to most specific. So in the case of an case of American Double India Pale Ale, since Double India Pale Ale appears in `keywords` after India Pale Ale and Pale Ale, an American Double India Pale Ale would get a `style_collapsed` of Double India Pale Ale.
 
-If a beer's `style` doesn't have any of the keywords in it, its `style_collapsed` is the same as its `style`; in other words, it doesn't get collpsed into a bigger bucket. This isn't a huge problem because we'll pare down to just the most popular styles later. (However, we could think about throwing them all into a catchall "Other" level.)
+If a beer's `style` doesn't contain any of the keywords, its `style_collapsed` is the same as its `style`; in other words, it doesn't get collpsed into a bigger bucket. This isn't a huge problem because we'll pare the data down to just the most popular styles later. (However, we could think about throwing them all into a catchall "Other" level.)
   
 
 ```r
@@ -309,7 +242,7 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 ```
 
 
-Then we collapse further; right now we just combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e's) by `fct_collapse`ing those levels. I'd be interested to hear if people think we should also collapse other similar styles. On the other hand, are there collapsed styles that are too broad?
+Then we'll collapse a few styles even further based on some knowledge of beer similarity. For now, all this means is that we'll combine all wheaty bears into Wheat and Pils-like beers into Pilsener (with two e's) by `fct_collapse`ing those levels. I'd be interested to hear if people think we should also collapse other similar styles. Or, on the other hand, are there collapsed styles that are too broad?
 
 
 ```r
@@ -327,7 +260,7 @@ collapse_further <- function(df) {
 
 **Split out Ingredients**
 
-When we unnested ingredients, we simply concatenated all of the ingredients for a given beer into a long, comma-separated string. That's what populates the `hops_name` and `malt_name` columns. It could be useful to split out the ingredients that were concatenated in `<ingredient>_name` with this `split_ingredients` function.
+When we unnested ingredients from the raw JSON, we simply concatenated all of the ingredients for a given beer into a long, comma-separated string. That's what populates the `hops_name` and `malt_name` columns. It could be useful to split out these ingredients with this `split_ingredients` function.
 
 This takes a vector of `ingredients_to_split`, so e.g. `c("hops_name", "malt_name")` and creates one column for each type of ingredient (`hops_name_1`, `hops_name_2`, etc.). It's flexible enough to adapt if the data in BreweryDB changes and a beer now has 15 hops where originally the maximum number of hops a beer had was 10.
 
@@ -364,15 +297,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
-Some quick summary stats on our main dataframe we're calling `beer_necessities`:
-
-```r
-dim(beer_necessities)
-```
-
-```
-## [1] 63495    39
-```
+We'll take a look at our new column names of our dataframe, `beer_necessities` of 63495 rows and 39 columns:
 
 ```r
 names(beer_necessities)
@@ -396,15 +321,14 @@ names(beer_necessities)
 
 
 
+Now we'll want to get a sense of the distribution and spread of beers in our dataset. First off, we'll ask: which collapsed styles do the majority of beers in the database fall into?
 
 
 **Find the Most Popualar Styles**
 
-What collapsed styles do the majority of beers in the database fall into?
-
 We find the mean ABV, IBU, and SRM per collapsed style and arrange collapsed styles by the number of beers that fall into them. (Of course, the collapsed style that a beer falls into is dependent on how we collapse styles; if we looped all Double IPAs in with IPAs then the category IPA would be much bigger than it is if we keep the two separate.)
 
-We drop beers in styles that are below the mean popularity.
+Then we'll drop beers that belong to styles that are below the mean popularity.
 
 
 ```r
@@ -437,27 +361,13 @@ popular_beer_dat <- beer_dat_pared %>%
 ```
 
 
-How many rows do we have in our dataset of just beers that fall into the popular styles? (In the original dataset we had 63495.)
+We're left with 45871 in our dataset of just beers that fall into the popular styles, down from 63495 in the original dataset.)
 
-```r
-nrow(popular_beer_dat)
-```
-
-```
-## [1] 45871
-```
-
-
-  
-  
-  
-  
-  
-  
 
 Now we can find what I'm calling the "style centers" for each of these most popular styles. The center is defined by the mean ABV, mean IBU, and mean SRM of all of the beers in that style. 
 
-You'll notice that there are beers with a `style_collapsed` that are not in one of the keywords. (Pumpkin beer, for instance.) Styles that appear here that did not appear in the keywords that we collapsed to are the most popular styles that did not contain one of those keywords. Recall that if a keyword did not appear in a style name, its `style_collapsed` was made the same as its `style`.
+You'll notice that there are beers with a `style_collapsed` that are not in one of the keywords (e.g., Pumpkin beer). Styles that appear here that did not appear in the keywords that we collapsed to are the most popular styles that did not contain one of those keywords. Recall that if a keyword did not appear in a style name, its `style_collapsed` was made the same as its `style`.
+
 
 ```r
 # Find the centers (mean ABV, IBU, SRM) of the most popular styles
@@ -1821,7 +1731,7 @@ sessionInfo()
 ```
 ## R version 3.3.3 (2017-03-06)
 ## Platform: x86_64-apple-darwin13.4.0 (64-bit)
-## Running under: macOS Sierra 10.12.5
+## Running under: macOS Sierra 10.12.6
 ## 
 ## locale:
 ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -1844,7 +1754,7 @@ sessionInfo()
 ## [10] cellranger_1.1.0   plyr_1.8.4         MatrixModels_0.4-1
 ## [13] backports_1.1.0    stats4_3.3.3       e1071_1.6-8       
 ## [16] evaluate_0.10.1    httr_1.2.1         highr_0.6         
-## [19] rlang_0.1.2        lazyeval_0.2.0     curl_2.8.1        
+## [19] rlang_0.1.2.9000   lazyeval_0.2.0     curl_2.8.1        
 ## [22] readxl_1.0.0       SparseM_1.74       minqa_1.2.4       
 ## [25] nloptr_1.0.4       car_2.1-5          Matrix_1.2-8      
 ## [28] rmarkdown_1.6      labeling_0.3       splines_3.3.3     
