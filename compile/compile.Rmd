@@ -3,7 +3,7 @@ title: Beer-in-Hand Data Science
 author:
   name: Amanda Dobbyn
   email: amanda.e.dobbyn@gmail.com
-  twitter: @dobbleobble
+  twitter: dobbleobble
 # output:
 #   html_notebook:
 #     toc: true
@@ -42,6 +42,9 @@ library(ggrepel)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
+
+# library("devtools"); install_github('aedobbyn/dobtools')
+library(dobtools)
 ```
 
 
@@ -59,13 +62,17 @@ For some interactive clustering, check out the [Shiny app](https://amandadobbyn.
 
 # Motivation and Overview
 
-This is a first pass exploration of different aspects of beer. The `r nrow(beer_necessities)` or so beers worth of data data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
+This is a first pass exploration of different aspects of beer. The `r nrow(beer_necessities) %>% round(digits = -3) %>% format(big.mark = ",")` or so beers worth of data data was collected via the [BreweryDB](http://www.brewerydb.com/developers) API. Special thanks to [Kris Kroski](https://kro.ski/) for data ideation and co-membership in the honourable Workplace Beer Consortium.
 
 The main question this analysis is meant to tackle is: are beer styles actually indicative of shared attributes of the beers within that style? Or are style boundaries more or less arbitrary? Is an IPA an IPA because it's really distinguishable as such from other beers, or is it an IPA because that's what it says on the label? I took two approaches to answer this question: unsupervised clustering and supervised prediction. 
+
+**Clustering and Prediction**
 
 Both of these approaches used a set of predictor variables like ABV (alcohol by volume), IBU (international bitterness units), SRM ([a measure of color](http://www.twobeerdudes.com/beer/srm)) as well as ingredients like hops and malts to quantify how similar or different beers were from one another.
 
 For the clustering portion, I removed each beer's style label and ran a k-means algorithm to assign beers to clusters. The algorithm did this by using certain of these predictors to cluster the beers by minimizing the distance between the center of each cluster in multi-demensional space. The cluster assignments were then compared to the distribution of beers in each style to see whether most beers in a certain style tended to fall into the same cluster. The goal of the prediction section is similar but the approach is different. Here, the style labels were kept in the dataset and used to train a neural net and a random forest on the same set of predictors with the explict goal of using the predictor variables to correctly classify beers into their correct styles. I was interested in how well these models were able to predict style from objective measures like alcohol content and bitterness. My thinking went that if the accuracy of the model is low, that should speak less to the quality of the model than to the fuziness of style boundaries. In other words, if a model has trouble categorizing beers into the correct style, then either a) we are missing several important variables that *are* quite predictive of style, or b) the assignment of styles to beers is more random than systematic.
+
+**What to Expect**
 
 This document gets very much in the weeds in the hopes that anyone else interested in using the same tools to explore questions about beer will be able to easily hit the ground running. It begins with an explanation of how I sourced beer data from BreweryDB, cleaned that data, and stuck the parts of it I wanted in a database. (These are just the highlights; the code actually executed in this document queries that database by sourcing the file `read_from_db.R`, also in this repo, rather than hitting the BreweryDB API. This is done for expediency's sake. The code below detailing how to actually get the beer data, run in full in `run_it.R`, takes some time to execute.)
 
@@ -85,6 +92,8 @@ ggplot() +
   theme_minimal()
 ```
 
+
+Finally, a minor note: a few ancillary functions here make use of a package of helper functions I've developed. This can be downloaded with `library("devtools"); install_github('aedobbyn/dobtools')`. All of these functions here should be preceded with `dobtools::` but you can of course attach the package with `library(dobtools)` if you like.
 
 
 ### Workflow
@@ -669,7 +678,7 @@ Now we're left with something of a sparse matrix of all the ingredients compared
 For instance, if certain hops or malts are very predictive of style, we can incorporate this easily into a model.
 
 ```{r, echo=TRUE}
-kable(beer_dat_sparse[1:20, ])
+kable(beer_dat_sparse[1:10, ])
 ```
 
 
@@ -799,7 +808,7 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 
 We take a look at the top of the resulting clustered data. The cluster assignment column appears on the far left.
 ```{r, echo=TRUE}
-kable(clustered_beer[1:20, ])
+kable(clustered_beer[1:10, ])
 ```
 
 
@@ -1005,8 +1014,9 @@ ggplot(data = beer_dat_sparse[which(beer_dat_sparse$total_hops >= 5), ], aes(tot
 
 The trend holds even with 5 or more hops, with a slightly smaller effect size (probably due to smaller sample size).
 ```{r, echo = TRUE}
-five_plus_hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse[which(beer_dat_sparse$total_hops > 5), ]) %>% broom::tidy()
-five_plus_hops_ibu_lm
+five_plus_hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat_sparse[which(beer_dat_sparse$total_hops > 5), ]) %>% broom::tidy() 
+
+five_plus_hops_ibu_lm %>% kable()
 ```
 
 
@@ -1173,14 +1183,14 @@ nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed",
 
 How accurate was it?
 ```{r, echo=TRUE, eval=TRUE}
-nn_collapsed_out$nn_accuracy[1]
+round((nn_collapsed_out$nn_accuracy[1])*100, digits=2) %>% kable()
 ```
 
 What were the most important variables?
 ```{r, echo=TRUE, eval=TRUE}
 get_nn_importance <- function(imp_vec) {
-  vals <- imp_vec
-  names <- rownames(vals)
+  vals <- imp_vec %>% round(digits=2)
+  names <- rownames(vals) %>% map(dobtools::cap_it) %>% as_vector()
   out <- cbind("Variable" = names, vals) %>% arrange(desc(Overall)) %>% rename(Importance = Overall)
   rownames(out) <- 1:nrow(out)
   return(out)
@@ -1200,9 +1210,9 @@ We'll run the model and again find accuracy and variable importance.
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
-nn_notcollapsed_out$nn_accuracy[1]
+round(nn_notcollapsed_out$nn_accuracy[1]*100 , digits = 2) %>% kable()
 
-nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% print() %>% kable()
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
 ```
 
 So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
@@ -1216,7 +1226,7 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat_sparse, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
-nn_collapsed_out_add_glass$nn_accuracy[1]
+round(nn_collapsed_out_add_glass$nn_accuracy[1]*100, digits = 2) %>% kable()
 ```
 So indeed, glass does improve the accuracy of the model. 
 
@@ -1224,6 +1234,7 @@ So indeed, glass does improve the accuracy of the model.
 ```{r, echo=TRUE}
 nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable()
 ```
+
 And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
 
 
@@ -1307,8 +1318,9 @@ get_rf_importance <- function(rf_df) {
 }
 
 bi_rf_imp <- bi_rf %>% get_rf_importance() 
-kable(bi_rf_imp[1:20, ])
+kable(bi_rf_imp[1:10, ])
 ```
+
 Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 
 
@@ -1382,7 +1394,7 @@ Suffice it to say, the question is far from settled. But there are many other pl
 * Implementing a GAN ([generative adversarial network](https://en.wikipedia.org/wiki/Generative_adversarial_networks)) to come up with beer names
 * Going deeper on the hops deep dive: which hops are used most often in which styles?
 
-Please don't hesitate to reach out with other ideas. Cheers.
+Please don't hesitate to reach out with other ideas. Cheers!
 
 
 ![](../img/pour.jpg)
