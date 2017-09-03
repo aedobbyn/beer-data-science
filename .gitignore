@@ -15,3 +15,4 @@ other
 todo.txt
 .httr-oauth
 clusterfun/rsconnect/shinyapps.io/amandadobbyn/clusterfun.dcf
+*compile/cache

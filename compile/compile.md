@@ -8,6 +8,7 @@
 
 
 
+
 ***
 
 For some interactive clustering, check out the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
@@ -38,7 +39,7 @@ But first, a density plot of the alcohol vs. bitterness landscape, colored by st
 ![](compile_files/figure-html/density_abv_ibu-1.png)<!-- -->
 
 
-Finally, a minor note: a few ancillary functions here make use of a package of helper functions I've developed. This can be downloaded with `library("devtools"); install_github('aedobbyn/dobtools')`. All of these functions should be preceded with `dobtools::` but you can of course attach the package with `library(dobtools)` if you like.
+Finally, a minor note: a few ancillary functions here make use of a [package of helper functions](https://github.com/aedobbyn/dobtools) I've developed. This can be downloaded with `library("devtools"); install_github('aedobbyn/dobtools')`. All of these functions here should be preceded with `dobtools::` but you can of course attach the package with `library(dobtools)` if you like.
 
 
 ### Workflow
@@ -325,6 +326,46 @@ names(beer_necessities)
 ## [37] "malt_name_8"      "malt_name_9"      "malt_name_10"
 ```
 
+
+For prettier dataset printing, we'll define a quick function that we'll use in conjunction with `purrr::map()` and `dobtools::cap_it()` on a vector of column names and soemtimes all the rows in a column. 
+The `cap_it()` function from the dobtools package will capitalize the first letter of each word in each string it's provided and split on underscores and periods. That way we can transform column names like `foo_bar` into `Foo Bar`. The only wrinkle is that column names `abv`, `ibu`, `srm`, and `id` need to be in all caps instead of just their first letter being capitalized. Both `cap_it()` and this new function we'll define, `beer_caps()`, operate on a single element so we'll use them with `map()` to iterate and then finally pass the result through `as_vector()` to turn the result from a list back into a vector.
+
+
+```r
+beer_caps <- function(to_cap) {
+  if(to_cap %in% c("abv", "ibu", "srm", "id",
+                 "Abv", "Ibu", "Srm", "Id")) {
+  to_cap <- to_cap %>% toupper()
+  } else {
+     to_cap <- to_cap              
+  }
+  return(to_cap)
+}
+```
+
+We can do this with the `beer_necessities` column names vector:
+
+```r
+names(beer_necessities) %>% map(cap_it) %>% map(beer_caps) %>% as_vector() 
+```
+
+```
+##  [1] "ID"               "Name"             "Description"     
+##  [4] "Style"            "ABV"              "IBU"             
+##  [7] "SRM"              "Glass"            "Hops Name"       
+## [10] "Hops Id"          "Malt Name"        "Malt Id"         
+## [13] "GlasswareId"      "StyleId"          "Style CategoryId"
+## [16] "Style Collapsed"  "Hops Name 1"      "Hops Name 2"     
+## [19] "Hops Name 3"      "Hops Name 4"      "Hops Name 5"     
+## [22] "Hops Name 6"      "Hops Name 7"      "Hops Name 8"     
+## [25] "Hops Name 9"      "Hops Name 10"     "Hops Name 11"    
+## [28] "Hops Name 12"     "Hops Name 13"     "Malt Name 1"     
+## [31] "Malt Name 2"      "Malt Name 3"      "Malt Name 4"     
+## [34] "Malt Name 5"      "Malt Name 6"      "Malt Name 7"     
+## [37] "Malt Name 8"      "Malt Name 9"      "Malt Name 10"
+```
+
+We've covered our bases with `beer_caps()` by also including "Abv", "Ibu", "Srm" in the `if` statement so that we can safely call `beer_caps()` before or after `cap_it()` and end up with the same result.
 
 
 Now we'll want to get a sense of the distribution and spread of beers in our dataset. First off, we'll ask: which collapsed styles do the majority of beers in the database fall into?
@@ -1345,21 +1386,20 @@ nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed",
 How accurate was it?
 
 ```r
-round((nn_collapsed_out$nn_accuracy[1])*100, digits=2) %>% kable()
+round((nn_collapsed_out$nn_accuracy[1])*100, digits=2)
 ```
 
-
-
-|         |      |
-|:--------|-----:|
-|Accuracy | 40.79|
+```
+## Accuracy 
+##    40.79
+```
 
 What were the most important variables?
 
 ```r
 get_nn_importance <- function(imp_vec) {
   vals <- imp_vec %>% round(digits=2)
-  names <- rownames(vals) %>% map(dobtools::cap_it) %>% as_vector()
+  names <- rownames(vals) %>% map(dobtools::cap_it) %>% map(beer_caps) %>% as_vector()
   out <- cbind("Variable" = names, vals) %>% arrange(desc(Overall)) %>% rename(Importance = Overall)
   rownames(out) <- 1:nrow(out)
   return(out)
@@ -1373,10 +1413,10 @@ nn_collapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
 |Variable   | Importance|
 |:----------|----------:|
 |Total Hops |      63.22|
-|Abv        |      30.68|
+|ABV        |      30.68|
 |Total Malt |      18.15|
-|Srm        |       4.02|
-|Ibu        |       2.91|
+|SRM        |       4.02|
+|IBU        |       2.91|
 
 
 **Change up some Parameters**
@@ -1389,17 +1429,16 @@ We'll run the model and again find accuracy and variable importance.
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
-round(nn_notcollapsed_out$nn_accuracy[1]*100 , digits = 2) %>% kable()
+round(nn_notcollapsed_out$nn_accuracy[1]*100 , digits = 2)
 ```
 
-
-
-|         |      |
-|:--------|-----:|
-|Accuracy | 35.58|
+```
+## Accuracy 
+##    35.58
+```
 
 ```r
-nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable() 
 ```
 
 
@@ -1408,9 +1447,9 @@ nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
 |:----------|----------:|
 |Total Hops |     333.67|
 |Total Malt |     211.32|
-|Abv        |      96.53|
-|Srm        |      26.33|
-|Ibu        |      15.89|
+|ABV        |      96.53|
+|SRM        |      26.33|
+|IBU        |      15.89|
 
 So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
 
@@ -1423,20 +1462,19 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat_sparse, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
-round(nn_collapsed_out_add_glass$nn_accuracy[1]*100, digits = 2) %>% kable()
+round(nn_collapsed_out_add_glass$nn_accuracy[1]*100, digits = 2)
 ```
 
-
-
-|         |      |
-|:--------|-----:|
-|Accuracy | 41.96|
+```
+## Accuracy 
+##    41.96
+```
 So indeed, glass does improve the accuracy of the model. 
 
 
 
 ```r
-nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable()
+nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable() 
 ```
 
 
@@ -1456,9 +1494,9 @@ nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable
 |GlassPilsner              |     224.98|
 |Total Hops                |      74.05|
 |Total Malt                |      63.62|
-|Abv                       |      33.05|
-|Ibu                       |       4.47|
-|Srm                       |       4.23|
+|ABV                       |      33.05|
+|IBU                       |       4.47|
+|SRM                       |       4.23|
 
 And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
 
@@ -1578,7 +1616,7 @@ The model output provides us with a measure of which variables contributed most 
 ```r
 get_rf_importance <- function(rf_df) {
   importance_sorted <- importance(rf_df) %>% sort(., decreasing = TRUE)
-  importance_names <- names(importance_sorted)
+  importance_names <- names(importance_sorted) %>% map(dobtools::cap_it) %>% map(beer_caps) %>% as_vector()
   importance_vals <- importance(rf_df) %>% as.numeric()
   importance_df <- cbind(`Variable Name` = importance_names, "Importance" = importance_sorted) %>% as_tibble()
   return(importance_df)
@@ -1592,16 +1630,16 @@ kable(bi_rf_imp[1:10, ])
 
 |Variable Name |Importance       |
 |:-------------|:----------------|
-|ibu           |133.23805651003  |
-|srm           |82.1330830847161 |
-|abv           |77.6321388103711 |
-|total_hops    |5.60525274350915 |
-|total_malt    |4.29584001973546 |
-|cascade       |4.09349689613152 |
-|centennial    |2.23054244826829 |
-|chocolatemalt |2.19405452077647 |
-|columbus      |2.10053776164705 |
-|pilsnermalt   |1.76825888896042 |
+|IBU           |133.23805651003  |
+|SRM           |82.1330830847161 |
+|ABV           |77.6321388103711 |
+|Total Hops    |5.60525274350915 |
+|Total Malt    |4.29584001973546 |
+|Cascade       |4.09349689613152 |
+|Centennial    |2.23054244826829 |
+|Chocolatemalt |2.19405452077647 |
+|Columbus      |2.10053776164705 |
+|Pilsnermalt   |1.76825888896042 |
 
 Interestingly, in this random forest, `total_hops` and `total_malt` are relatively less important here than they were in the neural net that used the same predictor variables and target. 
 
@@ -1655,11 +1693,11 @@ bi_pared_rf %>% get_rf_importance() %>% kable()
 
 |Variable Name |Importance       |
 |:-------------|:----------------|
-|ibu           |795.416009395711 |
-|abv           |691.426330812771 |
-|srm           |621.517396319976 |
-|total_hops    |47.009127934829  |
-|total_malt    |41.9568154760899 |
+|IBU           |795.416009395711 |
+|ABV           |691.426330812771 |
+|SRM           |621.517396319976 |
+|Total Hops    |47.009127934829  |
+|Total Malt    |41.9568154760899 |
 
 Once again, in the random forest model IBU, ABV, and SRM are more important than total hops and total malts. In fact, variable importance in the random forest is almost the inverse of variable importance in the neural net. Perhaps this is a reflection of intrinsic differences in the models; it's possible they leaned on different features to come to similar conclusions. The random forest performed overall somewhat better than the neural net, though neither was able to conclusively predict style with accuracy above 50%. 
 
@@ -1716,15 +1754,15 @@ sessionInfo()
 ## other attached packages:
 ##  [1] stringr_1.2.0   ranger_0.8.0    caret_6.0-76    lattice_0.20-35
 ##  [5] nnet_7.3-12     NbClust_3.0     forcats_0.2.0   bindrcpp_0.2   
-##  [9] dplyr_0.7.2     purrr_0.2.3     readr_1.1.1     tidyr_0.6.3    
-## [13] tibble_1.3.3    tidyverse_1.1.1 RMySQL_0.10.12  DBI_0.7        
+##  [9] RMySQL_0.10.12  DBI_0.7         dplyr_0.7.2     purrr_0.2.3    
+## [13] readr_1.1.1     tidyr_0.6.3     tibble_1.3.3    tidyverse_1.1.1
 ## [17] dobtools_0.1.0  ggrepel_0.6.5   ggplot2_2.2.1   jsonlite_1.5   
 ## [21] broom_0.4.2     knitr_1.16     
 ## 
 ## loaded via a namespace (and not attached):
 ##  [1] httr_1.2.1          splines_3.3.3       foreach_1.4.3      
 ##  [4] modelr_0.1.1        Formula_1.2-2       assertthat_0.2.0   
-##  [7] stats4_3.3.3        highr_0.6           latticeExtra_0.6-28
+##  [7] highr_0.6           stats4_3.3.3        latticeExtra_0.6-28
 ## [10] cellranger_1.1.0    yaml_2.1.14         backports_1.1.0    
 ## [13] quantreg_5.29       glue_1.1.1          digest_0.6.12      
 ## [16] RColorBrewer_1.1-2  checkmate_1.8.3     minqa_1.2.4        
@@ -1735,18 +1773,18 @@ sessionInfo()
 ## [31] htmlTable_1.9       mgcv_1.8-17         car_2.1-5          
 ## [34] lazyeval_0.2.0      pbkrtest_0.4-7      mnormt_1.5-5       
 ## [37] survival_2.41-3     magrittr_1.5        readxl_1.0.0       
-## [40] evaluate_0.10.1     nlme_3.1-131        MASS_7.3-47        
+## [40] evaluate_0.10.1     MASS_7.3-47         nlme_3.1-131       
 ## [43] class_7.3-14        xml2_1.1.1          foreign_0.8-69     
 ## [46] tools_3.3.3         data.table_1.10.4   hms_0.3            
 ## [49] munsell_0.4.3       cluster_2.0.5       e1071_1.6-8        
 ## [52] rlang_0.1.2.9000    nloptr_1.0.4        grid_3.3.3         
 ## [55] iterators_1.0.8     htmlwidgets_0.9     base64enc_0.1-3    
-## [58] labeling_0.3        rmarkdown_1.6       ModelMetrics_1.1.0 
-## [61] codetools_0.2-15    gtable_0.2.0        curl_2.8.1         
-## [64] reshape2_1.4.2      R6_2.2.2            gridExtra_2.2.1    
-## [67] lubridate_1.6.0     bindr_0.1           Hmisc_4.0-3        
-## [70] rprojroot_1.2       stringi_1.1.5       parallel_3.3.3     
-## [73] Rcpp_0.12.12        rpart_4.1-11        acepack_1.4.1
+## [58] rmarkdown_1.6       gtable_0.2.0        ModelMetrics_1.1.0 
+## [61] codetools_0.2-15    reshape2_1.4.2      R6_2.2.2           
+## [64] gridExtra_2.2.1     lubridate_1.6.0     bindr_0.1          
+## [67] Hmisc_4.0-3         rprojroot_1.2       stringi_1.1.5      
+## [70] parallel_3.3.3      Rcpp_0.12.12        rpart_4.1-11       
+## [73] acepack_1.4.1
 ```
 
 

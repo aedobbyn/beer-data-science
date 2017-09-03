@@ -26,6 +26,7 @@ output:
     toc: false
 ---
 
+
 ```{r, eval=FALSE, echo=FALSE}
 # If need to close all connections
 lapply( dbListConnections( dbDriver( drv = "MySQL")), dbDisconnect)
@@ -36,21 +37,26 @@ library(knitr)
 library(broom)
 library(jsonlite)
 library(ggrepel)
+# library("devtools"); install_github('aedobbyn/dobtools')
+library(dobtools)
+library(tidyverse)
 
-# knitr::opts_chunk$set(cache=TRUE)
-# knitr::opts_knit$set(root.dir=normalizePath('../'))
+# Set global chunk options
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 knitr::opts_chunk$set(fig.width=12, fig.height=8)
 options(knitr.table.format = 'markdown')
 
-# library("devtools"); install_github('aedobbyn/dobtools')
-library(dobtools)
+# Cache evaluated chunks unless they change
+knitr::opts_chunk$set(cache=TRUE)
+
+# Set the working directory path to one directory up so this .Rmd file's working directory is the same as the R Project directory. This way we don't have to change the file paths when sourcing in.
+knitr::opts_knit$set(root.dir=normalizePath('../'))
 ```
 
 
 ```{r, echo=FALSE, message=FALSE}
-source("../read_from_db.R")
-source("../analyze/key.R")
+source("./read_from_db.R")
+source("./analyze/key.R")
 ```
 
 
@@ -93,7 +99,7 @@ ggplot() +
 ```
 
 
-Finally, a minor note: a few ancillary functions here make use of a package of helper functions I've developed. This can be downloaded with `library("devtools"); install_github('aedobbyn/dobtools')`. All of these functions here should be preceded with `dobtools::` but you can of course attach the package with `library(dobtools)` if you like.
+Finally, a minor note: a few ancillary functions here make use of a [package of helper functions](https://github.com/aedobbyn/dobtools) I've developed. This can be downloaded with `library("devtools"); install_github('aedobbyn/dobtools')`. All of these functions here should be preceded with `dobtools::` but you can of course attach the package with `library(dobtools)` if you like.
 
 
 ### Workflow
@@ -336,6 +342,27 @@ We'll take a look at our new column names of our dataframe, `beer_necessities` o
 names(beer_necessities)
 ```
 
+
+For prettier dataset printing, we'll define a quick function that we'll use in conjunction with `purrr::map()` and `dobtools::cap_it()` on a vector of column names and soemtimes all the rows in a column. 
+The `cap_it()` function from the dobtools package will capitalize the first letter of each word in each string it's provided and split on underscores and periods. That way we can transform column names like `foo_bar` into `Foo Bar`. The only wrinkle is that column names `abv`, `ibu`, `srm`, and `id` need to be in all caps instead of just their first letter being capitalized. Both `cap_it()` and this new function we'll define, `beer_caps()`, operate on a single element so we'll use them with `map()` to iterate and then finally pass the result through `as_vector()` to turn the result from a list back into a vector.
+
+```{r beer_caps, echo=TRUE}
+beer_caps <- function(to_cap) {
+  if(grepl("abv|ibu|srm|id|Abv|Ibu|Srm|Id", to_cap)) {
+  to_cap <- to_cap %>% toupper()
+  } else {
+     to_cap <- to_cap              
+  }
+  return(to_cap)
+}
+```
+
+We can do this with the `beer_necessities` column names vector:
+```{r, echo=TRUE}
+names(beer_necessities) %>% map(cap_it) %>% map(beer_caps) %>% as_vector() 
+```
+
+We've covered our bases with `beer_caps()` by also including "Abv", "Ibu", "Srm" in the `if` statement so that we can safely call `beer_caps()` before or after `cap_it()` and end up with the same result.
 
 
 Now we'll want to get a sense of the distribution and spread of beers in our dataset. First off, we'll ask: which collapsed styles do the majority of beers in the database fall into?
@@ -1183,14 +1210,14 @@ nn_collapsed_out <- run_neural_net(df = bt_omit, outcome = "style_collapsed",
 
 How accurate was it?
 ```{r, echo=TRUE, eval=TRUE}
-round((nn_collapsed_out$nn_accuracy[1])*100, digits=2) %>% kable()
+round((nn_collapsed_out$nn_accuracy[1])*100, digits=2)
 ```
 
 What were the most important variables?
 ```{r, echo=TRUE, eval=TRUE}
 get_nn_importance <- function(imp_vec) {
   vals <- imp_vec %>% round(digits=2)
-  names <- rownames(vals) %>% map(dobtools::cap_it) %>% as_vector()
+  names <- rownames(vals) %>% map(dobtools::cap_it) %>% map(beer_caps) %>% as_vector()
   out <- cbind("Variable" = names, vals) %>% arrange(desc(Overall)) %>% rename(Importance = Overall)
   rownames(out) <- 1:nrow(out)
   return(out)
@@ -1210,9 +1237,9 @@ We'll run the model and again find accuracy and variable importance.
 nn_notcollapsed_out <- run_neural_net(df = bt_omit, outcome = "style", 
                          predictor_vars = p_vars)
 
-round(nn_notcollapsed_out$nn_accuracy[1]*100 , digits = 2) %>% kable()
+round(nn_notcollapsed_out$nn_accuracy[1]*100 , digits = 2)
 
-nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable()
+nn_notcollapsed_out$most_important_vars %>% get_nn_importance() %>% kable() 
 ```
 
 So style is harder to predict than collapsed style, which makes sense. However, the relative importance of the variables here doesn't change.
@@ -1226,13 +1253,13 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat_sparse, outcome = "style_collapsed", 
                          predictor_vars = p_vars_add_glass)
 
-round(nn_collapsed_out_add_glass$nn_accuracy[1]*100, digits = 2) %>% kable()
+round(nn_collapsed_out_add_glass$nn_accuracy[1]*100, digits = 2)
 ```
 So indeed, glass does improve the accuracy of the model. 
 
 
 ```{r, echo=TRUE}
-nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable()
+nn_collapsed_out_add_glass$most_important_vars %>% get_nn_importance() %>% kable() 
 ```
 
 And, unsurprisingly, glass is a very good predictor of style. Nevertheless, we're far from perfect accuracy.
@@ -1311,7 +1338,7 @@ The model output provides us with a measure of which variables contributed most 
 ```{r, echo=TRUE}
 get_rf_importance <- function(rf_df) {
   importance_sorted <- importance(rf_df) %>% sort(., decreasing = TRUE)
-  importance_names <- names(importance_sorted)
+  importance_names <- names(importance_sorted) %>% map(dobtools::cap_it) %>% map(beer_caps) %>% as_vector()
   importance_vals <- importance(rf_df) %>% as.numeric()
   importance_df <- cbind(`Variable Name` = importance_names, "Importance" = importance_sorted) %>% as_tibble()
   return(importance_df)
