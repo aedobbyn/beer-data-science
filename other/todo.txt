@@ -13,5 +13,10 @@
   - are they predictive?
   
   
-  
 
+From Molly
+ It’d be fun if you could also look at individual beers (maybe with tooltips), or maybe even search for particular beers. You could then report how close a particular beer is to the center of its cluster (i.e. how much of an IPA a particular IPA is).
+ 
+ 
+From adplax18
+not sure if you have any consumption data, but I think it'd be interesting to see where various beers are consumed / produced and if those match up.  If so, did producers start producing more beers because of local preferences or did preferences change from availability
