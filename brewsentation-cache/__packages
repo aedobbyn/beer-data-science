@@ -1,0 +1,16 @@
+base
+knitr
+broom
+jsonlite
+ggplot2
+ggrepel
+dobtools
+tidyverse
+tibble
+tidyr
+readr
+purrr
+dplyr
+DBI
+RMySQL
+bindrcpp
