@@ -49,7 +49,17 @@ ggplot() +
 Step 1: GET Beer
 ========================================================
 
-```{r unnest_it}
+![get_beers](./img/get_beers.jpg)
+
+***
+
+![get_beers](./img/example_beer.jpg)
+
+
+Step 1: GET Beer
+========================================================
+
+```{r unnest_it, echo=FALSE}
 unnest_it <- function(df) {
   unnested <- df
   for(col in seq_along(df[["data"]])) {
@@ -127,7 +137,10 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
+Collapse
+========================================================
 
+![get_beers](./img/collapse_styles.jpg)
 
 
 Cluster

@@ -27,22 +27,17 @@ The beer landscape
 Step 1: GET Beer
 ========================================================
 
+![get_beers](./img/get_beers.jpg)
 
-```r
-unnest_it <- function(df) {
-  unnested <- df
-  for(col in seq_along(df[["data"]])) {
-    if(! is.null(ncol(df[["data"]][[col]]))) {
-      if(! is.null(df[["data"]][[col]][["name"]])) {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
-      } else {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
-      }
-    }
-  }
-  return(unnested)
-}
-```
+***
+
+![get_beers](./img/example_beer.jpg)
+
+
+Step 1: GET Beer
+========================================================
+
+
 
 
 ```r
@@ -108,7 +103,10 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
+Collapse
+========================================================
 
+![get_beers](./img/collapse_styles.jpg)
 
 
 Cluster
