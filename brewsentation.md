@@ -9,19 +9,29 @@ transition: zoom
 
 
 
+Where's the code at
+========================================================
+Code at: <https://github.com/aedobbyn/beer-data-science>
+
 
 Motivation
 ========================================================
 
-### Are beer styles just a social construct?
+![get_beers](./img/beer_taxonomy.png)
 
-Code at: <https://github.com/aedobbyn/beer-data-science>
+***
+
+![get_beers](./img/beer_network.jpg)
+
+#### Are beer styles just a social construct?
+
 
 
 The beer landscape
 ========================================================
 
 ![plot of chunk unnamed-chunk-1](brewsentation-figure/unnamed-chunk-1-1.png)
+
 
 
 Step 1: GET Beer
@@ -36,8 +46,6 @@ Step 1: GET Beer
 
 Step 1: GET Beer
 ========================================================
-
-
 
 
 ```r
@@ -67,6 +75,19 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 ```
 
+
+What have we got?
+========================================================
+
+<br> 
+
+* ABV: alcohol by volume
+* IBU: International Biterness Units (really)
+* SRM: a measure of color
+    
+***
+
+![plot of chunk unnamed-chunk-2](brewsentation-figure/unnamed-chunk-2-1.png)
 
 
 
@@ -109,8 +130,10 @@ Collapse
 ![get_beers](./img/collapse_styles.jpg)
 
 
-Cluster
+Clustering
 ========================================================
+
+* If styles truly define distinct pockets of beer, some of that should be represented in unsupervised clustering
 
 
 ```r
@@ -186,7 +209,7 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 Clusterfun with Shiny
 ========================================================
 
-
+* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
 
 
 ```r
@@ -214,5 +237,11 @@ Clusterfun with Shiny
     } else if ... etc., etc.
 ```
 
+
+
+Clusterfun with Shiny
+========================================================
+
+<https://amandadobbyn.shinyapps.io/clusterfun/>
 
 

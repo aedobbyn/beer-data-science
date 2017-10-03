@@ -22,13 +22,22 @@ source("./read_from_db.R")
 source("./analyze/key.R")
 ```
 
+Where's the code at
+========================================================
+Code at: <https://github.com/aedobbyn/beer-data-science>
+
 
 Motivation
 ========================================================
 
-### Are beer styles just a social construct?
+![get_beers](./img/beer_taxonomy.png)
 
-Code at: <https://github.com/aedobbyn/beer-data-science>
+***
+
+![get_beers](./img/beer_network.jpg)
+
+#### Are beer styles just a social construct?
+
 
 
 The beer landscape
@@ -46,6 +55,7 @@ ggplot() +
 ```
 
 
+
 Step 1: GET Beer
 ========================================================
 
@@ -58,22 +68,6 @@ Step 1: GET Beer
 
 Step 1: GET Beer
 ========================================================
-
-```{r unnest_it, echo=FALSE}
-unnest_it <- function(df) {
-  unnested <- df
-  for(col in seq_along(df[["data"]])) {
-    if(! is.null(ncol(df[["data"]][[col]]))) {
-      if(! is.null(df[["data"]][[col]][["name"]])) {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
-      } else {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
-      }
-    }
-  }
-  return(unnested)
-}
-```
 
 ```{r get_beer, eval=FALSE}
 base_url <- "http://api.brewerydb.com/v2"
@@ -103,6 +97,35 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 ```
 
+
+What have we got?
+========================================================
+
+<br> 
+
+* ABV: alcohol by volume
+* IBU: International Biterness Units (really)
+* SRM: a measure of color
+    
+***
+
+```{r, echo=FALSE, eval=TRUE}
+ggplot(data = beer_necessities) +
+  geom_line(aes(abv), alpha = 0.5, colour = "red", stat = "density") +
+  geom_line(aes(ibu), alpha = 0.5, colour = "blue", stat = "density") +
+  geom_line(aes(srm), alpha = 0.5, colour = "green", stat = "density") +
+  theme_minimal() +
+  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 3, 
+            colour = "red") +
+  geom_text(aes(label = "IBU", x = 21, y = 0.07), fontface = "italic", size = 3,
+            colour = "blue") +
+  geom_text(aes(label = "SRM", x = 70, y = 0.03), fontface = "italic", size = 3,
+            colour = "green") +
+  xlim(0, 125) +
+  ggtitle("Distribution of ABV, IBU, SRM") +
+  labs(x = "Measure", y = "Density")
+  
+```
 
 
 
@@ -143,8 +166,10 @@ Collapse
 ![get_beers](./img/collapse_styles.jpg)
 
 
-Cluster
+Clustering
 ========================================================
+
+* If styles truly define distinct pockets of beer, some of that should be represented in unsupervised clustering
 
 ```{r prep_clusters}
 prep_clusters <- function(df, preds, to_scale, resp) {
@@ -217,7 +242,7 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 Clusterfun with Shiny
 ========================================================
 
-
+* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
 
 ```{r, eval=FALSE}
   output$cluster_plot <- renderPlot({
@@ -244,5 +269,11 @@ Clusterfun with Shiny
     } else if ... etc., etc.
 ```
 
+
+
+Clusterfun with Shiny
+========================================================
+
+<https://amandadobbyn.shinyapps.io/clusterfun/>
 
 
