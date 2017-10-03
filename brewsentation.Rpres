@@ -17,6 +17,7 @@ library(ggrepel)
 # devtools::install_github("aedobbyn/dobtools")
 library(dobtools)
 library(tidyverse)
+library(forcats)
 
 source("./read_from_db.R")
 source("./analyze/key.R")
@@ -27,12 +28,16 @@ Where's the code at
 Code at: <https://github.com/aedobbyn/beer-data-science>
 
 
-Motivation
+The Order of Things, theoretically
 ========================================================
+
+<br>
 
 ![get_beers](./img/beer_taxonomy.png)
 
 ***
+
+<br>
 
 ![get_beers](./img/beer_network.jpg)
 
@@ -42,6 +47,7 @@ Motivation
 
 The beer landscape
 ========================================================
+Looks a bit messier than it should
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot() +   
@@ -117,10 +123,10 @@ ggplot(data = beer_necessities) +
   theme_minimal() +
   geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 3, 
             colour = "red") +
-  geom_text(aes(label = "IBU", x = 21, y = 0.07), fontface = "italic", size = 3,
-            colour = "blue") +
-  geom_text(aes(label = "SRM", x = 70, y = 0.03), fontface = "italic", size = 3,
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 3,
             colour = "green") +
+  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 3,
+            colour = "blue") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
   labs(x = "Measure", y = "Density")
@@ -164,6 +170,66 @@ Collapse
 ========================================================
 
 ![get_beers](./img/collapse_styles.jpg)
+
+
+Which styles reign supreme?
+========================================================
+
+```{r popular_styles, eval=TRUE}
+# Pare down to only cases where style is not NA
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
+
+# Arrange by style popularity
+style_popularity <- beer_dat_pared %>% 
+  group_by(style) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+# Add a column that z-scores popularity
+style_popularity <- bind_cols(style_popularity, 
+                               n_scaled = as.vector(scale(style_popularity$n)))
+
+# Find styles that are above a z-score of 0 (the mean)
+popular_styles <- style_popularity %>% 
+  filter(n_scaled > 0)
+
+# Pare dat down to only beers that fall into those styles, so styles that are above mean popularity
+popular_beer_dat <- beer_dat_pared %>% 
+  filter(
+    style %in% popular_styles$style
+  ) %>% 
+  droplevels() %>% 
+  as_tibble() 
+```
+
+* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
+
+```{r style_centers, eval=TRUE, echo=FALSE}
+style_centers <- popular_beer_dat %>% 
+  group_by(style_collapsed) %>% 
+  add_count() %>% 
+  summarise(
+    mean_abv = mean(abv, na.rm = TRUE) %>% round(., digits = 2),
+    mean_ibu = mean(ibu, na.rm = TRUE) %>% round(., digits = 2), 
+    mean_srm = mean(srm, na.rm = TRUE) %>% round(., digits = 2),
+    n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
+  ) %>% 
+  arrange(desc(n)) %>% 
+  drop_na() %>% 
+  droplevels()
+
+# Give some nicer names
+style_centers_rename <- style_centers %>% 
+  rename(
+    `Collapsed Style` = style_collapsed,
+    `Mean ABV` = mean_abv,
+    `Mean IBU` = mean_ibu,
+    `Mean SRM` = mean_srm,
+    `Numer of Beers` = n
+  )
+```
+
+
 
 
 Clustering
@@ -220,7 +286,7 @@ cluster_prep <- prep_clusters(df = beer_dat,
 ```
 
 
-```{r cluster_it}
+```{r cluster_it, eval=TRUE}
 cluster_it <- function(df_preds, n_centers) {
   set.seed(9)
   clustered_df_out <- kmeans(x = df_preds$preds, centers = n_centers, trace = FALSE)
@@ -232,7 +298,9 @@ cluster_it <- function(df_preds, n_centers) {
 
   return(clustered_df)
 }
+```
 
+```{r do_clustering}
 clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 ```
 
@@ -241,8 +309,6 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 
 Clusterfun with Shiny
 ========================================================
-
-* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
 
 ```{r, eval=FALSE}
   output$cluster_plot <- renderPlot({
@@ -276,4 +342,47 @@ Clusterfun with Shiny
 
 <https://amandadobbyn.shinyapps.io/clusterfun/>
 
+
+
+Narrowing In
+========================================================
+
+```{r, eval=TRUE, echo=FALSE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bd_certain_styles <- beer_necessities %>%    # using beer necessities here for simplicity instead of beer_dat
+  filter(
+    style_collapsed %in% styles_to_keep
+  ) %>% 
+  droplevels()
+
+cluster_on <- c("abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm")
+response_vars <- c("name", "style", "style_collapsed")
+
+bd_cluster_prep <- prep_clusters(df = bd_certain_styles,
+                   preds = cluster_on,
+                   to_scale = to_scale,
+                   resp = response_vars)
+
+certain_styles_clustered <- cluster_it(df_preds = bd_cluster_prep, n_centers = 5)
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(style_collapsed %in% styles_to_keep)
+```
+
+
+```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
+by_style_plot <- ggplot() +   
+  geom_point(data = certain_styles_clustered, 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4, solid=TRUE) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
 

@@ -14,12 +14,16 @@ Where's the code at
 Code at: <https://github.com/aedobbyn/beer-data-science>
 
 
-Motivation
+The Order of Things, theoretically
 ========================================================
+
+<br>
 
 ![get_beers](./img/beer_taxonomy.png)
 
 ***
+
+<br>
 
 ![get_beers](./img/beer_network.jpg)
 
@@ -29,6 +33,7 @@ Motivation
 
 The beer landscape
 ========================================================
+Looks a bit messier than it should
 
 ![plot of chunk unnamed-chunk-1](brewsentation-figure/unnamed-chunk-1-1.png)
 
@@ -130,6 +135,44 @@ Collapse
 ![get_beers](./img/collapse_styles.jpg)
 
 
+Which styles reign supreme?
+========================================================
+
+
+```r
+# Pare down to only cases where style is not NA
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
+
+# Arrange by style popularity
+style_popularity <- beer_dat_pared %>% 
+  group_by(style) %>% 
+  count() %>% 
+  arrange(desc(n))
+
+# Add a column that z-scores popularity
+style_popularity <- bind_cols(style_popularity, 
+                               n_scaled = as.vector(scale(style_popularity$n)))
+
+# Find styles that are above a z-score of 0 (the mean)
+popular_styles <- style_popularity %>% 
+  filter(n_scaled > 0)
+
+# Pare dat down to only beers that fall into those styles, so styles that are above mean popularity
+popular_beer_dat <- beer_dat_pared %>% 
+  filter(
+    style %in% popular_styles$style
+  ) %>% 
+  droplevels() %>% 
+  as_tibble() 
+```
+
+* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
+
+
+
+
+
+
 Clustering
 ========================================================
 
@@ -199,7 +242,10 @@ cluster_it <- function(df_preds, n_centers) {
 
   return(clustered_df)
 }
+```
 
+
+```r
 clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 ```
 
@@ -208,8 +254,6 @@ clustered_beer <- cluster_it(df_preds = cluster_prep, n_centers = 10)
 
 Clusterfun with Shiny
 ========================================================
-
-* Style "centers" I defined as the mean ABV, IBU, and SRM of each style
 
 
 ```r
@@ -244,4 +288,13 @@ Clusterfun with Shiny
 
 <https://amandadobbyn.shinyapps.io/clusterfun/>
 
+
+
+Narrowing In
+========================================================
+
+
+
+
+![plot of chunk cluster_certain_styles](brewsentation-figure/cluster_certain_styles-1.png)
 

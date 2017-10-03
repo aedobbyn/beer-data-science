@@ -669,7 +669,8 @@ beer_ingredients_join_all <-
 beer_ingredients_join_all <- beer_ingredients_join_all %>% 
   select(
     id, name, total_hops, total_malt, everything(), -description
-  )
+  ) %>% 
+  as_tibble()
 
 # Keep only beers that fall into a style_collapsed bucket
 # We're not filtering by levels in beer_necessities$style_collapsed because those levels contain more than what's in just the keywords of collapse_styles()
