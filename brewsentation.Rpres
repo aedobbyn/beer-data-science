@@ -18,6 +18,7 @@ library(ggrepel)
 library(dobtools)
 library(tidyverse)
 library(forcats)
+library(feather)
 
 source("./read_from_db.R")
 source("./analyze/key.R")
@@ -347,16 +348,21 @@ Clusterfun with Shiny
 Narrowing In
 ========================================================
 
+```{r read_in_beer_dat, echo=FALSE, eval=TRUE}
+beer_dat <- read_feather("./beer_dat.feather")
+```
+
+
 ```{r, eval=TRUE, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bd_certain_styles <- beer_necessities %>%    # using beer necessities here for simplicity instead of beer_dat
+bd_certain_styles <- beer_dat %>%
   filter(
     style_collapsed %in% styles_to_keep
   ) %>% 
   droplevels()
 
-cluster_on <- c("abv", "ibu", "srm")
-to_scale <- c("abv", "ibu", "srm")
+cluster_on <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 response_vars <- c("name", "style", "style_collapsed")
 
 bd_cluster_prep <- prep_clusters(df = bd_certain_styles,
