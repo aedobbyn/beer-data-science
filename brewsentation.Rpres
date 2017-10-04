@@ -4,6 +4,7 @@ author: Amanda Dobbyn
 date: 
 autosize: true
 transition: zoom
+<!-- output: ioslides_presentation -->
 
 ```{r setup, include=FALSE}
 opts_chunk$set(cache=TRUE, eval=FALSE)
@@ -19,6 +20,8 @@ library(dobtools)
 library(tidyverse)
 library(forcats)
 library(feather)
+library(nnet)
+library(caret)
 
 beer_necessities <- read_feather("./beer_necessities.feather")
 beer_dat <- read_feather("./beer_dat.feather")
@@ -465,14 +468,100 @@ Okay back on track!
 
 Prediction
 ========================================================
-Here's my reasoning: if beers are well-defined by their styles and we have the most important 
+Here's my reasoning: if beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+
+
+Prediction: Neural Net
+========================================================
+
+* Package: `nnet`
+* Outcome variable: `style` or `style_collapsed`
+
+**What we'll do**
+* Feed it a dataframe, an outcome variable, and a set of predictor variables
+* It will train it 80%, test on 20%
+    * From this, we can get a measure of accuracy
+    
+Neural Net
+========================================================
+
+```{r nn_func, warning=FALSE, echo=TRUE, eval=TRUE}
+run_neural_net <- function(df, outcome, predictor_vars) {
+  out <- list(outcome = outcome)
+  
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  if (outcome == "style_collapsed") {
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
+
+  cols_to_keep <- c("outcome", predictor_vars)
+  
+  df <- df %>%
+    select_(.dots = cols_to_keep) %>%
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
+
+  # Select 80% of the data for training
+  df_train <- sample_n(df, nrow(df)*(0.8))
+  
+  # The rest is for testing
+  df_test <- df %>%
+    filter(! (row %in% df_train$row)) %>%
+    select(-row)
+  
+  df_train <- df_train %>%
+    select(-row)
+  
+  # Build multinomail neural net
+  nn <- multinom(outcome ~ .,
+                 data = df_train, maxit=500, trace=TRUE)
+
+  # Which variables are the most important in the neural net?
+  most_important_vars <- varImp(nn)
+
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_accuracy <- postResample(df_test$outcome, nn_preds)
+
+  out <- list(out, nn = nn, 
+              most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
+              nn_accuracy = nn_accuracy)
+
+  return(out)
+}
+```
+
+
+Neural Net
+========================================================
+
+```{r nn_run, eval=TRUE, echo=TRUE}
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
+                         predictor_vars = p_vars)
+```
+
+Neural Net
+========================================================
+How'd we do? 
+
+```{r, eval=TRUE}
+nn_collapsed_out$nn_accuracy
+```
+
+Not awful given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
 
 
 Future Directions
 ========================================================
-In no particular order, some thoughts I've had plus suggestions from friends and kind strangers:
+In no particular order, some thoughts I've had plus suggestions from others:
 
-* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to get ratings and flavor profiles
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
         * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
@@ -481,6 +570,7 @@ In no particular order, some thoughts I've had plus suggestions from friends and
     * Tooltips on hover
 * Some funky model (neural net?) to generate beer names
     
+
 
 
 

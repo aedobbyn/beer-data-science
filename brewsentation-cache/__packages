@@ -16,3 +16,6 @@ RMySQL
 bindrcpp
 forcats
 feather
+nnet
+lattice
+caret
