@@ -20,9 +20,12 @@ library(tidyverse)
 library(forcats)
 library(feather)
 
-source("./read_from_db.R")
+beer_necessities <- read_feather("./beer_necessities.feather")
+beer_dat <- read_feather("./beer_dat.feather")
 source("./analyze/key.R")
 ```
+
+
 
 Where's the code at
 ========================================================
@@ -44,6 +47,20 @@ The Order of Things, theoretically
 
 #### Are beer styles just a social construct?
 
+
+Implications
+========================================================
+
+* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style.
+
+* It should also be easy to predict style from the other variables
+
+This all, assuming the features we have can account for most of the variance between styles
+
+
+<br> 
+
+**The stakes could not be higher**.
 
 
 The beer landscape
@@ -133,6 +150,11 @@ ggplot(data = beer_necessities) +
   labs(x = "Measure", y = "Density")
   
 ```
+
+
+Where did we put it?
+========================================================
+![local_db](./img/local_db.jpg)
 
 
 
@@ -385,4 +407,81 @@ by_style_plot <- ggplot() +
   theme_bw()
 by_style_plot
 ```
+
+
+And now for something completely different
+========================================================
+![now_for_something_completely_different](./img/now_for_something_completely_different.gif)
+
+...a quick dive into hops
+
+
+Hops
+========================================================
+
+![mad_hops](./img/mad_hops.jpg)
+
+
+Hops
+========================================================
+
+### No, not those hops!
+
+
+Hops
+========================================================
+
+![fresh_hops](./img/fresh_hops.jpg)
+
+
+
+Hops
+========================================================
+
+![fresh_hops](./img/fresh_hops.jpg)
+
+Our question: do more kinds of hops generally make a beer more bitter?
+
+(Note that this is different than the *amount* of hops poured into a beer)
+
+Hops
+========================================================
+
+```{r, eval=TRUE, echo=FALSE}
+ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
+  ggtitle("Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
+  theme_minimal()
+```
+
+
+Okay back on track!
+========================================================
+
+![onward](./img/onward.gif)
+
+
+Prediction
+========================================================
+Here's my reasoning: if beers are well-defined by their styles and we have the most important 
+
+
+Future Directions
+========================================================
+In no particular order, some thoughts I've had plus suggestions from friends and kind strangers:
+
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to get ratings and flavor profiles
+* Beer consumption: how is this trending over time, for each style?
+    * What drives the trend? Supply or demand?
+        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+* Shiny features:
+    * Beer search
+    * Tooltips on hover
+* Some funky model (neural net?) to generate beer names
+    
+
+
+
 

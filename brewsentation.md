@@ -9,6 +9,8 @@ transition: zoom
 
 
 
+
+
 Where's the code at
 ========================================================
 Code at: <https://github.com/aedobbyn/beer-data-science>
@@ -29,6 +31,20 @@ The Order of Things, theoretically
 
 #### Are beer styles just a social construct?
 
+
+Implications
+========================================================
+
+* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style.
+
+* It should also be easy to predict style from the other variables
+
+This all, assuming the features we have can account for most of the variance between styles
+
+
+<br> 
+
+**The stakes could not be higher**.
 
 
 The beer landscape
@@ -93,6 +109,11 @@ What have we got?
 ***
 
 ![plot of chunk unnamed-chunk-2](brewsentation-figure/unnamed-chunk-2-1.png)
+
+
+Where did we put it?
+========================================================
+![local_db](./img/local_db.jpg)
 
 
 
@@ -300,4 +321,74 @@ Narrowing In
 
 
 ![plot of chunk cluster_certain_styles](brewsentation-figure/cluster_certain_styles-1.png)
+
+
+And now for something completely different
+========================================================
+![now_for_something_completely_different](./img/now_for_something_completely_different.gif)
+
+...a quick dive into hops
+
+
+Hops
+========================================================
+
+![mad_hops](./img/mad_hops.jpg)
+
+
+Hops
+========================================================
+
+### No, not those hops!
+
+
+Hops
+========================================================
+
+![fresh_hops](./img/fresh_hops.jpg)
+
+
+
+Hops
+========================================================
+
+![fresh_hops](./img/fresh_hops.jpg)
+
+Our question: do more kinds of hops generally make a beer more bitter?
+
+(Note that this is different than the *amount* of hops poured into a beer)
+
+Hops
+========================================================
+
+![plot of chunk unnamed-chunk-5](brewsentation-figure/unnamed-chunk-5-1.png)
+
+
+Okay back on track!
+========================================================
+
+![onward](./img/onward.gif)
+
+
+Prediction
+========================================================
+Here's my reasoning: if beers are well-defined by their styles and we have the most important 
+
+
+Future Directions
+========================================================
+In no particular order, some thoughts I've had plus suggestions from friends and kind strangers:
+
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to get ratings and flavor profiles
+* Beer consumption: how is this trending over time, for each style?
+    * What drives the trend? Supply or demand?
+        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+* Shiny features:
+    * Beer search
+    * Tooltips on hover
+* Some funky model (neural net?) to generate beer names
+    
+
+
+
 
