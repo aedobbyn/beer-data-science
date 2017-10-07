@@ -29,6 +29,17 @@ beer_dat <- read_feather("./beer_dat.feather")
 source("./analyze/key.R")
 ```
 
+```{r beer_caps, echo=TRUE}
+beer_caps <- function(to_cap) {
+  if(grepl("abv|ibu|srm|id|Abv|Ibu|Srm|Id", to_cap)) {
+  to_cap <- to_cap %>% toupper()
+  } else {
+     to_cap <- to_cap              
+  }
+  return(to_cap)
+}
+```
+
 
 First things first
 ----
@@ -346,7 +357,8 @@ clustered_beer <- do_cluster(beer_necessities, to_include, to_scale)
 Clustering: Output
 ----
 
-```{r clustered_beer, eval=TRUE}
+```{r clustered_beer, eval=TRUE, echo=FALSE}
+clustered_beer_capped <- clustered_beer %>% dobtools::cap_df() %>% beer_caps()
 kable(clustered_beer[1:30, ])
 ```
 

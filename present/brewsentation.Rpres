@@ -58,6 +58,16 @@ source("./analyze/key.R")
 ```
 
 
+```{r beer_caps, echo=FALSE, eval=TRUE}
+beer_caps <- function(to_cap) {
+  if(grepl("abv|ibu|srm|id|Abv|Ibu|Srm|Id", to_cap)) {
+  to_cap <- to_cap %>% toupper()
+  } else {
+     to_cap <- to_cap              
+  }
+  return(to_cap)
+}
+```
 
 First things first
 ========================================================
@@ -189,9 +199,13 @@ ggplot(data = beer_necessities) +
 Where did we put it?
 ========================================================
 
-MySQL. 
-
 ![local_db](./img/local_db.jpg)
+
+***
+
+<br>
+
+MySQL. 
 
 * This allows us to
    * Easily update the data if anything changes
@@ -324,16 +338,24 @@ What's in a Predictor?
 * Only directly controlled by a brewer **before** a beer is brewed
     * Hops, malts
 
-
 ##### Outputs
 * Only measured **after** a beer been brewed
     * ABV, IBU, SRM
     
-`r emo::ji("+1")` predictor because 
-    
 ##### Style-Defined
 * Dependent entirely on style
-`r emo::ji("-1")` predictor because 
+
+
+
+What's in a Predictor?
+========================================================
+
+Style-Defined: `r emo::ji("-1")`   predictor  
+
+Outputs: `r emo::ji("+1")`  predictor  
+
+Inputs: `r emo::ji("shrug")`  predictor  
+
 
 
 Clustering: the function
@@ -374,13 +396,16 @@ to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
 to_scale <- c("abv", "ibu", "srm")
 
 clustered_beer <- do_cluster(beer_necessities, to_include, to_scale)
+
 ```
 
 Clustering: Output
 ========================================================
 
-```{r clustered_beer, eval=TRUE}
-kable(clustered_beer[1:30, ])
+```{r clustered_beer, eval=TRUE, echo=FALSE}
+clustered_beer_caps <- dobtools::cap_df(clustered_beer) %>% beer_caps()
+names(clustered_beer_caps) <- names(clustered_beer_caps) %>% map(beer_caps) %>% as_vector()
+kable(clustered_beer_caps[1:30, ])
 ```
 
 
