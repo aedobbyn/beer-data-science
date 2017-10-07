@@ -560,7 +560,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   spread_ingredients <- function(df) {
     df_spread <- df %>% 
       mutate(
-        row = 1:nrow(df)        # Add a unique idenfitier for each row which we'll need in order to spread; we'll drop this later
+        row = 1:nrow(df)    # Add a unique idenfitier for each row which we'll need in order to spread; we'll drop this later
       ) %>%                                 
       spread(
         key = ing_names,
