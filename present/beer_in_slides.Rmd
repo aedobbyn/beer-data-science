@@ -1,0 +1,683 @@
+---
+title: "BeerSlides"
+author: "Amanda Dobbyn"
+date: "October 2017"
+output: ioslides_presentation
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache=TRUE, eval=FALSE)
+knitr::opts_chunk$set(root.dir=normalizePath('../'))
+```
+
+```{r source_in, eval=TRUE, echo=FALSE, message=FALSE}
+library(knitr)
+library(broom)
+library(jsonlite)
+library(ggrepel)
+# devtools::install_github("aedobbyn/dobtools")
+library(dobtools)
+library(tidyverse)
+library(forcats)
+library(feather)
+library(nnet)
+library(caret)
+library(emo)
+
+beer_necessities <- read_feather("./beer_necessities.feather")
+beer_dat <- read_feather("./beer_dat.feather")
+source("./analyze/key.R")
+```
+
+
+First things first
+----
+Who am I?
+UChicago '15, go whatever our mascot is
+[Earlybird Software](http://earlybird.co/)
+
+Where's the code at?
+Code at: <https://github.com/aedobbyn/beer-data-science>
+
+
+
+The Order of Things, theoretically
+----
+<br>
+
+![get_beers](./img/beer_taxonomy.png)
+
+***
+
+<br>
+
+![get_beers](./img/beer_network.jpg)
+
+#### Are beer styles just a social construct?
+
+
+Implications
+----
+
+* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style.
+
+* It should also be easy to predict style from the other variables
+
+This all, assuming the features we have can account for most of the variance between styles
+
+
+<br>
+
+**The stakes could not be higher**.
+
+
+
+Step 1: GET Beer
+----
+
+From where?
+[BreweryDB](http://www.brewerydb.com/developers/docs).
+
+![get_beers](./img/get_beers.jpg)
+
+***
+
+![get_beers](./img/example_beer.jpg)
+
+
+Step 1: GET Beer
+----
+
+```{r get_beer, eval=FALSE}
+base_url <- "http://api.brewerydb.com/v2"
+key_preface <- "/?key="
+
+paginated_request <- function(ep, addition, trace_progress = TRUE) {
+  full_request <- NULL
+  first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                , "&p=1"))
+  number_of_pages <- ifelse(!(is.null(first_page$numberOfPages)),
+                            first_page$numberOfPages, 1)
+
+    for (page in 1:number_of_pages) {
+    this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                    , "&p=", page, addition),
+                             flatten = TRUE)
+    this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
+
+    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))} # if TRUE, print the page we're on
+
+    full_request <- bind_rows(full_request, this_req_unnested[["data"]])
+  }
+  return(full_request)
+}
+
+all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
+
+```
+
+
+What have we got?
+----
+<br>
+
+* `r format(nrow(beer_necessities), big.mark = ",")` distinct beers
+
+<br>
+
+* ABV: alcohol by volume
+* IBU: International Biterness Units (really)
+* SRM: [a measure of color](http://www.twobeerdudes.com/beer/srm)
+* Ingredients
+    * Hops, malts
+
+<br>
+**What have we *not* got?**
+Flavor profiles (fruity, hoppy, piney); ratings
+
+***
+
+```{r plot_distributions, echo=FALSE, eval=TRUE}
+ggplot(data = beer_necessities) +
+  geom_line(aes(abv), alpha = 0.5, colour = "red", stat = "density") +
+  geom_line(aes(ibu), alpha = 0.5, colour = "blue", stat = "density") +
+  geom_line(aes(srm), alpha = 0.5, colour = "green", stat = "density") +
+  theme_minimal() +
+  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 3,
+            colour = "red") +
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 3,
+            colour = "green") +
+  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 3,
+            colour = "blue") +
+  xlim(0, 125) +
+  ggtitle("Distribution of ABV, IBU, SRM") +
+  labs(x = "Measure", y = "Density")
+
+```
+
+
+Where did we put it?
+----
+
+MySQL.
+
+![local_db](./img/local_db.jpg)
+
+* This allows us to
+   * Easily update the data if anything changes
+   * Others easy access to the data if they want to build an app using it
+
+
+
+Step 2: Breathe sigh of relief, Collapse
+----
+
+```{r keywords}
+keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
+
+keyword_df <- as_tibble(list(`Main Styles` = keywords))
+```
+
+
+```{r collapse_styles}
+collapse_styles <- function(df, trace_progress = TRUE) {
+
+  df[["style_collapsed"]] <- vector(length = nrow(df))
+
+  for (beer in 1:nrow(df)) {
+    if (grepl(paste(keywords, collapse="|"), df$style[beer])) {
+      for (keyword in keywords) {
+        if(grepl(keyword, df$style[beer]) == TRUE) {
+          df$style_collapsed[beer] <- keyword
+        }
+      }
+    } else {
+      df$style_collapsed[beer] <- as.character(df$style[beer])
+    }
+    if(trace_progress == TRUE) {message(paste0("Collapsing this ", df$style[beer], " to: ", df$style_collapsed[beer]))}
+  }
+  return(df)
+}
+```
+
+Collapse
+----
+
+![get_beers](./img/collapse_styles.jpg)
+
+
+
+Popular Styles
+----
+
+* Pare down to only the popular kids
+   * Those with above the mean number of beers in their style (z-score > 0)
+* And then get a sense of where those styles fall in relation to one another
+    * Style "centers" = mean ABV, IBU, and SRM of each style
+
+```{r popular_styles, echo=FALSE, eval=TRUE}
+# Pare down to only cases where style is not NA
+beer_dat_pared <- beer_necessities[complete.cases(beer_necessities$style), ]
+
+# Arrange by style popularity
+style_popularity <- beer_dat_pared %>%
+  group_by(style) %>%
+  count() %>%
+  arrange(desc(n))
+
+# Add a column that z-scores popularity
+style_popularity <- bind_cols(style_popularity,
+                               n_scaled = as.vector(scale(style_popularity$n)))
+
+# Find styles that are above a z-score of 0 (the mean)
+popular_styles <- style_popularity %>%
+  filter(n_scaled > 0)
+
+# Pare dat down to only beers that fall into those styles, so styles that are above mean popularity
+popular_beer_dat <- beer_dat_pared %>%
+  filter(
+    style %in% popular_styles$style
+  ) %>%
+  droplevels() %>%
+  as_tibble()
+```
+
+
+```{r style_centers, eval=TRUE, echo=FALSE}
+style_centers <- popular_beer_dat %>%
+  group_by(style_collapsed) %>%
+  add_count() %>%
+  summarise(
+    mean_abv = mean(abv, na.rm = TRUE) %>% round(., digits = 2),
+    mean_ibu = mean(ibu, na.rm = TRUE) %>% round(., digits = 2),
+    mean_srm = mean(srm, na.rm = TRUE) %>% round(., digits = 2),
+    n = median(n, na.rm = TRUE)          # Median here only for summarise. Should be just the same as n
+  ) %>%
+  arrange(desc(n)) %>%
+  drop_na() %>%
+  droplevels()
+
+# Give some nicer names
+style_centers_rename <- style_centers %>%
+  rename(
+    `Collapsed Style` = style_collapsed,
+    `Mean ABV` = mean_abv,
+    `Mean IBU` = mean_ibu,
+    `Mean SRM` = mean_srm,
+    `Numer of Beers` = n
+  )
+```
+
+
+Popular Styles
+----
+
+```{r, echo=FALSE, eval=TRUE}
+kable(style_centers)
+```
+
+
+
+
+Clustering
+----
+
+* If styles truly define distinct pockets of beer, some of that should be represented in unsupervised clustering
+
+
+What's in a Predictor?
+----
+
+##### Inputs
+* Only directly controlled by a brewer **before** a beer is brewed
+    * Hops, malts
+
+
+##### Outputs
+* Only measured **after** a beer been brewed
+    * ABV, IBU, SRM
+
+`r emo::ji("+1")` predictor because
+
+##### Style-Defined
+* Dependent entirely on style
+`r emo::ji("-1")` predictor because
+
+
+Clustering: the function
+----
+
+```{r do_cluster_func, eval=FALSE}
+set.seed(9)
+
+do_cluster <- function (df, vars, to_scale, n_centers = 5) {
+  df_for_clustering <- df %>% select(!!vars) %>% na.omit()
+
+  # Scale the ones to be scaled and append _scaled to their names
+  df_vars_scale <- df_for_clustering %>% select(!!to_scale) %>%
+    scale() %>% as_tibble()
+  names(df_vars_scale) <- names(df_vars_scale) %>% stringr::str_c("_scaled")
+
+  # Do the clustering on the scaled data
+  clusters_out <- kmeans(x = df_vars_scale, centers = n_centers, trace = FALSE)
+
+  # Combine cluster assignment, scaled data, and unscaled rest of data
+  clustered_df <- bind_cols(
+    cluster_assignment = factor(clusters_out$cluster),   # Cluster assignment
+    df_vars_scale,
+    df_for_clustering
+  )
+
+  return(clustered_df)
+}
+```
+
+
+Clustering: run it
+----
+
+```{r run_do_cluster, eval=TRUE}
+to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
+to_scale <- c("abv", "ibu", "srm")
+
+clustered_beer <- do_cluster(beer_necessities, to_include, to_scale)
+```
+
+Clustering: Output
+----
+
+```{r clustered_beer, eval=TRUE}
+kable(clustered_beer[1:30, ])
+```
+
+
+
+
+Clusterfun with Shiny
+----
+
+```{r, eval=FALSE}
+  output$cluster_plot <- renderPlot({
+
+    # If our checkbox is checked saying we do want style centers, show them. Else, don't.
+    if (input$show_centers == TRUE & input$show_all == FALSE) {
+
+      this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
+
+      ggplot() +
+        geom_point(data = this_style_data(),
+                   aes(x = abv, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+        geom_point(data = this_style_center(),
+                   aes(mean_abv, mean_ibu), colour = "black") +
+        geom_text_repel(data = this_style_center(),
+                        aes(mean_abv, mean_ibu, label = input$style_collapsed),
+                        box.padding = unit(0.45, "lines"),
+                        family = "Calibri") +
+        ggtitle("k-Means Clustered Beer") +
+        labs(x = "ABV", y = "IBU") +
+        labs(colour = "Cluster Assignment") +
+        theme_minimal() +
+        theme(legend.position="none")
+    } else if  # ....... etc., etc.
+```
+
+
+
+Clusterfun with Shiny
+----
+
+<https://amandadobbyn.shinyapps.io/clusterfun/>
+
+
+
+Narrowing In
+----
+
+```{r read_in_beer_dat, echo=FALSE, eval=TRUE}
+beer_dat <- read_feather("./beer_dat.feather")
+```
+
+
+```{r, eval=TRUE, echo=FALSE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bd_certain_styles <- beer_dat %>%
+  filter(
+    style_collapsed %in% styles_to_keep
+  ) %>%
+  droplevels()
+
+include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+
+certain_styles_clustered <- do_cluster(bd_certain_styles, include, to_scale)
+
+style_centers_certain_styles <- style_centers %>%
+  filter(style_collapsed %in% styles_to_keep)
+```
+
+
+```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
+by_style_plot <- ggplot() +
+  geom_point(data = certain_styles_clustered %>% trim_outliers(cutoff = 3),
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
+
+
+And now for something completely different
+----
+![now_for_something_completely_different](./img/now_for_something_completely_different.gif)
+
+...a quick dive into hops
+
+
+Hops
+----
+
+![mad_hops](./img/mad_hops.jpg)
+
+
+Hops
+----
+
+<br>
+
+### No, not those hops!
+
+
+Hops
+----
+
+![fresh_hops](./img/fresh_hops.jpg)
+
+Hops: it's what makes it bitter and flavorful.
+
+Our question: do more kinds of hops generally make a beer more bitter?
+
+(Note that this is different than the *amount* of hops poured into a beer)
+
+Hops
+----
+
+```{r, eval=TRUE, echo=FALSE}
+ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") +
+  ggtitle("Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
+  theme_minimal()
+```
+
+
+How do hops effect ABV and IBU?
+----
+Let's wrangle.
+
+```{r, echo=TRUE, eval=TRUE}
+# Gather up all the hops columns into one called `hop_name`
+beer_necessities_hops_gathered <- beer_necessities %>%
+  gather(
+    hop_key, hop_name, hops_name_1:hops_name_13
+  ) %>% as_tibble()
+
+# Filter to just those beers that have at least one hop
+beer_necessities_w_hops <- beer_necessities_hops_gathered %>%
+  filter(!is.na(hop_name)) %>%
+  filter(!hop_name == "")
+
+beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
+
+# For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
+hops_beer_stats <- beer_necessities_w_hops %>%
+  ungroup() %>%
+  group_by(hop_name) %>%
+  summarise(
+    mean_ibu = mean(ibu, na.rm = TRUE),
+    mean_abv = mean(abv, na.rm = TRUE),
+    n = n()
+  ) %>%
+  arrange(desc(n))
+
+# Pare to hops that are used in at least 50 beers
+pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ]
+
+pop_hops_display <- pop_hops_beer_stats %>%
+    rename(
+    `Hop Name` = hop_name,
+    `Mean IBU` = mean_ibu,
+    `Mean ABV` = mean_abv,
+    `Number Beers Containing this Hop` = n
+  )
+
+kable(pop_hops_display)
+
+# Keep just beers that contain these most popular hops
+beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
+  filter(hop_name %in% pop_hops_beer_stats$hop_name) %>%
+  droplevels()
+```
+
+How do hops effect ABV and IBU?
+----
+
+```{r abv_ibu_hopsize, echo=FALSE, eval=TRUE}
+ggplot(data = pop_hops_beer_stats) +
+  geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
+  ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
+  labs(x = "Mean ABV per Hop Type", y = "Mean IBU per Hop Type", colour = "Hop Name",
+       size = "Number of Beers") +
+  theme_minimal()
+```
+
+
+Okay back on track!
+----
+
+![onward](./img/onward.gif)
+
+
+Prediction
+----
+Here's my reasoning: if beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+
+
+Prediction: Neural Net
+----
+
+* Package: `nnet`
+* Outcome variable: `style` or `style_collapsed`
+
+**What we'll do**
+* Feed it a dataframe, an outcome variable, and a set of predictor variables
+* It will train it 80%, test on 20%
+    * From this, we can get a measure of accuracy
+
+Neural Net
+----
+
+```{r nn_func, warning=FALSE, echo=TRUE, eval=TRUE}
+run_neural_net <- function(df, outcome, predictor_vars) {
+  out <- list(outcome = outcome)
+
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  if (outcome == "style_collapsed") {
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
+
+  cols_to_keep <- c("outcome", predictor_vars)
+
+  df <- df %>%
+    select_(.dots = cols_to_keep) %>%
+    mutate(row = 1:nrow(df)) %>%
+    droplevels()
+
+  # Select 80% of the data for training
+  df_train <- sample_n(df, nrow(df)*(0.8))
+
+  # The rest is for testing
+  df_test <- df %>%
+    filter(! (row %in% df_train$row)) %>%
+    select(-row)
+
+  df_train <- df_train %>%
+    select(-row)
+
+  # Build multinomail neural net
+  nn <- multinom(outcome ~ .,
+                 data = df_train, maxit=500, trace=TRUE)
+
+  # Which variables are the most important in the neural net?
+  most_important_vars <- varImp(nn)
+
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_accuracy <- postResample(df_test$outcome, nn_preds)
+
+  out <- list(out, nn = nn,
+              most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
+              nn_accuracy = nn_accuracy)
+
+  return(out)
+}
+```
+
+
+Neural Net
+----
+
+```{r nn_run, eval=TRUE, echo=TRUE}
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed",
+                         predictor_vars = p_vars)
+```
+
+Neural Net
+----
+How'd we do?
+
+```{r, eval=TRUE}
+nn_collapsed_out$nn_accuracy
+```
+
+Not awful given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
+
+
+So what's the answer?
+----
+
+The beer landscape looks a bit messier than it should
+
+```{r, echo=FALSE, eval=TRUE}
+ggplot() +
+  geom_density2d(data = beer_necessities %>% filter(style_collapsed %in% keywords) %>%
+               filter(abv < 20 & abv > 3 & ibu < 200),
+             aes(x = abv, y = ibu, colour = style_collapsed), alpha = 0.5) +
+  ggtitle("Beer Styles, ABV vs. IBU") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Collapsed Style") +
+  theme_minimal()
+```
+
+
+
+
+Future Directions
+----
+In no particular order, some thoughts I've had plus suggestions from others:
+
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
+* Beer consumption: how is this trending over time, for each style?
+    * What drives the trend? Supply or demand?
+        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+* Shiny features:
+    * Beer search
+    * Tooltips on hover
+* Hierarchical clustering; what style is the mother of all styles?
+* Some funky model (neural net?) to generate beer names
+
+
+Cheers, all
+----
+
+![cheers](./img/cheers.jpg)
+
+
+
+
+
+
