@@ -60,7 +60,30 @@ source("./analyze/key.R")
 
 ```{r beer_caps, echo=FALSE, eval=TRUE}
 beer_caps <- function(to_cap) {
-  if(grepl("abv|ibu|srm|id|Abv|Ibu|Srm|Id", to_cap)) {
+  uncapped <- c("abv", "ibu", "srm", "id", 
+                "Abv", "Ibu", "Srm", "Id")
+  to_find <- "abv|ibu|srm|id|Abv|Ibu|Srm|Id"
+  
+  
+  if(str_detect(to_cap, uncapped)) {
+    this_uncapped <- uncapped[which(str_detect(to_cap, uncapped))]
+    
+    split_to_cap <- str_split(to_cap, " ") %>% as_vector()
+    
+    # to_cap_ind <- which(split_to_cap == this_uncapped)
+    to_cap_ind_capped <- split_to_cap[to_cap_ind] %>% toupper()
+    
+    # no_need_to_cap <- split_to_cap[-to_cap_ind]
+    
+    split_to_cap[to_cap_ind] <- split_to_cap[to_cap_ind] %>% toupper()
+    
+    rejoined <- str_c(split_to_cap)
+    
+    # split_to_cap <- c(no_need_to_cap, to_cap_ind_capped)
+    
+    # post <- split_to_cap[split_to_cap[to_cap_ind] %>% toupper()]
+    
+    pre_capped <- stringr::str_split(to_cap, uncapped)
   to_cap <- to_cap %>% toupper()
   } else {
      to_cap <- to_cap              
