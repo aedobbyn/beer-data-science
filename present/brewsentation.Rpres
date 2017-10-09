@@ -5,6 +5,30 @@ date:
 autosize: true
 
 <style>
+  .title-slide {
+     background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+   }
+  
+
+  .cheers {
+      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+    
+  .section .reveal .state-background {
+      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+  }
 
   td{
     <!-- font-family: Arial;  -->
@@ -164,6 +188,8 @@ Step 1: GET Beer
 ========================================================
 class: small-code
 
+
+
 ```{r get_beer, eval=FALSE}
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
@@ -195,6 +221,10 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 What have we got?
 ========================================================
+
+<div class="footer" style="font-size:80%; margin-bottom:0%">
+What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and ratings.</div>
+
 <br> 
 * `r format(nrow(beer_necessities), big.mark = ",")` distinct beers
 * Info about the beer:
@@ -210,14 +240,14 @@ What have we got?
 ggplot(data = beer_necessities) +
   geom_line(aes(abv), alpha = 0.5, colour = "#D8B365", stat = "density") +
   geom_line(aes(ibu), alpha = 0.5, colour = "#F5F5F5", stat = "density") +
-  geom_line(aes(srm), alpha = 0.5, colour = "#5AB4AC", stat = "density") +
+  geom_line(aes(srm), alpha = 0.5, colour = "brown", stat = "density") +
   theme_minimal() +
   geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 3, 
             colour = "#D8B365") +
-  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 3,
-            colour = "#F5F5F5") +
   geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 3,
-            colour = "#5AB4AC") +
+            colour = "#F5F5F5") +
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 3,
+            colour = "brown") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
   labs(x = "Measure", y = "Density")
@@ -225,10 +255,6 @@ ggplot(data = beer_necessities) +
 ```
 
 
-What have we **not** got?
-========================================================
-* Flavor profiles (fruity, hoppy, piney)
-* Ratings
 
 
 Where did we put it?
@@ -236,7 +262,8 @@ Where did we put it?
 
 <!-- ![local_db](./img/local_db.jpg) -->
 
-<div class="leftcenter" style="height: 70%; width: "70%">
+<div class="leftcenter" style="height: 66%; width: "40%;
+margin-top:10%">
 <img src="./img/local_db.jpg"></img>
 </div>
 
@@ -256,7 +283,7 @@ Step 2: Breathe sigh of relief, Collapse
 ========================================================
 class: small-code
 
-```{r keywords}
+```{r keywords, eval=TRUE}
 keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
 
 keyword_df <- as_tibble(list(`Main Styles` = keywords))
@@ -284,7 +311,7 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
-Collapse
+Collapsing in action
 ========================================================
 
 ![get_beers](./img/collapse_styles.jpg)
@@ -685,7 +712,9 @@ Okay back on track!
 
 Prediction
 ========================================================
-Here's my reasoning: if beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+
+I used a random forest and a multinomial neural network. We'll go through the neural net.
 
 
 Prediction: Neural Net
@@ -778,8 +807,17 @@ Not awful given we've got `r length(levels(beer_dat$style_collapsed))` collapsed
 
 So what's the answer?
 ========================================================
+*Are beer styles a useful construct to use as a proxy for natural clusters in beer?*
 
-The beer landscape looks a bit messier than it should
+I'd give it a fuzzy yes.
+
+Fuzzy because:
+* We couldn't do better than ~40% accuracy
+
+Unknowns:
+* Was our style collapsing scheme successful in putting beers in the "right" buckets?
+* Would taste-related information have been a useful variable?
+
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot() +   
@@ -813,7 +851,10 @@ In no particular order, some thoughts I've had plus suggestions from others:
 Cheers, all
 ========================================================
 
-![cheers](./img/cheers.jpg)
+<!-- ![cheers](./img/cheers.jpg) -->
+
+<div><img src = "./img/cheers.jpg" 
+style = "margin-left:0%; margin-bottom:10%; width:100%; height:100%"></div>
 
 
 

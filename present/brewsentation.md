@@ -5,6 +5,30 @@ date:
 autosize: true
 
 <style>
+  .title-slide {
+     background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+   }
+  
+
+  .cheers {
+      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+    }
+    
+  .section .reveal .state-background {
+      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+  }
 
   td{
     <!-- font-family: Arial;  -->
@@ -138,6 +162,8 @@ Step 1: GET Beer
 class: small-code
 
 
+
+
 ```r
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
@@ -168,6 +194,10 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 
 What have we got?
 ========================================================
+
+<div class="footer" style="font-size:80%; margin-bottom:0%">
+What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and ratings.</div>
+
 <br> 
 * 63,495 distinct beers
 * Info about the beer:
@@ -182,10 +212,6 @@ What have we got?
 ![plot of chunk unnamed-chunk-1](brewsentation-figure/unnamed-chunk-1-1.png)
 
 
-What have we **not** got?
-========================================================
-* Flavor profiles (fruity, hoppy, piney)
-* Ratings
 
 
 Where did we put it?
@@ -193,7 +219,8 @@ Where did we put it?
 
 <!-- ![local_db](./img/local_db.jpg) -->
 
-<div class="leftcenter" style="height: 70%; width: "70%">
+<div class="leftcenter" style="height: 66%; width: "40%;
+margin-top:10%">
 <img src="./img/local_db.jpg"></img>
 </div>
 
@@ -243,7 +270,7 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
-Collapse
+Collapsing in action
 ========================================================
 
 ![get_beers](./img/collapse_styles.jpg)
@@ -826,7 +853,9 @@ Okay back on track!
 
 Prediction
 ========================================================
-Here's my reasoning: if beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+
+I used a random forest and a multinomial neural network. We'll go through the neural net.
 
 
 Prediction: Neural Net
@@ -954,13 +983,48 @@ Not awful given we've got 30 collapsed styles; chance would be 3.3%.
 
 So what's the answer?
 ========================================================
+*Are beer styles a useful construct to use as a proxy for natural clusters in beer?*
 
-The beer landscape looks a bit messier than it should
+I'd give it a fuzzy yes.
+
+Fuzzy because:
+* We couldn't do better than ~40% accuracy
+
+Unknowns:
+* Was our style collapsing scheme successful in putting beers in the "right" buckets?
+* Would taste-related information have been a useful variable?
+
+
+![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
 
 
 
 
-```
-Error in filter_impl(.data, quo) : 
-  Evaluation error: object 'keywords' not found.
-```
+Future Directions
+========================================================
+In no particular order, some thoughts I've had plus suggestions from others:
+
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
+* Beer consumption: how is this trending over time, for each style?
+    * What drives the trend? Supply or demand?
+        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+* Shiny features:
+    * Beer search
+    * Tooltips on hover
+* Hierarchical clustering; what style is the mother of all styles?
+* Some funky model (neural net?) to generate beer names
+
+
+Cheers, all
+========================================================
+
+<!-- ![cheers](./img/cheers.jpg) -->
+
+<div><img src = "./img/cheers.jpg" 
+style = "margin-left:0%; margin-bottom:10%; width:100%; height:100%"></div>
+
+
+
+
+
+
