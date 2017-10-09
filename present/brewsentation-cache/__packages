@@ -11,13 +11,10 @@ tidyr
 readr
 purrr
 dplyr
-DBI
-RMySQL
-bindrcpp
 forcats
 feather
 nnet
 lattice
 caret
-fcuk
 emo
+bindrcpp

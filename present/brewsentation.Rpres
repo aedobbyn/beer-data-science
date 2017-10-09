@@ -5,6 +5,7 @@ date:
 autosize: true
 
 <style>
+
   td{
     <!-- font-family: Arial;  -->
     font-size: 4pt;
@@ -28,6 +29,28 @@ autosize: true
   .small-code pre code {
     font-size: 1em;
   }
+  
+  .footer {
+    color: black; 
+    position: fixed; top: 90%;
+    margin: top: 20%;
+    text-align:center; width:100%;
+}
+
+  .midcenter {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      background-color:transparent;
+  }
+  
+  .leftcenter {
+      position: fixed;
+      top: 15%;
+      left: 5%;
+      right: 1%; 
+      background-color:transparent;
+  }
 </style>
 
 ```{r setup, include=FALSE}
@@ -43,7 +66,7 @@ knitr::opts_knit$set(root.dir=normalizePath('../'))
 library(broom)
 library(jsonlite)
 library(ggrepel)
-# devtools::install_github("aedobbyn/dobtools")
+devtools::install_github("aedobbyn/dobtools")
 library(dobtools)
 library(tidyverse)
 library(forcats)
@@ -59,73 +82,61 @@ source("./analyze/key.R")
 
 
 ```{r beer_caps, echo=FALSE, eval=TRUE}
-beer_caps <- function(to_cap) {
-  uncapped <- c("abv", "ibu", "srm", "id", 
+# For cap_a_word_partial()
+words_to_cap <- c("abv", "ibu", "srm", "id", 
                 "Abv", "Ibu", "Srm", "Id")
-  to_find <- "abv|ibu|srm|id|Abv|Ibu|Srm|Id"
-  
-  
-  if(str_detect(to_cap, uncapped)) {
-    this_uncapped <- uncapped[which(str_detect(to_cap, uncapped))]
-    
-    split_to_cap <- str_split(to_cap, " ") %>% as_vector()
-    
-    # to_cap_ind <- which(split_to_cap == this_uncapped)
-    to_cap_ind_capped <- split_to_cap[to_cap_ind] %>% toupper()
-    
-    # no_need_to_cap <- split_to_cap[-to_cap_ind]
-    
-    split_to_cap[to_cap_ind] <- split_to_cap[to_cap_ind] %>% toupper()
-    
-    rejoined <- str_c(split_to_cap)
-    
-    # split_to_cap <- c(no_need_to_cap, to_cap_ind_capped)
-    
-    # post <- split_to_cap[split_to_cap[to_cap_ind] %>% toupper()]
-    
-    pre_capped <- stringr::str_split(to_cap, uncapped)
-  to_cap <- to_cap %>% toupper()
-  } else {
-     to_cap <- to_cap              
-  }
-  return(to_cap)
-}
 ```
 
 First things first
 ========================================================
 Who am I?
-UChicago '15, go whatever our mascot is
-[Earlybird Software](http://earlybird.co/)
+- UChicago '15, go Maroons
+- Met Angela when she joined this bunch of goons:
+
+<div class="midcenter" style="height: 70%; width: "70%">
+<img src="./img/supersnatch.jpg"></img>
+</div>
+
+<!-- ![uchi_ultimate](./img/supersnatch.jpg) -->
+
+- Now at [Earlybird Software](http://earlybird.co/)
+
+<br>
 
 Where's the code at?
 Code at: <https://github.com/aedobbyn/beer-data-science>
 
 
+How did this come about?
+========================================================
+- Beer = water + malt + hops + yeast + sometimes other stuff like fruit
+- We categorize it into different styles based on 
+  - Type and ratio of ingredients
+  - How the beer is made (e.g., how long and at what temperature it's brewed)
+  - Squishy regional differences 
+  
+BUT
+- *How well do styles actually demarcate the beer landscape?*
+  - Is there actually more inter-style variation than intra-style variation?
+  - Is there a better way to categorize beers into groups?
+
+In other words, we're asking, are beer styles just a social construct?
+
+
 The Order of Things, theoretically
 ========================================================
 
-<br>
-
-![get_beers](./img/beer_taxonomy.png)
-
-***
-
-<br>
-
-![get_beers](./img/beer_network.jpg)
-
-#### Are beer styles just a social construct?
+![get_beers](./img/magnificent-chart-of-beer.jpg)
 
 
 Implications
 ========================================================
+This all, assuming the variables we have (more on those in a sec) can account for most of the variance between styles...
 
-* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style.
+* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style
 
 * It should also be easy to predict style from the other variables
 
-This all, assuming the features we have can account for most of the variance between styles
 
 
 <br> 
@@ -135,7 +146,9 @@ This all, assuming the features we have can account for most of the variance bet
 
 
 Step 1: GET Beer
+# The age-old dilemma ----
 ========================================================
+
 
 From where?
 [BreweryDB](http://www.brewerydb.com/developers/docs).
@@ -183,35 +196,28 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 What have we got?
 ========================================================
 <br> 
-
 * `r format(nrow(beer_necessities), big.mark = ",")` distinct beers
-
-<br> 
-
-* ABV: alcohol by volume
-* IBU: International Biterness Units (really)
-* SRM: [a measure of color](http://www.twobeerdudes.com/beer/srm)
-* Ingredients
-    * Hops, malts
-
-<br> 
-**What have we *not* got?**
-Flavor profiles (fruity, hoppy, piney); ratings
-    
+* Info about the beer:
+  * ABV: alcohol by volume
+  * IBU: International Biterness Units (really)
+  * SRM: [a measure of color](http://www.twobeerdudes.com/beer/srm)
+  * Ingredients
+      * Hops, malts
+      
 ***
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot(data = beer_necessities) +
-  geom_line(aes(abv), alpha = 0.5, colour = "red", stat = "density") +
-  geom_line(aes(ibu), alpha = 0.5, colour = "blue", stat = "density") +
-  geom_line(aes(srm), alpha = 0.5, colour = "green", stat = "density") +
+  geom_line(aes(abv), alpha = 0.5, colour = "#D8B365", stat = "density") +
+  geom_line(aes(ibu), alpha = 0.5, colour = "#F5F5F5", stat = "density") +
+  geom_line(aes(srm), alpha = 0.5, colour = "#5AB4AC", stat = "density") +
   theme_minimal() +
   geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 3, 
-            colour = "red") +
+            colour = "#D8B365") +
   geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 3,
-            colour = "green") +
+            colour = "#F5F5F5") +
   geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 3,
-            colour = "blue") +
+            colour = "#5AB4AC") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
   labs(x = "Measure", y = "Density")
@@ -219,10 +225,20 @@ ggplot(data = beer_necessities) +
 ```
 
 
+What have we **not** got?
+========================================================
+* Flavor profiles (fruity, hoppy, piney)
+* Ratings
+
+
 Where did we put it?
 ========================================================
 
-![local_db](./img/local_db.jpg)
+<!-- ![local_db](./img/local_db.jpg) -->
+
+<div class="leftcenter" style="height: 70%; width: "70%">
+<img src="./img/local_db.jpg"></img>
+</div>
 
 ***
 
@@ -419,19 +435,32 @@ to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
 to_scale <- c("abv", "ibu", "srm")
 
 clustered_beer <- do_cluster(beer_necessities, to_include, to_scale)
-
 ```
+
 
 Clustering: Output
 ========================================================
 
-```{r clustered_beer, eval=TRUE, echo=FALSE}
-clustered_beer_caps <- dobtools::cap_df(clustered_beer) %>% beer_caps()
-names(clustered_beer_caps) <- names(clustered_beer_caps) %>% map(beer_caps) %>% as_vector()
+```{r clustered_beer, eval=TRUE, echo=FALSE, dependson = "source_in"}
+clustered_beer_caps <- clustered_beer
+names(clustered_beer_caps) <- names(clustered_beer) %>% map(dobtools::cap_a_word_partial, words_to_cap) %>% map(cap_it) %>% as_vector()
 kable(clustered_beer_caps[1:30, ])
 ```
 
 
+
+<!-- Clusterfun with Shiny Embed -->
+<!-- ======================================================== -->
+<!-- ```{r, echo = FALSE, eval=TRUE} -->
+<!-- shinyAppDir( -->
+<!--   system.file("/Users/amanda/Desktop/Projects/beer_data_science/present/clusterfun", package="shiny"), -->
+<!--   options=list( -->
+<!--     width="100%", height="100%" -->
+<!--   ) -->
+<!-- ) -->
+
+
+<!-- ``` -->
 
 
 Clusterfun with Shiny
@@ -475,10 +504,11 @@ Clusterfun with Shiny
 Narrowing In
 ========================================================
 
-```{r read_in_beer_dat, echo=FALSE, eval=TRUE}
-beer_dat <- read_feather("./beer_dat.feather")
-```
+<div class="footer" style="font-size:80%;">
+Yep, not bad.</div>
 
+<br> 
+- If we focus in on 5 distinct styles and cluster them into 5 clusters, will they each be siphoned off into their own cluster?
 
 ```{r, eval=TRUE, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
@@ -487,7 +517,16 @@ bd_certain_styles <- beer_dat %>%
     style_collapsed %in% styles_to_keep
   ) %>% 
   droplevels()
+```
+    
+***
 
+```{r read_in_beer_dat, echo=FALSE, eval=TRUE}
+beer_dat <- read_feather("./beer_dat.feather")
+```
+
+
+```{r, eval=TRUE, echo=FALSE}
 include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm", "total_hops", "total_malt")
 to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 
@@ -513,8 +552,6 @@ by_style_plot <- ggplot() +
 by_style_plot
 ```
 
-If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
-
 
 And now for something completely different
 ========================================================
@@ -526,7 +563,11 @@ And now for something completely different
 Hops
 ========================================================
 
-![mad_hops](./img/mad_hops.jpg)
+<!-- ![mad_hops](./img/mad_hops.jpg) -->
+
+<div class="midcenter" style="margin-left:-300px; margin-top:-300px;">
+<img src="./img/mad_hops.jpg"></img>
+</div>
 
 
 Hops
@@ -544,9 +585,8 @@ Hops
 
 Hops: it's what makes it bitter and flavorful.
 
-Our question: do more kinds of hops generally make a beer more bitter?
-
-(Note that this is different than the *amount* of hops poured into a beer)
+Our question: do more *kinds* of hops generally make a beer more bitter?
+(Note that this is different than the *amount* of hops poured into a beer.)
 
 Hops
 ========================================================
@@ -633,6 +673,8 @@ ggplot(data = pop_hops_beer_stats) +
        size = "Number of Beers") +
   theme_minimal()
 ```
+
+If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
 
 
 Okay back on track!
