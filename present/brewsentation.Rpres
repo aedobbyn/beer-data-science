@@ -534,9 +534,7 @@ sidebarLayout(
       h4("Control Panel"),
 
       checkboxInput("show_all", "Show all styles", TRUE),      
-      
       checkboxInput("show_centers", "Show style centers", FALSE),
-      
       numericInput("num_clusters", "Number of Clusters:", starting_n_clusters),
       
       checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
@@ -557,7 +555,6 @@ sidebarLayout(
         condition = "input.show_all == false",
         selectInput("style_collapsed", "Collapsed Style:",
                     style_names)
-        
         )
     ),
 ```
@@ -665,7 +662,7 @@ And now for something completely different
 
 Hops
 ========================================================
-incremental: true
+incremental:true
 
 <!-- ![mad_hops](./img/mad_hops.jpg) -->
 
@@ -673,17 +670,21 @@ incremental: true
 <img src="./img/mad_hops.jpg"></img>
 </div>
 
-No, not those hops!
-
 
 
 Hops
 ========================================================
 incremental:true
 
+No, not those hops!
+
 ![fresh_hops](./img/fresh_hops.jpg)
 
-Hops: it's what makes it bitter and flavorful.
+These hops `r emo::ji("point_up")`
+
+*** 
+
+Hops, *noun*: it's what makes it bitter and flavorful.
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
 (Note that this is different than the *amount* of hops poured into a beer.)
@@ -692,6 +693,8 @@ Our question: do more *kinds* of hops generally make a beer more bitter?
 How do hops affect ABV and IBU?
 ========================================================
 class: small-code
+
+Let's munge a bit.
 
 ```{r, echo=TRUE, eval=TRUE}
 # Gather up all the hops columns into one called `hop_name`
@@ -707,6 +710,13 @@ beer_necessities_w_hops <- beer_necessities_hops_gathered %>%
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 
+```
+
+
+How do hops effect ABV and IBU?
+========================================================
+class: small-code
+```{r, echo=TRUE, eval=TRUE}
 # For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
 hops_beer_stats <- beer_necessities_w_hops %>% 
   ungroup() %>% 
@@ -717,13 +727,7 @@ hops_beer_stats <- beer_necessities_w_hops %>%
     n = n()
   ) %>% 
   arrange(desc(n))
-```
 
-
-How do hops effect ABV and IBU?
-========================================================
-class: small-code
-```{r, echo=TRUE, eval=TRUE}
 # Pare to hops that are used in at least 50 beers
 pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ] 
 
@@ -734,10 +738,10 @@ beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
 
 pop_hops_display <- pop_hops_beer_stats %>% 
     rename(
-    `Hop Name` = hop_name,
+    `Hop` = hop_name,
     `Mean IBU` = mean_ibu,
     `Mean ABV` = mean_abv,
-    `Number Beers Containing this Hop` = n
+    `N Beers with this Hop` = n
   )
 ```
 
@@ -748,23 +752,8 @@ How do hops effect ABV and IBU?
 kable(pop_hops_display)
 ```
 
+***
 
-Hops
-========================================================
-
-```{r, eval=TRUE, echo=FALSE}
-ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
-  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
-  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
-  ggtitle("Hops Per Beer vs. Bitterness") +
-  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
-  theme_minimal()
-```
-
-
-How do hops effect ABV and IBU?
-========================================================
-incremental: true
 
 ```{r abv_ibu_hopsize, echo=FALSE, eval=TRUE}
 ggplot(data = pop_hops_beer_stats) + 
@@ -775,11 +764,33 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
+
+
+How do hops effect ABV and IBU?
+========================================================
+incremental: true
+class: small-code
+
+```{r, eval=TRUE, echo=FALSE}
+ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
+  ggtitle("Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
+  theme_minimal()
+```
+
 If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
 
 ***
+Is it significant?
 
-<br>
+```{r, echo=TRUE, eval=TRUE}
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% style_lm()
+
+kable(hops_ibu_lm)
+```
+
 
 Okay back on track!
 

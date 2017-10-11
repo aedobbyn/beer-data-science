@@ -702,9 +702,7 @@ sidebarLayout(
       h4("Control Panel"),
 
       checkboxInput("show_all", "Show all styles", TRUE),      
-      
       checkboxInput("show_centers", "Show style centers", FALSE),
-      
       numericInput("num_clusters", "Number of Clusters:", starting_n_clusters),
       
       checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
@@ -725,7 +723,6 @@ sidebarLayout(
         condition = "input.show_all == false",
         selectInput("style_collapsed", "Collapsed Style:",
                     style_names)
-        
         )
     ),
 ```
@@ -804,7 +801,7 @@ And now for something completely different
 
 Hops
 ========================================================
-incremental: true
+incremental:true
 
 <!-- ![mad_hops](./img/mad_hops.jpg) -->
 
@@ -812,17 +809,21 @@ incremental: true
 <img src="./img/mad_hops.jpg"></img>
 </div>
 
-No, not those hops!
-
 
 
 Hops
 ========================================================
 incremental:true
 
+No, not those hops!
+
 ![fresh_hops](./img/fresh_hops.jpg)
 
-Hops: it's what makes it bitter and flavorful.
+These hops ☝️
+
+*** 
+
+Hops, *noun*: it's what makes it bitter and flavorful.
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
 (Note that this is different than the *amount* of hops poured into a beer.)
@@ -831,6 +832,8 @@ Our question: do more *kinds* of hops generally make a beer more bitter?
 How do hops affect ABV and IBU?
 ========================================================
 class: small-code
+
+Let's munge a bit.
 
 
 ```r
@@ -846,7 +849,14 @@ beer_necessities_w_hops <- beer_necessities_hops_gathered %>%
   filter(!hop_name == "")
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
+```
 
+
+How do hops effect ABV and IBU?
+========================================================
+class: small-code
+
+```r
 # For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
 hops_beer_stats <- beer_necessities_w_hops %>% 
   ungroup() %>% 
@@ -857,14 +867,7 @@ hops_beer_stats <- beer_necessities_w_hops %>%
     n = n()
   ) %>% 
   arrange(desc(n))
-```
 
-
-How do hops effect ABV and IBU?
-========================================================
-class: small-code
-
-```r
 # Pare to hops that are used in at least 50 beers
 pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ] 
 
@@ -875,10 +878,10 @@ beer_necessities_w_popular_hops <- beer_necessities_w_hops %>%
 
 pop_hops_display <- pop_hops_beer_stats %>% 
     rename(
-    `Hop Name` = hop_name,
+    `Hop` = hop_name,
     `Mean IBU` = mean_ibu,
     `Mean ABV` = mean_abv,
-    `Number Beers Containing this Hop` = n
+    `N Beers with this Hop` = n
   )
 ```
 
@@ -910,293 +913,47 @@ How do hops effect ABV and IBU?
 |Tettnanger (American)      | 30.27551| 6.016780|                               59|
 |Sterling                   | 35.41860| 6.024259|                               55|
 
+***
 
-Hops
-========================================================
 
-![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
+![plot of chunk abv_ibu_hopsize](brewsentation-figure/abv_ibu_hopsize-1.png)
+
 
 
 How do hops effect ABV and IBU?
 ========================================================
 incremental: true
+class: small-code
 
-![plot of chunk abv_ibu_hopsize](brewsentation-figure/abv_ibu_hopsize-1.png)
+![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
 
 If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
 
 ***
-
-<br>
-
-Okay back on track!
-
-![onward](./img/onward.gif)
-
-
-
-
-Prediction
-========================================================
-If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
-
-I used a random forest and a multinomial neural network. We'll go through the neural net.
-
-
-Prediction: Neural Net
-========================================================
-
-* Package: `nnet`
-* Outcome variable: `style` or `style_collapsed`
-
-**What we'll do**
-* Feed it a dataframe, an outcome variable, and a set of predictor variables
-* It will train it 80%, test on 20%
-    * From this, we can get a measure of accuracy
-    
-    
-Neural Net: the Function
-========================================================
-class: small-code
+Is it significant?
 
 
 
 
 
-```r
-run_neural_net <- function(df, outcome, predictor_vars) {
-  out <- list(outcome = outcome)
-  
-  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
-  if (outcome == "style_collapsed") {
-    df[["outcome"]] <- df[["style_collapsed"]]
-  } else {
-    df[["outcome"]] <- df[["style"]]
-  }
-
-  cols_to_keep <- c("outcome", predictor_vars)
-  
-  df <- df %>%
-    select_(.dots = cols_to_keep) %>%
-    mutate(row = 1:nrow(df)) %>% 
-    droplevels()
-
-  # Select 80% of the data for training
-  df_train <- sample_n(df, nrow(df)*(0.8))
-  
-  # The rest is for testing
-  df_test <- df %>%
-    filter(! (row %in% df_train$row)) %>%
-    select(-row)
-```
-
-***
 
 
-```r
-  df_train <- df_train %>%
-    select(-row)
-  
-  # Build multinomail neural net
-  nn <- multinom(outcome ~ .,
-                 data = df_train, maxit=500, trace=TRUE)
-
-  # Which variables are the most important in the neural net?
-  most_important_vars <- varImp(nn)
-
-  # How accurate is the model? Compare predictions to outcomes from test data
-  nn_preds <- predict(nn, type="class", newdata = df_test)
-  nn_accuracy <- postResample(df_test$outcome, nn_preds)
-
-  out <- list(out, nn = nn, 
-              most_important_vars = most_important_vars,
-              df_test = df_test,
-              nn_preds = nn_preds,
-              nn_accuracy = nn_accuracy)
-
-  return(out)
-}
-```
 
 
-Neural Net: Run It
-========================================================
-class: small-code
 
 
-```r
-p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
-
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
-                         predictor_vars = p_vars, trace=TRUE)
-```
-
-```
-# weights:  210 (174 variable)
-initial  value 10693.364568 
-iter  10 value 9007.861736
-iter  20 value 8383.735156
-iter  30 value 8154.843641
-iter  40 value 8017.693678
-iter  50 value 7670.274347
-iter  60 value 7507.313838
-iter  70 value 7307.286325
-iter  80 value 7103.609163
-iter  90 value 6802.044987
-iter 100 value 6634.900333
-iter 110 value 6543.160440
-iter 120 value 6441.293317
-iter 130 value 6404.665876
-iter 140 value 6384.745396
-iter 150 value 6379.883760
-iter 160 value 6379.179600
-iter 170 value 6378.814775
-iter 180 value 6378.691773
-iter 190 value 6378.660759
-iter 200 value 6378.646203
-iter 210 value 6378.605387
-final  value 6378.598978 
-converged
-```
 
 
-Neural Net: Evaluate
-========================================================
-How'd we do? 
 
 
-```r
-nn_collapsed_out$nn_accuracy
-```
-
-```
- Accuracy     Kappa 
-0.4002541 0.3449254 
-```
-
-Not terrible given we've got 30 collapsed styles; chance would be 3.3%.
 
 
-Neural Net: Glass
-========================================================
-What happens if we add in glass, a style-dependent attribute, as a predictor?
 
 
-```r
-p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
-
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
-```
 
 
 
 ```
- Accuracy     Kappa 
-0.4298441 0.3873117 
+Error in function_list[[i]](value) : 
+  could not find function "capitalize_df"
 ```
-
-
-
-So what's the answer?
-========================================================
-*Are beer styles a useful construct to use as a proxy for natural clusters in beer?*
-
-I'd give it a fuzzy yes.
-
-Fuzzy because:
-* We couldn't do better than ~40% accuracy
-* We had a lot of missing predictors
-
-Unknowns:
-* Was our style collapsing scheme successful in putting beers in the "right" buckets?
-* Would taste-related information have been a useful variable?
-
-
-So what's the answer?
-========================================================
-
-![plot of chunk unnamed-chunk-16](brewsentation-figure/unnamed-chunk-16-1.png)
-
-***
-
-* We can distinguish more at the edges 
-
-
-
-Future Directions
-========================================================
-In no particular order, some thoughts I've had plus suggestions from others:
-
-* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
-* Beer consumption: how is this trending over time, for each style?
-    * What drives the trend? Supply or demand?
-        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
-* Shiny features:
-    * Beer search
-    * Tooltips on hover
-* Hierarchical clustering; what style is the mother of all styles?
-* Some funky model (neural net?) to generate beer names
-
-
-Cheers, all!
-========================================================
-class: .title-slide
-
-
-```r
-sessionInfo()
-```
-
-```
-R version 3.3.3 (2017-03-06)
-Platform: x86_64-apple-darwin13.4.0 (64-bit)
-Running under: macOS Sierra 10.12.6
-
-locale:
-[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-
-attached base packages:
-[1] stats     graphics  grDevices utils     datasets  methods   base     
-
-other attached packages:
- [1] bindrcpp_0.2    emo_0.0.0.9000  caret_6.0-76    lattice_0.20-35
- [5] nnet_7.3-12     feather_0.3.1   forcats_0.2.0   dplyr_0.7.2    
- [9] purrr_0.2.3     readr_1.1.1     tidyr_0.6.3     tibble_1.3.4   
-[13] tidyverse_1.1.1 dobtools_0.1.0  ggrepel_0.6.5   ggplot2_2.2.1  
-[17] jsonlite_1.5    broom_0.4.2     knitr_1.17     
-
-loaded via a namespace (and not attached):
- [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
- [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
- [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
-[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
-[13] colorspace_1.3-2      gridExtra_2.2.1       mnormt_1.5-5         
-[16] rvest_0.3.2           quantreg_5.29         htmlTable_1.9        
-[19] SparseM_1.74          xml2_1.1.1            labeling_0.3         
-[22] scales_0.5.0          checkmate_1.8.3       psych_1.7.5          
-[25] stringr_1.2.0         digest_0.6.12         foreign_0.8-69       
-[28] minqa_1.2.4           base64enc_0.1-3       pkgconfig_2.0.1      
-[31] htmltools_0.3.6       lme4_1.1-13           highr_0.6            
-[34] htmlwidgets_0.9       rlang_0.1.2.9000      readxl_1.0.0         
-[37] rstudioapi_0.7.0-9000 shiny_1.0.5.9000      bindr_0.1            
-[40] acepack_1.4.1         ModelMetrics_1.1.0    car_2.1-5            
-[43] magrittr_1.5          Formula_1.2-2         Matrix_1.2-8         
-[46] Rcpp_0.12.13          munsell_0.4.3         stringi_1.1.5        
-[49] MASS_7.3-47           plyr_1.8.4            grid_3.3.3           
-[52] parallel_3.3.3        crayon_1.3.4          miniUI_0.1.1         
-[55] haven_1.1.0           splines_3.3.3         hms_0.3              
-[58] ranger_0.8.0          stats4_3.3.3          reshape2_1.4.2       
-[61] codetools_0.2-15      glue_1.1.1            evaluate_0.10.1      
-[64] latticeExtra_0.6-28   data.table_1.10.4     modelr_0.1.1         
-[67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
-[70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         
-[73] assertthat_0.2.0      mime_0.5              xtable_1.8-2         
-[76] e1071_1.6-8           class_7.3-14          survival_2.41-3      
-[79] iterators_1.0.8       cluster_2.0.5        
-```
-
-
-
-
-
-
