@@ -64,6 +64,10 @@ autosize: true
     font-size: 1em;
   }
   
+  .very-small-code pre code {
+    font-size: .7em;
+  }
+  
   .footer {
     color: black; 
     position: fixed; top: 90%;
@@ -94,32 +98,40 @@ autosize: true
 
 
 
+
 First things first
 ========================================================
-navigation:section
+incremental:true
+*Who am I?*
 
-Who am I?
-- UChicago '15, go Maroons
-- Met Angela when she joined this bunch of goons:
+UChicago '15
+![uchi_ultimate](./img/supersnatch.jpg)
+<small> ^ Angela not yet pictured </small>
 
-<div class="midcenter" style="height: 70%; width: "70%">
-<img src="./img/supersnatch.jpg"></img>
-</div>
 
-<!-- ![uchi_ultimate](./img/supersnatch.jpg) -->
+***
+<br> 
 
-- Now at [Earlybird Software](http://earlybird.co/)
+Now at [Earlybird Software](http://earlybird.co/)
+![eb](./img/eb_planning.jpg)
 
-<br>
 
-Where's the code at?
-Code at: <https://github.com/aedobbyn/beer-data-science>
+First things first
+========================================================
+incremental:false
+
+*Where's the code at?*
+- Code at: <https://github.com/aedobbyn/beer-data-science>
+    - Includes writeup, Shiny app
+
+
 
 
 How did this come about?
 ========================================================
-- Over a Friday afternoon beverage in the office discussing an ideal beer flavor profile visualizer
-    - How do you represent *"hoppy, for a Kölsch"*?
+- Typical Friday afternoon office conversation
+    - How do you architect the ideal beer flavor profile visualizer
+        - In particular, how do you represent *"hoppy, for a Kölsch"*?
     
     
 How did this come about?
@@ -137,7 +149,7 @@ How did this come about?
 BUT
 - *How well do styles actually demarcate the beer landscape?*
   - Is there actually more inter-style variation than intra-style variation?
-  - Is there a better way to categorize beers into groups?
+  - Is there a more empiricially accurate way to categorize beers into super-groups?
 
 In other words, we're asking, are beer styles just a social construct?
 
@@ -145,7 +157,7 @@ In other words, we're asking, are beer styles just a social construct?
 The Order of Things, theoretically
 ========================================================
 
-![get_beers](./img/magnificent-chart-of-beer.jpg)
+<center>![order_of_things](./img/magnificent-chart-of-beer.jpg)<center>
 
 
 Implications
@@ -169,7 +181,7 @@ Step 1: GET Beer
 
 
 From where?
-[BreweryDB](http://www.brewerydb.com/developers/docs).
+[BreweryDB](http://www.brewerydb.com/developers/docs), an online database of beers with a public API.
 
 ![get_beers](./img/get_beers.jpg)
 
@@ -178,17 +190,170 @@ From where?
 ![get_beers](./img/example_beer.jpg)
 
 
-Step 1: GET Beer
+Quick funciton factory
 ========================================================
-class: small-code
+class:small-code
 
-We'll use the `fromJSON()` function from the `jsonlite` package to actually send the requests.
+Using `purrr::walk()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
+
+The `fromJSON()` function will actually send the requests for us.
 
 
 ```r
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
+endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
+
+# Base function
+get_ <- function(id, ep) {
+  jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+}
+
+# Create new get_<ep> functions
+endpoints %>% walk(~ assign(x = paste0("get_", .x),
+                             value = partial(get_, ep = .x),
+                             envir = .GlobalEnv))
+```
+
+Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment.
+
+Test it out
+========================================================
+class:small-code
+
+We get a 200 success response and a nested list of all the data associated with this hop that `fromJSON` converted from JSON into a nested list.
+
+
+```r
+get_hop("3")
+```
+
+```
+$message
+[1] "READ ONLY MODE: Request Successful"
+
+$data
+$data$id
+[1] 3
+
+$data$name
+[1] "Ahtanum"
+
+$data$description
+[1] "An open-pollinated aroma variety developed in Washington, Ahtanum is used for its distinctive, somewhat Cascade-like aroma and for moderate bittering."
+
+$data$countryOfOrigin
+[1] "US"
+
+$data$alphaAcidMin
+[1] 5.7
+
+$data$betaAcidMin
+[1] 5
+
+$data$betaAcidMax
+[1] 6.5
+
+$data$humuleneMin
+[1] 16
+
+$data$humuleneMax
+[1] 20
+
+$data$caryophylleneMin
+[1] 9
+
+$data$caryophylleneMax
+[1] 12
+
+$data$cohumuloneMin
+[1] 30
+
+$data$cohumuloneMax
+[1] 35
+
+$data$myrceneMin
+[1] 50
+
+$data$myrceneMax
+[1] 55
+
+$data$farneseneMax
+[1] 1
+
+$data$category
+[1] "hop"
+
+$data$categoryDisplay
+[1] "Hops"
+
+$data$createDate
+[1] "2013-06-24 16:07:26"
+
+$data$updateDate
+[1] "2013-06-24 16:10:37"
+
+$data$country
+$data$country$isoCode
+[1] "US"
+
+$data$country$name
+[1] "UNITED STATES"
+
+$data$country$displayName
+[1] "United States"
+
+$data$country$isoThree
+[1] "USA"
+
+$data$country$numberCode
+[1] 840
+
+$data$country$createDate
+[1] "2012-01-03 02:41:33"
+
+
+
+$status
+[1] "success"
+```
+
+
+Unnesting
+========================================================
+class:small-code
+
+The only thing we really care about is the name of the hop, contained in `get_hop("3")$data$name` -- in this case, Ahtanum. 
+
+So, we'll unravel the response and grab just the name from each column. 
+(If we don't get `$data$name` back, we'll just grab whatever the first column is.)
+
+
+```r
+unnest_it <- function(df) {
+  unnested <- df
+  for(col in seq_along(df[["data"]])) {
+    if(! is.null(ncol(df[["data"]][[col]]))) {
+      if(! is.null(df[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+      } else {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+      }
+    }
+  }
+  return(unnested)
+}
+```
+
+Step 1: GET Beer
+========================================================
+class: small-code
+
+We find out how many pages there are total and then keep sending requests and unnesting until we hit `number_of_pages`.
+
+
+```r
 paginated_request <- function(ep, addition, trace_progress = TRUE) {    
   full_request <- NULL
   first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
@@ -209,7 +374,7 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
   return(full_request)
 } 
 
-all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
+beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 ```
 
 
@@ -245,7 +410,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
       
 ***
 
-![plot of chunk unnamed-chunk-2](brewsentation-figure/unnamed-chunk-2-1.png)
+![plot of chunk unnamed-chunk-4](brewsentation-figure/unnamed-chunk-4-1.png)
 
 
 
@@ -317,9 +482,7 @@ We've set `trace_progress = TRUE`
 
 Popular Styles
 ========================================================
-* Let's focus on just beers in the few main styles
-
-* So we'll pare down to only the popular kids
+* Let's reduce the levels in our outcome variable by focusing on only popular styles
    * Those with above the mean number of beers in their style (z-score > 0)
    * (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption)
    
@@ -561,17 +724,26 @@ class: small-code
 </table>
 
 
+To the main question
+========================================================
+*Do styles truly define distinct pockets of beer?*
+
+If they do, we could expect styles to align with **clusters** generated using an unsupervised learning algorithm. 
+
+* k-means
+    * Takes numeric inputs splits for each observation and splits those observations into `k` clusters (we choose `k`)
+    * Goal is to minimize the sum of squares between each datapoint and its assigned cluster center
+
+<small>Note that we'll have to throw away rows that contain `NA` values in any of the variables we're using.</small>
+
+What variables should we include?
+
 
 What's in a Predictor?
 ========================================================
-To the main question: do styles truly define distinct pockets of beer?
+incremental:false
 
-If so, we could expect styles to align with **clusters** generated using an unsupervised learning algorithm. 
-
-
-##### Inputs
-* Only directly controlled by a brewer **before** a beer is brewed
-    * Hops, malts
+*A heuristic I used*:
 
 ##### Outputs
 * Only measured **after** a beer been brewed
@@ -579,29 +751,41 @@ If so, we could expect styles to align with **clusters** generated using an unsu
     
 ##### Style-Defined
 * Dependent entirely on style
+  * Serving glass
+
+##### Inputs
+* Only directly controlled by a brewer **before** a beer is brewed
+    * Hops, malts
 
 
+***
+
+<br> 
+<br> 
+
+👍  predictor  
+
+<br> 
+<br> 
+<br> 
+
+👎   predictor  
+
+<br> 
+
+🤷🏻‍♂️  predictor because chicken and egg problem  
+    <small> Do brewers assign style first and then choose which ingredients to add, or vice versa? 🐣 </small>
 
 
-What's in a Predictor?
-========================================================
-
-Style-Defined: 👎   predictor  
-
-Outputs: 👍  predictor  
-
-Inputs: 🤷🏻‍♂️  predictor  
-
-
-
-Clustering: the function
+Clustering: Let's have a function
 ========================================================
 class: small-code
 
 
-```r
-set.seed(9)
 
+
+
+```r
 do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
   df_for_clustering <- df %>% select(!!vars) %>% na.omit()
 
@@ -624,15 +808,17 @@ do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
 }
 ```
 
+We don't need to specify an outcome variable because this is unsupervised.
+
 
 Clustering: Run It
 ========================================================
-
-* Cluster the beers and stitch together the cluster assignments with the original data
+Cluster the beers and stitch together the cluster assignments with the original data
 
 
 ```r
 to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
+
 to_cluster_on <- c("abv", "ibu", "srm")
 
 clustered_beer <- do_cluster(beer_necessities, to_include, to_cluster_on)
@@ -677,6 +863,44 @@ Clustering: Output
 |5                  | -0.4982118|  0.6264828| -0.4534796|M6vu9P |10 Blocks South                                              |American-Style Pale Ale                            |Pale Ale              | 5.5| 56.0|   9|
 
 
+Clustering: Plot
+========================================================
+class:very-small-code
+
+Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)
+
+
+```r
+trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE){
+
+  to_scale <- names(df)[!names(df) %in% exclude]
+
+  df_scaled <- df %>%
+    select(!!to_scale) %>%
+    transmute_if(
+      is.numeric, scale
+    )
+  names(df_scaled) <- names(df_scaled) %>% stringr::str_c("_scaled")
+
+  df_out <- bind_cols(df_scaled, df)
+
+  df_out_trimmed <- df_out %>%
+    filter_at(
+      .vars = vars(contains("_scaled")),
+      .vars_predicate = all_vars(. < abs(cutoff))
+    )
+
+  if(keep_scaled == FALSE) {
+    df_out_trimmed <- df_out_trimmed %>% select(!!names(df))
+  }
+
+  return(df_out_trimmed)
+}
+```
+
+***
+
+<img src="brewsentation-figure/cluster_srm_ibu-1.png" title="plot of chunk cluster_srm_ibu" alt="plot of chunk cluster_srm_ibu" style="display: block; margin: auto;" />
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -764,14 +988,16 @@ class: small-code
 Clusterfun with Shiny
 ========================================================
 
-![clusterfun](./img/clusterfun.jpg)
+<center>![clusterfun](./img/clusterfun.jpg)
 
-<https://amandadobbyn.shinyapps.io/clusterfun/>
+<small><https://amandadobbyn.shinyapps.io/clusterfun/></small></center>
 
 
 
 Narrowing In
 ========================================================
+
+
 
 <div class="footer" style="font-size:80%;">
 Not bad.</div>
@@ -780,12 +1006,17 @@ Not bad.</div>
 If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
 
 
+|               |   1|  2|   3|   4|  5|
+|:--------------|---:|--:|---:|---:|--:|
+|Blonde         | 131| 17|   4|   1|  7|
+|India Pale Ale |  43|  1| 468|  11| 54|
+|Stout          |   6| 10|   3| 180|  5|
+|Tripel         |   1| 57|   1|   3|  3|
+|Wheat          | 289|  9|   6|   5| 12|
+
+
     
 ***
-
-
-
-
 
 
 
@@ -823,7 +1054,7 @@ These hops ☝️
 
 *** 
 
-Hops, *noun*: it's what makes it bitter and flavorful.
+Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
 (Note that this is different than the *amount* of hops poured into a beer.)
@@ -852,7 +1083,7 @@ beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 ```
 
 
-How do hops effect ABV and IBU?
+How do hops affect ABV and IBU?
 ========================================================
 class: small-code
 
@@ -881,79 +1112,348 @@ pop_hops_display <- pop_hops_beer_stats %>%
     `Hop` = hop_name,
     `Mean IBU` = mean_ibu,
     `Mean ABV` = mean_abv,
-    `N Beers with this Hop` = n
+    `N Beers` = n
   )
 ```
 
 
-How do hops effect ABV and IBU?
+How do hops affect ABV and IBU?
 ========================================================
 
-|Hop Name                   | Mean IBU| Mean ABV| Number Beers Containing this Hop|
-|:--------------------------|--------:|--------:|--------------------------------:|
-|Cascade                    | 51.92405| 6.510729|                              445|
-|Centennial                 | 63.96526| 7.081883|                              243|
-|Chinook                    | 60.86871| 7.043439|                              194|
-|Simcoe                     | 64.07211| 6.877394|                              191|
-|Columbus                   | 63.74483| 6.953846|                              183|
-|Amarillo                   | 61.36053| 6.959264|                              163|
-|Citra                      | 59.60000| 6.733290|                              157|
-|Willamette                 | 39.61078| 7.014657|                              133|
-|Nugget                     | 52.23810| 6.383119|                              114|
-|Magnum                     | 48.71596| 6.926852|                              109|
-|East Kent Golding          | 38.51875| 6.347386|                               89|
-|Perle (American)           | 32.03947| 6.251744|                               88|
-|Hallertauer (American)     | 23.92388| 5.658537|                               83|
-|Mosaic                     | 56.81818| 6.977465|                               71|
-|Northern Brewer (American) | 39.48475| 6.473944|                               71|
-|Mount Hood                 | 37.83500| 6.550000|                               68|
-|Warrior                    | 59.13043| 6.983115|                               62|
-|Saaz (American)            | 30.69778| 6.248333|                               60|
-|Fuggles                    | 40.75581| 6.772143|                               59|
-|Tettnanger (American)      | 30.27551| 6.016780|                               59|
-|Sterling                   | 35.41860| 6.024259|                               55|
+|Hop               | Mean IBU| Mean ABV| N Beers|
+|:-----------------|--------:|--------:|-------:|
+|Cascade           | 51.92405| 6.510729|     445|
+|Centennial        | 63.96526| 7.081883|     243|
+|Chinook           | 60.86871| 7.043439|     194|
+|Simcoe            | 64.07211| 6.877394|     191|
+|Columbus          | 63.74483| 6.953846|     183|
+|Amarillo          | 61.36053| 6.959264|     163|
+|Citra             | 59.60000| 6.733290|     157|
+|Willamette        | 39.61078| 7.014657|     133|
+|Nugget            | 52.23810| 6.383119|     114|
+|Magnum            | 48.71596| 6.926852|     109|
+|East Kent Golding | 38.51875| 6.347386|      89|
 
 ***
 
 
-![plot of chunk abv_ibu_hopsize](brewsentation-figure/abv_ibu_hopsize-1.png)
+|Hop                        | Mean IBU| Mean ABV| N Beers|
+|:--------------------------|--------:|--------:|-------:|
+|Perle (American)           | 32.03947| 6.251744|      88|
+|Hallertauer (American)     | 23.92388| 5.658537|      83|
+|Mosaic                     | 56.81818| 6.977465|      71|
+|Northern Brewer (American) | 39.48475| 6.473944|      71|
+|Mount Hood                 | 37.83500| 6.550000|      68|
+|Warrior                    | 59.13043| 6.983115|      62|
+|Saaz (American)            | 30.69778| 6.248333|      60|
+|Fuggles                    | 40.75581| 6.772143|      59|
+|Tettnanger (American)      | 30.27551| 6.016780|      59|
 
 
 
-How do hops effect ABV and IBU?
+How do hops affect ABV and IBU?
 ========================================================
 incremental: true
 class: small-code
 
-![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
 
-If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
+<img src="brewsentation-figure/unnamed-chunk-13-1.png" title="plot of chunk unnamed-chunk-13" alt="plot of chunk unnamed-chunk-13" style="display: block; margin: auto;" />
+
+^ Note that there is actually, irl, a strain of hops called Fuggle.
+
+
+How do hops affect ABV and IBU?
+========================================================
+class:small-code
+incremental:true
+
+![plot of chunk unnamed-chunk-14](brewsentation-figure/unnamed-chunk-14-1.png)
+
 
 ***
-Is it significant?
+Is the relationship significant?
+
+
+```r
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm()
+```
+
+
+```
+    Variable Estimate Std.Error P.Value
+1 Total Hops    8.635     0.488       0
+```
+
+
+Okay back on track!
+
+<center>![onward](./img/onward.gif)</center>
+
+
+
+
+Prediction
+========================================================
+If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+
+I used a random forest and a multinomial neural network. We'll go through the neural net.
+
+
+Prediction: Neural Net
+========================================================
+
+* Package: `nnet`
+* Outcome variable: `style` or `style_collapsed`
+
+**What we'll do**
+* Feed it a dataframe, an outcome variable, and a set of predictor variables
+* It will train it 80%, test on 20%
+    * From this, we can get a measure of accuracy
+    
+    
+Neural Net: the Function
+========================================================
+class: small-code
 
 
 
 
 
+```r
+run_neural_net <- function(df, outcome, predictor_vars) {
+  out <- list(outcome = outcome)
+  
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  if (outcome == "style_collapsed") {
+    df[["outcome"]] <- df[["style_collapsed"]]
+  } else {
+    df[["outcome"]] <- df[["style"]]
+  }
+
+  cols_to_keep <- c("outcome", predictor_vars)
+  
+  df <- df %>%
+    select_(.dots = cols_to_keep) %>%
+    mutate(row = 1:nrow(df)) %>% 
+    droplevels()
+
+  # Select 80% of the data for training
+  df_train <- sample_n(df, nrow(df)*(0.8))
+  
+  # The rest is for testing
+  df_test <- df %>%
+    filter(! (row %in% df_train$row)) %>%
+    select(-row)
+```
+
+***
 
 
+```r
+  df_train <- df_train %>%
+    select(-row)
+  
+  # Build multinomail neural net
+  nn <- multinom(outcome ~ .,
+                 data = df_train, maxit=500, trace=TRUE)
+
+  # Which variables are the most important in the neural net?
+  most_important_vars <- varImp(nn)
+
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_accuracy <- postResample(df_test$outcome, nn_preds)
+
+  out <- list(out, nn = nn, 
+              most_important_vars = most_important_vars,
+              df_test = df_test,
+              nn_preds = nn_preds,
+              nn_accuracy = nn_accuracy)
+
+  return(out)
+}
+```
 
 
+Neural Net: Run It
+========================================================
+class: small-code
 
 
+```r
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
+                         predictor_vars = p_vars, trace=TRUE)
+```
+
+```
+# weights:  210 (174 variable)
+initial  value 10693.364568 
+iter  10 value 9007.861736
+iter  20 value 8383.735156
+iter  30 value 8154.843641
+iter  40 value 8017.693678
+iter  50 value 7670.274347
+iter  60 value 7507.313838
+iter  70 value 7307.286325
+iter  80 value 7103.609163
+iter  90 value 6802.044987
+iter 100 value 6634.900333
+iter 110 value 6543.160440
+iter 120 value 6441.293317
+iter 130 value 6404.665876
+iter 140 value 6384.745396
+iter 150 value 6379.883760
+iter 160 value 6379.179600
+iter 170 value 6378.814775
+iter 180 value 6378.691773
+iter 190 value 6378.660759
+iter 200 value 6378.646203
+iter 210 value 6378.605387
+final  value 6378.598978 
+converged
+```
 
 
+Neural Net: Evaluate
+========================================================
+How'd we do? 
 
 
+```r
+nn_collapsed_out$nn_accuracy
+```
+
+```
+ Accuracy     Kappa 
+0.4002541 0.3449254 
+```
+
+Not terrible given we've got 30 collapsed styles; chance would be 3.3%.
 
 
+Neural Net: Glass
+========================================================
+What happens if we add in glass, a style-dependent attribute, as a predictor?
 
 
+```r
+p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
+```
 
 
 
 ```
-Error in function_list[[i]](value) : 
-  could not find function "capitalize_df"
+ Accuracy     Kappa 
+0.4298441 0.3873117 
 ```
+
+
+
+So what's the answer?
+========================================================
+*Are beer styles a useful construct to use as a proxy for natural clusters in beer?*
+
+I'd give it a fuzzy yes.
+
+Fuzzy because:
+* We couldn't do better than ~40% accuracy
+* We had a lot of missing predictors
+
+Unknowns:
+* Was our style collapsing scheme successful in putting beers in the "right" buckets?
+* Would taste-related information have been a useful variable?
+
+
+So what's the answer?
+========================================================
+
+![plot of chunk unnamed-chunk-21](brewsentation-figure/unnamed-chunk-21-1.png)
+
+***
+
+* We can distinguish more at the edges 
+* There don't appear distinct super-groups that are not already covered by style
+
+
+
+Future Directions
+========================================================
+In no particular order, some thoughts I've had plus suggestions from others:
+
+* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
+* Beer consumption: how is this trending over time, for each style?
+    * What drives the trend? Supply or demand?
+        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+* Shiny features:
+    * Beer search
+    * Tooltips on hover
+* Hierarchical clustering; what style is the mother of all styles?
+* Some funky model (neural net?) to generate beer names
+
+
+Cheers, all!
+========================================================
+class: small-code
+
+
+```r
+sessionInfo()
+```
+
+```
+R version 3.3.3 (2017-03-06)
+Platform: x86_64-apple-darwin13.4.0 (64-bit)
+Running under: macOS Sierra 10.12.6
+
+locale:
+[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+
+attached base packages:
+[1] stats     graphics  grDevices utils     datasets  methods   base     
+
+other attached packages:
+ [1] bindrcpp_0.2    emo_0.0.0.9000  caret_6.0-76    lattice_0.20-35
+ [5] nnet_7.3-12     feather_0.3.1   forcats_0.2.0   dplyr_0.7.2    
+ [9] purrr_0.2.3     readr_1.1.1     tidyr_0.6.3     tibble_1.3.4   
+[13] tidyverse_1.1.1 dobtools_0.1.0  ggrepel_0.6.5   ggplot2_2.2.1  
+[17] jsonlite_1.5    broom_0.4.2     knitr_1.17     
+
+loaded via a namespace (and not attached):
+ [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
+ [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
+ [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
+[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
+[13] colorspace_1.3-2      gridExtra_2.2.1       mnormt_1.5-5         
+[16] curl_2.8.1            rvest_0.3.2           quantreg_5.29        
+[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
+[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
+[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
+[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
+[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
+[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
+[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
+[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
+[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
+[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
+[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
+[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
+[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
+[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
+[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
+[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
+[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
+[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
+[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
+[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
+[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+```
+
+
+
+
+
+
