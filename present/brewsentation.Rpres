@@ -15,11 +15,23 @@ autosize: true
   
 
   .cheers {
+      background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
+      background-position: center center;
+      background-attachment: fixed;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
+      color: white;
+      background:transparent;
+    }
+    
+  .cheers .reveal .state-background {
       background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
       background-position: center center;
       background-attachment: fixed;
       background-repeat: no-repeat;
       background-size: 100% 100%;
+      color: white;
+      <!-- background:transparent; -->
     }
     
   .section .reveal .state-background {
@@ -31,16 +43,14 @@ autosize: true
   }
 
   td{
-    <!-- font-family: Arial;  -->
-    font-size: 4pt;
-    padding:0px;
+    font-size: 2pt;
+    padding: 0px;
     cellpadding="0";
     cellspacing="0"
   }
   th {
-    <!-- font-family: Arial;  -->
-    font-size: 4pt;
-    height: 20px;
+    font-size: 2pt;
+    height: 10px;
     font-weight: bold;
     text-align: right;
     background-color: #989da5;
@@ -113,6 +123,8 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 First things first
 ========================================================
+navigation:section
+
 Who am I?
 - UChicago '15, go Maroons
 - Met Angela when she joined this bunch of goons:
@@ -278,16 +290,9 @@ ggplot(data = beer_necessities) +
 Where did we put it?
 ========================================================
 
-<!-- ![local_db](./img/local_db.jpg) -->
-
-<div class="leftcenter" style="height: 66%; width: "40%;
-margin-top:10%">
-<img src="./img/local_db.jpg"></img>
-</div>
+![local_db](./img/local_db.jpg)
 
 ***
-
-<br>
 
 MySQL. 
 
@@ -336,12 +341,13 @@ We've set `trace_progress = TRUE`
 
 ***
 * Keywords are ordered from most general to most specific
-    * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in keyword 
+  * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in keyword 
     
-* American-Style Pale Ale  -->  Pale Ale
-* American-Style India Pale Ale  -->  India Pale Ale
+    
+`American-Style Pale Ale`  `r emo::ji("right_arrow")`  `Pale Ale`
 
-* We could have, but didn't, classify uncollapsable styles as "Other"
+`American-Style India Pale Ale`  `r emo::ji("right_arrow")`  `India Pale Ale`
+
 
 
 Popular Styles
@@ -419,16 +425,12 @@ kable(style_centers_rename, format = "html", pad=0)
 
 
 
-
-Clustering
-========================================================
-* How closely does
-
-* If styles truly define distinct pockets of beer, some of that should be represented in unsupervised clustering
-
-
 What's in a Predictor?
 ========================================================
+To the main question: do styles truly define distinct pockets of beer?
+
+If so, we could expect styles to align with **clusters** generated using an unsupervised learning algorithm. 
+
 
 ##### Inputs
 * Only directly controlled by a brewer **before** a beer is brewed
@@ -440,6 +442,7 @@ What's in a Predictor?
     
 ##### Style-Defined
 * Dependent entirely on style
+
 
 
 
@@ -461,7 +464,7 @@ class: small-code
 ```{r do_cluster_func, eval=FALSE}
 set.seed(9)
 
-do_cluster <- function (df, vars, to_scale, n_centers = 5) {
+do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
   df_for_clustering <- df %>% select(!!vars) %>% na.omit()
 
   # Scale the ones to be scaled and append _scaled to their names
@@ -484,14 +487,16 @@ do_cluster <- function (df, vars, to_scale, n_centers = 5) {
 ```
 
 
-Clustering: run it
+Clustering: Run It
 ========================================================
+
+* Cluster the beers and stitch together the cluster assignments with the original data
 
 ```{r run_do_cluster, eval=TRUE}
 to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
-to_scale <- c("abv", "ibu", "srm")
+to_cluster_on <- c("abv", "ibu", "srm")
 
-clustered_beer <- do_cluster(beer_necessities, to_include, to_scale)
+clustered_beer <- do_cluster(beer_necessities, to_include, to_cluster_on)
 ```
 
 
@@ -519,8 +524,47 @@ kable(clustered_beer_caps[1:30, ])
 
 <!-- ``` -->
 
+Clusterfun with Shiny: UI
+========================================================
+class: small-code 
 
-Clusterfun with Shiny
+```{r}
+sidebarLayout(
+    sidebarPanel(
+      h4("Control Panel"),
+
+      checkboxInput("show_all", "Show all styles", TRUE),      
+      
+      checkboxInput("show_centers", "Show style centers", FALSE),
+      
+      numericInput("num_clusters", "Number of Clusters:", starting_n_clusters),
+      
+      checkboxGroupInput("cluster_on", "Choose variables to cluster on: ",
+                         c("ABV (alcohol)" = "abv", 
+                           "IBU (bitterness)" = "ibu", 
+                           "SRM (color)" ="srm", 
+                           "Total number of hops" = "total_hops", 
+                           "Total number of malts" = "total_malt"),
+                         selected = c("abv", "ibu", "srm")),
+      
+      checkboxGroupInput("response_vars", "Choose response variable(s): ",
+                         c("Collapsed style" = "style_collapsed",
+                           "Specific style" = "style"
+                         ),
+                         selected = c("style_collapsed")),
+      
+      conditionalPanel(
+        condition = "input.show_all == false",
+        selectInput("style_collapsed", "Collapsed Style:",
+                    style_names)
+        
+        )
+    ),
+```
+
+
+
+Clusterfun with Shiny: Server
 ========================================================
 class: small-code 
 
@@ -554,6 +598,8 @@ class: small-code
 Clusterfun with Shiny
 ========================================================
 
+![clusterfun](./img/clusterfun.jpg)
+
 <https://amandadobbyn.shinyapps.io/clusterfun/>
 
 
@@ -562,10 +608,10 @@ Narrowing In
 ========================================================
 
 <div class="footer" style="font-size:80%;">
-Yep, not bad.</div>
+Not bad.</div>
 
 <br> 
-- If we focus in on 5 distinct styles and cluster them into 5 clusters, will they each be siphoned off into their own cluster?
+If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
 
 ```{r, eval=TRUE, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
@@ -612,13 +658,14 @@ by_style_plot
 
 And now for something completely different
 ========================================================
-![now_for_something_completely_different](./img/now_for_something_completely_different.gif)
+<div class="midcenter" style="width:90%; height:90%; margin-right:30%"> <img src="./img/now_for_something_completely_different.gif"></img></div>
 
 ...a quick dive into hops
 
 
 Hops
 ========================================================
+incremental: true
 
 <!-- ![mad_hops](./img/mad_hops.jpg) -->
 
@@ -626,17 +673,13 @@ Hops
 <img src="./img/mad_hops.jpg"></img>
 </div>
 
+No, not those hops!
 
-Hops
-========================================================
-
-<br>
-
-### No, not those hops!
 
 
 Hops
 ========================================================
+incremental:true
 
 ![fresh_hops](./img/fresh_hops.jpg)
 
@@ -645,20 +688,8 @@ Hops: it's what makes it bitter and flavorful.
 Our question: do more *kinds* of hops generally make a beer more bitter?
 (Note that this is different than the *amount* of hops poured into a beer.)
 
-Hops
-========================================================
 
-```{r, eval=TRUE, echo=FALSE}
-ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
-  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
-  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
-  ggtitle("Hops Per Beer vs. Bitterness") +
-  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
-  theme_minimal()
-```
-
-
-How do hops effect ABV and IBU?
+How do hops affect ABV and IBU?
 ========================================================
 class: small-code
 
@@ -718,9 +749,22 @@ kable(pop_hops_display)
 ```
 
 
+Hops
+========================================================
+
+```{r, eval=TRUE, echo=FALSE}
+ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
+  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
+  ggtitle("Hops Per Beer vs. Bitterness") +
+  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
+  theme_minimal()
+```
+
 
 How do hops effect ABV and IBU?
 ========================================================
+incremental: true
 
 ```{r abv_ibu_hopsize, echo=FALSE, eval=TRUE}
 ggplot(data = pop_hops_beer_stats) + 
@@ -733,11 +777,15 @@ ggplot(data = pop_hops_beer_stats) +
 
 If nothing else, we learned that there is a strain of hops called Fuggle. So that's a win.
 
+***
+
+<br>
 
 Okay back on track!
-========================================================
 
 ![onward](./img/onward.gif)
+
+
 
 
 Prediction
@@ -758,11 +806,17 @@ Prediction: Neural Net
 * It will train it 80%, test on 20%
     * From this, we can get a measure of accuracy
     
-Neural Net
+    
+Neural Net: the Function
 ========================================================
 class: small-code
 
-```{r nn_func, warning=FALSE, echo=TRUE, eval=TRUE}
+```{r source_run_nn, eval=TRUE, echo=FALSE}
+source("./helpers/run_neural_net.R")
+```
+
+
+```{r nn_func, warning=FALSE, echo=TRUE, eval=FALSE}
 run_neural_net <- function(df, outcome, predictor_vars) {
   out <- list(outcome = outcome)
   
@@ -787,6 +841,13 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   df_test <- df %>%
     filter(! (row %in% df_train$row)) %>%
     select(-row)
+
+```
+
+***
+
+```{r, echo=TRUE, eval=FALSE}
+
   
   df_train <- df_train %>%
     select(-row)
@@ -813,18 +874,19 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 ```
 
 
-Neural Net
+Neural Net: Run It
 ========================================================
 class: small-code
 
-```{r nn_run, eval=TRUE, echo=TRUE}
+```{r nn_run, eval=TRUE, echo=TRUE, dependson="source_run_nn"}
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 
 nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
-                         predictor_vars = p_vars)
+                         predictor_vars = p_vars, trace=TRUE)
 ```
 
-Neural Net
+
+Neural Net: Evaluate
 ========================================================
 How'd we do? 
 
@@ -832,7 +894,24 @@ How'd we do?
 nn_collapsed_out$nn_accuracy
 ```
 
-Not awful given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
+Not terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
+
+
+Neural Net: Glass
+========================================================
+What happens if we add in glass, a style-dependent attribute, as a predictor?
+
+```{r, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
+p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
+```
+
+
+```{r, eval=TRUE, echo=FALSE}
+nn_collapsed_out_add_glass$nn_accuracy
+```
+
 
 
 So what's the answer?
@@ -843,11 +922,15 @@ I'd give it a fuzzy yes.
 
 Fuzzy because:
 * We couldn't do better than ~40% accuracy
+* We had a lot of missing predictors
 
 Unknowns:
 * Was our style collapsing scheme successful in putting beers in the "right" buckets?
 * Would taste-related information have been a useful variable?
 
+
+So what's the answer?
+========================================================
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot() +   
@@ -860,6 +943,9 @@ ggplot() +
   theme_minimal()
 ```
 
+***
+
+* We can distinguish more at the edges 
 
 
 
@@ -878,13 +964,13 @@ In no particular order, some thoughts I've had plus suggestions from others:
 * Some funky model (neural net?) to generate beer names
 
 
-Cheers, all
+Cheers, all!
 ========================================================
+class: .title-slide
 
-<!-- ![cheers](./img/cheers.jpg) -->
-
-<div><img src = "./img/cheers.jpg" 
-style = "margin-left:0%; margin-bottom:10%; width:100%; height:100%"></div>
+```{r, eval=TRUE, echo=TRUE}
+sessionInfo()
+```
 
 
 
