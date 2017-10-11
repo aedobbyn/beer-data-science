@@ -106,12 +106,22 @@ Code at: <https://github.com/aedobbyn/beer-data-science>
 
 How did this come about?
 ========================================================
-- Beer = water + malt + hops + yeast + sometimes other stuff like fruit
+- Over a Friday afternoon beverage in the office discussing an ideal beer flavor profile visualizer
+    - How do you represent *"hoppy, for a Kölsch"*?
+    
+    
+How did this come about?
+========================================================
+`Beer = water + malt + hops + yeast + sometimes other stuff like fruit`
 - We categorize it into different styles based on 
   - Type and ratio of ingredients
   - How the beer is made (e.g., how long and at what temperature it's brewed)
   - Squishy regional differences 
   
+
+How did this come about?
+========================================================
+
 BUT
 - *How well do styles actually demarcate the beer landscape?*
   - Is there actually more inter-style variation than intra-style variation?
@@ -128,23 +138,22 @@ The Order of Things, theoretically
 
 Implications
 ========================================================
-This all, assuming the variables we have (more on those in a sec) can account for most of the variance between styles...
-
-* If styles do demarcate the beer landscape well, we should expect to see distinct clusters dominated mostly by beers classified into a *single* style
-
-* It should also be easy to predict style from the other variables
 
 
+* If styles do demarcate the beer landscape well, we should expect to see distinct **clusters** dominated mostly by beers classified into a *single* style
 
-<br> 
+* It should also be easy to **predict** style from the other variables
 
-**The stakes could not be higher**.
+This all assumes the variables we have (more on those in a sec) can account for most of the variance between styles.
+
+
+*The stakes could not be higher*.
 
 
 
 Step 1: GET Beer
-# The age-old dilemma ----
 ========================================================
+### The age-old dilemma
 
 
 From where?
@@ -161,7 +170,7 @@ Step 1: GET Beer
 ========================================================
 class: small-code
 
-
+We'll use the `fromJSON()` function from the `jsonlite` package to actually send the requests.
 
 
 ```r
@@ -195,6 +204,21 @@ all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
 What have we got?
 ========================================================
 
+
+|id     |name                                     |style                                              |style_collapsed       |glass | abv| ibu| srm|hops_name                                  |malt_name                                                                     |
+|:------|:----------------------------------------|:--------------------------------------------------|:---------------------|:-----|---:|---:|---:|:------------------------------------------|:-----------------------------------------------------------------------------|
+|X4KcGF |(512) TWO                                |Imperial or Double India Pale Ale                  |Double India Pale Ale |Pint  | 9.0|  99|   9|Columbus, Glacier, Horizon, Nugget, Simcoe |Caramel/Crystal Malt, Two-Row Pale Malt - Organic, Wheat Malt                 |
+|USaRyl |(512) Whiskey Barrel Double Pecan Porter |Wood- and Barrel-Aged Strong Beer                  |Barrel-Aged           |Pint  | 9.5|  30|  NA|Glacier                                    |Black Malt, Caramel/Crystal Malt, Chocolate Malt, Two-Row Pale Malt - Organic |
+|bXwskR |(512) White IPA                          |American-Style India Pale Ale                      |India Pale Ale        |Pint  | 5.3|  55|   4|NA                                         |NA                                                                            |
+|XnPVIo |(512) Wild Bear                          |Specialty Beer                                     |Specialty Beer        |Tulip | 8.5|   9|  NA|NA                                         |NA                                                                            |
+|QLp4mV |(512) Wit                                |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 |Pint  | 5.1|  10|   5|Golding (American)                         |Oats - Malted, Two-Row Pale Malt - Organic, Wheat Malt - White                |
+|tWuIyV |(714): Blond Ale                         |Golden or Blonde Ale                               |Blonde                |NA    | 4.8|  NA|  NA|NA                                         |NA                                                                            |
+
+
+
+What have we got?
+========================================================
+
 <div class="footer" style="font-size:80%; margin-bottom:0%">
 What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and ratings.</div>
 
@@ -209,7 +233,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
       
 ***
 
-![plot of chunk unnamed-chunk-1](brewsentation-figure/unnamed-chunk-1-1.png)
+![plot of chunk unnamed-chunk-2](brewsentation-figure/unnamed-chunk-2-1.png)
 
 
 
@@ -243,8 +267,6 @@ class: small-code
 
 ```r
 keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
-
-keyword_df <- as_tibble(list(`Main Styles` = keywords))
 ```
 
 
@@ -270,18 +292,31 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
-Collapsing in action
+Collapsing in Action
 ========================================================
+
+We've set `trace_progress = TRUE`
 
 ![get_beers](./img/collapse_styles.jpg)
 
+***
+* Keywords are ordered from most general to most specific
+    * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in keyword 
+    
+* American-Style Pale Ale  -->  Pale Ale
+* American-Style India Pale Ale  -->  India Pale Ale
+
+* We could have, but didn't, classify uncollapsable styles as "Other"
 
 
 Popular Styles
 ========================================================
+* Let's focus on just beers in the few main styles
 
-* Pare down to only the popular kids
+* So we'll pare down to only the popular kids
    * Those with above the mean number of beers in their style (z-score > 0)
+   * (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption)
+   
 * And then get a sense of where those styles fall in relation to one another
     * Style "centers" = mean ABV, IBU, and SRM of each style
 
@@ -524,6 +559,7 @@ class: small-code
 
 Clustering
 ========================================================
+* How closely does
 
 * If styles truly define distinct pockets of beer, some of that should be represented in unsupervised clustering
 
@@ -750,7 +786,7 @@ Our question: do more *kinds* of hops generally make a beer more bitter?
 Hops
 ========================================================
 
-![plot of chunk unnamed-chunk-6](brewsentation-figure/unnamed-chunk-6-1.png)
+![plot of chunk unnamed-chunk-7](brewsentation-figure/unnamed-chunk-7-1.png)
 
 
 How do hops effect ABV and IBU?
@@ -995,7 +1031,7 @@ Unknowns:
 * Would taste-related information have been a useful variable?
 
 
-![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
+![plot of chunk unnamed-chunk-12](brewsentation-figure/unnamed-chunk-12-1.png)
 
 
 
