@@ -68,6 +68,34 @@ autosize: true
     font-size: .7em;
   }
   
+  .very-small-code-transparent {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .very-small-code-transparent .reveal .state-background {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .very-small-code-transparent pre code {
+    font-size: .7em;
+    background: transparent;
+    border-style: none;
+  }
+  
   .footer {
     color: black; 
     position: fixed; top: 90%;
@@ -1056,6 +1084,12 @@ class: small-code
 </tbody>
 </table>
 
+***
+
+From this we can plot the centers of each style.
+
+![plot of chunk unnamed-chunk-12](brewsentation-figure/unnamed-chunk-12-1.png)
+
 
 To the main question
 ========================================================
@@ -1106,7 +1140,7 @@ incremental:false
 
 <br> 
 
-🤷🏻‍♂️  predictor because chicken and egg problem  
+🤷🏼‍♀️  predictor because chicken and egg problem  
     <small> Do brewers assign style first and then choose which ingredients to add, or vice versa? 🐣 </small>
 
 
@@ -1200,6 +1234,13 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
+We've got three main dimensions: ABV, IBU, and SRM. We'll plot color against alcohol here.
+
+
+<img src="brewsentation-figure/cluster_srm_ibu-1.png" title="plot of chunk cluster_srm_ibu" alt="plot of chunk cluster_srm_ibu" style="display: block; margin: auto;" />
+
+***
+
 Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)
 
 
@@ -1231,9 +1272,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-***
 
-<img src="brewsentation-figure/cluster_srm_ibu-1.png" title="plot of chunk cluster_srm_ibu" alt="plot of chunk cluster_srm_ibu" style="display: block; margin: auto;" />
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -1321,9 +1360,10 @@ class: small-code
 Clusterfun with Shiny
 ========================================================
 
+<small><https://amandadobbyn.shinyapps.io/clusterfun/></small></center>
+
 <center>![clusterfun](./img/clusterfun.jpg)
 
-<small><https://amandadobbyn.shinyapps.io/clusterfun/></small></center>
 
 
 
@@ -1333,7 +1373,7 @@ Narrowing In
 
 
 <div class="footer" style="font-size:80%;">
-Not bad.</div>
+Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales.</div>
 
 <br> 
 If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
@@ -1389,16 +1429,50 @@ These hops ☝️
 
 Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
+<br>
+
 Our question: do more *kinds* of hops generally make a beer more bitter?
-(Note that this is different than the *amount* of hops poured into a beer.)
+(Note that this is different than the total *quantity* of hops poured into a beer.)
 
 
 How do hops affect bitterness?
 ========================================================
 class: small-code
 
-Let's munge a bit.
+Let's munge a bit. We'll need to split out ingredients from one column into many. 
 
+
+```r
+split_ingredients <- function(df, ingredients_to_split) {
+  ncol_df <- ncol(df)
+  
+  for (ingredient in ingredients_to_split) {
+    ingredient_split <- str_split(df[[ingredient]], ", ")    
+    num_new_cols <- max(lengths(ingredient_split))    
+    
+    for (num in 1:num_new_cols) {
+      this_col <- ncol_df + 1         
+      df[, this_col] <- NA
+      names(df)[this_col] <- paste0(ingredient, "_", num)
+      ncol_df <- ncol(df)             
+      
+      for (row in seq_along(ingredient_split)) {          
+        if (!is.null(ingredient_split[[row]][num])) {        
+          df[row, this_col] <- ingredient_split[[row]][num]
+        }
+      }
+      df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
+    }
+    ncol_df <- ncol(df)
+  }
+  return(df)
+}
+```
+
+
+How do hops affect bitterness?
+========================================================
+class: very-small-code
 
 ```r
 # Gather up all the hops columns into one called `hop_name`
@@ -1413,14 +1487,7 @@ beer_necessities_w_hops <- beer_necessities_hops_gathered %>%
   filter(!hop_name == "")
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
-```
 
-
-How do hops affect bitterness?
-========================================================
-class: small-code
-
-```r
 # For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
 hops_beer_stats <- beer_necessities_w_hops %>% 
   ungroup() %>% 
@@ -1490,7 +1557,7 @@ incremental: true
 class: small-code
 
 
-<img src="brewsentation-figure/unnamed-chunk-19-1.png" title="plot of chunk unnamed-chunk-19" alt="plot of chunk unnamed-chunk-19" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
 
 ^ Note that there is actually, irl, a strain of hops called Fuggle.
 
@@ -1500,11 +1567,12 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-20](brewsentation-figure/unnamed-chunk-20-1.png)
+![plot of chunk unnamed-chunk-22](brewsentation-figure/unnamed-chunk-22-1.png)
 
+Is the relationship significant?
 
 ***
-Is the relationship significant?
+
 
 
 ```r
@@ -1517,10 +1585,11 @@ hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) 
 1 Total Hops    8.635     0.488       0
 ```
 
+We can expect an increase in around 9 IBU for every 1 extra hop.
 
 Okay back on track!
 
-<center>![onward](./img/onward.gif)</center>
+![onward](./img/onward.gif)
 
 
 
@@ -1704,7 +1773,7 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-27](brewsentation-figure/unnamed-chunk-27-1.png)
+![plot of chunk unnamed-chunk-29](brewsentation-figure/unnamed-chunk-29-1.png)
 
 ***
 
@@ -1730,12 +1799,8 @@ In no particular order, some thoughts I've had plus suggestions from others:
 
 Cheers, all!
 ========================================================
-class: very-small-code
+class: very-small-code-transparent  
 
-
-```r
-sessionInfo()
-```
 
 ```
 R version 3.3.3 (2017-03-06)
@@ -1775,8 +1840,8 @@ loaded via a namespace (and not attached):
 [49] MASS_7.3-47           plyr_1.8.4            grid_3.3.3           
 [52] parallel_3.3.3        crayon_1.3.4          miniUI_0.1.1         
 [55] haven_1.1.0           splines_3.3.3         hms_0.3              
-[58] ranger_0.8.0          reshape2_1.4.2        codetools_0.2-15     
-[61] stats4_3.3.3          glue_1.1.1            evaluate_0.10.1      
+[58] ranger_0.8.0          stats4_3.3.3          reshape2_1.4.2       
+[61] codetools_0.2-15      glue_1.1.1            evaluate_0.10.1      
 [64] latticeExtra_0.6-28   data.table_1.10.4     modelr_0.1.1         
 [67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
 [70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         

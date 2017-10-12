@@ -68,6 +68,34 @@ autosize: true
     font-size: .7em;
   }
   
+  .very-small-code-transparent {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .very-small-code-transparent .reveal .state-background {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .very-small-code-transparent pre code {
+    font-size: .7em;
+    background: transparent;
+    border-style: none;
+  }
+  
   .footer {
     color: black; 
     position: fixed; top: 90%;
@@ -589,6 +617,19 @@ class: small-code
 kable(style_centers_rename, format = "html", pad=0)
 ```
 
+***
+
+From this we can plot the centers of each style.
+
+```{r, echo=FALSE, eval=TRUE}
+ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) + 
+  geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) +
+  ggtitle("Style Centers and their Popularity") +
+  labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles", 
+       size = "Number of Beers") +
+  theme_minimal()
+```
+
 
 To the main question
 ========================================================
@@ -705,6 +746,30 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
+We've got three main dimensions: ABV, IBU, and SRM. We'll plot color against alcohol here.
+
+
+```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
+clustered_beer_plot_srm_ibu <- ggplot() +
+  geom_jitter(data = clustered_beer %>% dobtools::trim_outliers(cutoff = 2.5), 
+             aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
+  geom_point(data = style_centers,
+             aes(mean_srm, mean_ibu), colour = "black") +
+  theme_minimal()  +
+  geom_text_repel(data = style_centers, aes(mean_srm, mean_ibu, label = style_collapsed), 
+                  box.padding = unit(0.45, "lines"),
+                  family = "Calibri",
+                  label.size = 0.3) +
+  ggtitle("k-Means Clustering of Beer: SRM vs. IBU") +
+  labs(x = "SRM", y = "IBU") +
+  labs(colour = "Cluster Assignment") +
+  theme(legend.position="none")
+clustered_beer_plot_srm_ibu
+
+```
+
+***
+
 Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)
 
 ```{r trim_outliers, echo=TRUE, eval=FALSE}
@@ -735,26 +800,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-***
 
-```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
-clustered_beer_plot_srm_ibu <- ggplot() +
-  geom_jitter(data = clustered_beer %>% dobtools::trim_outliers(cutoff = 2.5), 
-             aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
-  geom_point(data = style_centers,
-             aes(mean_srm, mean_ibu), colour = "black") +
-  theme_minimal()  +
-  geom_text_repel(data = style_centers, aes(mean_srm, mean_ibu, label = style_collapsed), 
-                  box.padding = unit(0.45, "lines"),
-                  family = "Calibri",
-                  label.size = 0.3) +
-  ggtitle("k-Means Clustering of Beer: SRM vs. IBU") +
-  labs(x = "SRM", y = "IBU") +
-  labs(colour = "Cluster Assignment") +
-  theme(legend.position="none")
-clustered_beer_plot_srm_ibu
-
-```
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -840,9 +886,10 @@ class: small-code
 Clusterfun with Shiny
 ========================================================
 
+<small><https://amandadobbyn.shinyapps.io/clusterfun/></small></center>
+
 <center>![clusterfun](./img/clusterfun.jpg)
 
-<small><https://amandadobbyn.shinyapps.io/clusterfun/></small></center>
 
 
 
@@ -868,7 +915,7 @@ style_centers_certain_styles <- style_centers %>%
 ```
 
 <div class="footer" style="font-size:80%;">
-Not bad.</div>
+Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales.</div>
 
 <br> 
 If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
@@ -932,17 +979,50 @@ These hops `r emo::ji("point_up")`
 
 Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
+<br>
+
 Our question: do more *kinds* of hops generally make a beer more bitter?
-(Note that this is different than the *amount* of hops poured into a beer.)
+(Note that this is different than the total *quantity* of hops poured into a beer.)
 
 
 How do hops affect bitterness?
 ========================================================
 class: small-code
 
-Let's munge a bit.
+Let's munge a bit. We'll need to split out ingredients from one column into many. 
 
-```{r get_pop_hops, echo=TRUE, eval=TRUE}
+```{r, eval=TRUE, echo=TRUE}
+split_ingredients <- function(df, ingredients_to_split) {
+  ncol_df <- ncol(df)
+  
+  for (ingredient in ingredients_to_split) {
+    ingredient_split <- str_split(df[[ingredient]], ", ")    
+    num_new_cols <- max(lengths(ingredient_split))    
+    
+    for (num in 1:num_new_cols) {
+      this_col <- ncol_df + 1         
+      df[, this_col] <- NA
+      names(df)[this_col] <- paste0(ingredient, "_", num)
+      ncol_df <- ncol(df)             
+      
+      for (row in seq_along(ingredient_split)) {          
+        if (!is.null(ingredient_split[[row]][num])) {        
+          df[row, this_col] <- ingredient_split[[row]][num]
+        }
+      }
+      df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
+    }
+    ncol_df <- ncol(df)
+  }
+  return(df)
+}
+```
+
+
+How do hops affect bitterness?
+========================================================
+class: very-small-code
+```{r get_pop_hops_2, echo=TRUE, eval=TRUE}
 # Gather up all the hops columns into one called `hop_name`
 beer_necessities_hops_gathered <- beer_necessities %>%
   gather(
@@ -956,13 +1036,6 @@ beer_necessities_w_hops <- beer_necessities_hops_gathered %>%
 
 beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 
-```
-
-
-How do hops affect bitterness?
-========================================================
-class: small-code
-```{r get_pop_hops_2, echo=TRUE, eval=TRUE}
 # For all hops, find the number of beers they're in as well as those beers' mean IBU and ABV
 hops_beer_stats <- beer_necessities_w_hops %>% 
   ungroup() %>% 
@@ -1013,11 +1086,11 @@ class: small-code
 
 
 ```{r, eval=TRUE, echo=FALSE, fig.align="center"}
-ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
-  geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
-  geom_smooth(method = "loess", se = FALSE, colour = "black") + 
-  ggtitle("Hops Per Beer vs. Bitterness") +
-  labs(x = "Number of Hops", y = "IBU", colour = "Style Collapsed") +
+ggplot(data = pop_hops_beer_stats) + 
+  geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
+  ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
+  labs(x = "Mean ABV per Hop Type", y = "Mean IBU per Hop Type", colour = "Hop Name", 
+       size = "Number of Beers") +
   theme_minimal()
 ```
 
@@ -1038,9 +1111,10 @@ ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
   theme_minimal()
 ```
 
+Is the relationship significant?
 
 ***
-Is the relationship significant?
+
 
 ```{r, echo=TRUE, eval=TRUE}
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm()
@@ -1050,10 +1124,11 @@ hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) 
 hops_ibu_lm %>% data.frame()
 ```
 
+We can expect an increase in around `r round(hops_ibu_lm$Estimate, digits = 0)` IBU for every 1 extra hop.
 
 Okay back on track!
 
-<center>![onward](./img/onward.gif)</center>
+![onward](./img/onward.gif)
 
 
 
@@ -1237,9 +1312,9 @@ In no particular order, some thoughts I've had plus suggestions from others:
 
 Cheers, all!
 ========================================================
-class: very-small-code
+class: very-small-code-transparent  
 
-```{r, eval=TRUE, echo=TRUE}
+```{r, eval=TRUE, echo=FALSE}
 sessionInfo()
 ```
 
