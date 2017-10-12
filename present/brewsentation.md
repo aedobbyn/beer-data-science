@@ -122,9 +122,10 @@ incremental:false
 
 *Where's the code at?*
 - Code at: <https://github.com/aedobbyn/beer-data-science>
-    - Includes writeup, Shiny app
+    - Includes writeup, Shiny app, and step-by-step scripts for getting and munging data
 
-
+***
+![git_cat](./img/gitcat.png)
 
 
 How did this come about?
@@ -133,6 +134,7 @@ How did this come about?
     - How do you architect the ideal beer flavor profile visualizer
         - In particular, how do you represent *"hoppy, for a Kölsch"*?
     
+- Does the style Kölsch even describe a tangibly different subset of beer that would be distinguishable in a blind taste test from other styles?
     
 How did this come about?
 ========================================================
@@ -218,11 +220,11 @@ endpoints %>% walk(~ assign(x = paste0("get_", .x),
 
 Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment.
 
-Test it out
+Testing testing
 ========================================================
 class:small-code
 
-We get a 200 success response and a nested list of all the data associated with this hop that `fromJSON` converted from JSON into a nested list.
+We get a 200 success response and a nested list of all the data associated with this hop that `fromJSON` converted from, well, JSON into a nested list.
 
 
 ```r
@@ -320,14 +322,293 @@ $status
 ```
 
 
+Now with beer
+========================================================
+class:very-small-code
+
+What does the data look like when we request a certain beer?
+
+
+```r
+get_beer("GZQpRX")
+```
+
+```
+$message
+[1] "READ ONLY MODE: Request Successful"
+
+$data
+$data$id
+[1] "GZQpRX"
+
+$data$name
+[1] "Alpha King"
+
+$data$nameDisplay
+[1] "Alpha King"
+
+$data$description
+[1] "A bold yet balanced American Pale Ale with slight caramel sweetness and aggressive citrus hoppiness. This is our flagship beer."
+
+$data$abv
+[1] "6.7"
+
+$data$ibu
+[1] "68"
+
+$data$glasswareId
+[1] 5
+
+$data$srmId
+[1] 21
+
+$data$availableId
+[1] 1
+
+$data$styleId
+[1] 25
+
+$data$isOrganic
+[1] "N"
+
+$data$labels
+$data$labels$icon
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-icon.png"
+
+$data$labels$medium
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-medium.png"
+
+$data$labels$large
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-large.png"
+
+
+$data$status
+[1] "verified"
+
+$data$statusDisplay
+[1] "Verified"
+
+$data$createDate
+[1] "2012-01-03 02:42:40"
+
+$data$updateDate
+[1] "2017-01-10 21:43:48"
+
+$data$glass
+$data$glass$id
+[1] 5
+
+$data$glass$name
+[1] "Pint"
+
+$data$glass$createDate
+[1] "2012-01-03 02:41:33"
+
+
+$data$srm
+$data$srm$id
+[1] 21
+
+$data$srm$name
+[1] "21"
+
+$data$srm$hex
+[1] "952D00"
+
+
+$data$available
+$data$available$id
+[1] 1
+
+$data$available$name
+[1] "Year Round"
+
+$data$available$description
+[1] "Available year round as a staple beer."
+
+
+$data$style
+$data$style$id
+[1] 25
+
+$data$style$categoryId
+[1] 3
+
+$data$style$category
+$data$style$category$id
+[1] 3
+
+$data$style$category$name
+[1] "North American Origin Ales"
+
+$data$style$category$createDate
+[1] "2012-03-21 20:06:45"
+
+
+$data$style$name
+[1] "American-Style Pale Ale"
+
+$data$style$shortName
+[1] "American Pale"
+
+$data$style$description
+[1] "American pale ales range from deep golden to copper in color. The style is characterized by fruity, floral and citrus-like American-variety hop character producing medium to medium-high hop bitterness, flavor, and aroma. Note that the \"traditional\" style of this beer has its origins with certain floral, fruity, citrus-like, piney, resinous, or sulfur-like American hop varietals. One or more of these hop characters is the perceived end, but the perceived hop characters may be a result of the skillful use of hops of other national origins. American pale ales have medium body and low to medium maltiness. Low caramel character is allowable. Fruity-ester flavor and aroma should be moderate to strong. Diacetyl should be absent or present at very low levels. Chill haze is allowable at cold temperatures."
+
+$data$style$ibuMin
+[1] "30"
+
+$data$style$ibuMax
+[1] "42"
+
+$data$style$abvMin
+[1] "4.5"
+
+$data$style$abvMax
+[1] "5.6"
+
+$data$style$srmMin
+[1] "6"
+
+$data$style$srmMax
+[1] "14"
+
+$data$style$ogMin
+[1] "1.044"
+
+$data$style$fgMin
+[1] "1.008"
+
+$data$style$fgMax
+[1] "1.014"
+
+$data$style$createDate
+[1] "2012-03-21 20:06:45"
+
+$data$style$updateDate
+[1] "2015-04-07 15:25:18"
+
+
+
+$status
+[1] "success"
+```
+
+***
+
+Let's unnest just the fourth element of the `data` part of the response. This is the beer's `description`. 
+
+```r
+get_beer("GZQpRX")$data$description
+```
+
+```
+[1] "A bold yet balanced American Pale Ale with slight caramel sweetness and aggressive citrus hoppiness. This is our flagship beer."
+```
+
+Or in other words:
+
+```r
+get_beer("GZQpRX")[["data"]][4][[1]]
+```
+
+```
+[1] "A bold yet balanced American Pale Ale with slight caramel sweetness and aggressive citrus hoppiness. This is our flagship beer."
+```
+
+
+Now with beer
+========================================================
+class:very-small-code
+
+Other things are more deeply nested. In these cases, we really only care about the name portion.
+
+
+```r
+get_beer("GZQpRX")$data$style
+```
+
+```
+$id
+[1] 25
+
+$categoryId
+[1] 3
+
+$category
+$category$id
+[1] 3
+
+$category$name
+[1] "North American Origin Ales"
+
+$category$createDate
+[1] "2012-03-21 20:06:45"
+
+
+$name
+[1] "American-Style Pale Ale"
+
+$shortName
+[1] "American Pale"
+
+$description
+[1] "American pale ales range from deep golden to copper in color. The style is characterized by fruity, floral and citrus-like American-variety hop character producing medium to medium-high hop bitterness, flavor, and aroma. Note that the \"traditional\" style of this beer has its origins with certain floral, fruity, citrus-like, piney, resinous, or sulfur-like American hop varietals. One or more of these hop characters is the perceived end, but the perceived hop characters may be a result of the skillful use of hops of other national origins. American pale ales have medium body and low to medium maltiness. Low caramel character is allowable. Fruity-ester flavor and aroma should be moderate to strong. Diacetyl should be absent or present at very low levels. Chill haze is allowable at cold temperatures."
+
+$ibuMin
+[1] "30"
+
+$ibuMax
+[1] "42"
+
+$abvMin
+[1] "4.5"
+
+$abvMax
+[1] "5.6"
+
+$srmMin
+[1] "6"
+
+$srmMax
+[1] "14"
+
+$ogMin
+[1] "1.044"
+
+$fgMin
+[1] "1.008"
+
+$fgMax
+[1] "1.014"
+
+$createDate
+[1] "2012-03-21 20:06:45"
+
+$updateDate
+[1] "2015-04-07 15:25:18"
+```
+
+***
+
+In this case, that's:
+
+
+```r
+get_beer("GZQpRX")$data$style$name
+```
+
+```
+[1] "American-Style Pale Ale"
+```
+
+
 Unnesting
 ========================================================
 class:small-code
 
-The only thing we really care about is the name of the hop, contained in `get_hop("3")$data$name` -- in this case, Ahtanum. 
+So, we'll unravel the `data` part of the response, grab whatever we want there, and glue it together into a dataframe. 
 
-So, we'll unravel the response and grab just the name from each column. 
-(If we don't get `$data$name` back, we'll just grab whatever the first column is.)
+If the particular list item we're unnesting has a `name` portion (like `$style$name`), great, we'll grab that for the column. Otherwise, we'll take whatever's first.
 
 
 ```r
@@ -346,9 +627,13 @@ unnest_it <- function(df) {
 }
 ```
 
+Note that this is a `for` loop so it's pretty slow.
+
 Step 1: GET Beer
 ========================================================
 class: small-code
+
+Let's do this iteratively.
 
 We find out how many pages there are total and then keep sending requests and unnesting until we hit `number_of_pages`.
 
@@ -377,6 +662,54 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 ```
 
+
+Quick note on Ingredients
+========================================================
+The thing with ingredients is that a lot of beers don't have any hops or malts to speak of. The ones that do often have a few listed. Do these warrant their own columns?
+
+I took a few apporaches this question:
+
+* First, I concatenated them all into a single string during the unnesting process
+  * These are the columns `hop_name` and `malt_name`
+* Then I split them out into one hop per column and one malt per column
+  * `hops_name_1`, `hops_name_2`, etc. with the funciton to the right
+* Then I created a sparse dataframe where each type of hop (like Cascade, Fuggle, etc.) is its own column and the value is either 1 or 0 
+
+This gives people a few options for working with ingredients.
+
+***
+
+
+```r
+split_ingredients <- function(df, ingredients_to_split) {
+  
+  ncol_df <- ncol(df)
+  
+  for (ingredient in ingredients_to_split) {
+
+    ingredient_split <- str_split(df[[ingredient]], ", ")    
+    num_new_cols <- max(lengths(ingredient_split))    
+  
+    for (num in 1:num_new_cols) {
+      
+      this_col <- ncol_df + 1         
+      
+      df[, this_col] <- NA
+      names(df)[this_col] <- paste0(ingredient, "_", num)
+      ncol_df <- ncol(df)             
+      for (row in seq_along(ingredient_split)) {          
+        if (!is.null(ingredient_split[[row]][num])) {        
+          df[row, this_col] <- ingredient_split[[row]][num]
+        }
+      }
+      df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
+    }
+    
+    ncol_df <- ncol(df)
+  }
+  return(df)
+}
+```
 
 What have we got?
 ========================================================
@@ -410,7 +743,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
       
 ***
 
-![plot of chunk unnamed-chunk-4](brewsentation-figure/unnamed-chunk-4-1.png)
+![plot of chunk unnamed-chunk-10](brewsentation-figure/unnamed-chunk-10-1.png)
 
 
 
@@ -1060,7 +1393,7 @@ Our question: do more *kinds* of hops generally make a beer more bitter?
 (Note that this is different than the *amount* of hops poured into a beer.)
 
 
-How do hops affect ABV and IBU?
+How do hops affect bitterness?
 ========================================================
 class: small-code
 
@@ -1083,7 +1416,7 @@ beer_necessities_w_hops$hop_name <- factor(beer_necessities_w_hops$hop_name)
 ```
 
 
-How do hops affect ABV and IBU?
+How do hops affect bitterness?
 ========================================================
 class: small-code
 
@@ -1117,7 +1450,7 @@ pop_hops_display <- pop_hops_beer_stats %>%
 ```
 
 
-How do hops affect ABV and IBU?
+How do hops affect bitterness?
 ========================================================
 
 |Hop               | Mean IBU| Mean ABV| N Beers|
@@ -1151,23 +1484,23 @@ How do hops affect ABV and IBU?
 
 
 
-How do hops affect ABV and IBU?
+How do hops affect bitterness?
 ========================================================
 incremental: true
 class: small-code
 
 
-<img src="brewsentation-figure/unnamed-chunk-13-1.png" title="plot of chunk unnamed-chunk-13" alt="plot of chunk unnamed-chunk-13" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-19-1.png" title="plot of chunk unnamed-chunk-19" alt="plot of chunk unnamed-chunk-19" style="display: block; margin: auto;" />
 
 ^ Note that there is actually, irl, a strain of hops called Fuggle.
 
 
-How do hops affect ABV and IBU?
+How do hops affect bitterness?
 ========================================================
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-14](brewsentation-figure/unnamed-chunk-14-1.png)
+![plot of chunk unnamed-chunk-20](brewsentation-figure/unnamed-chunk-20-1.png)
 
 
 ***
@@ -1371,7 +1704,7 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-21](brewsentation-figure/unnamed-chunk-21-1.png)
+![plot of chunk unnamed-chunk-27](brewsentation-figure/unnamed-chunk-27-1.png)
 
 ***
 
@@ -1397,7 +1730,7 @@ In no particular order, some thoughts I've had plus suggestions from others:
 
 Cheers, all!
 ========================================================
-class: small-code
+class: very-small-code
 
 
 ```r
@@ -1428,28 +1761,28 @@ loaded via a namespace (and not attached):
  [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
 [10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
 [13] colorspace_1.3-2      gridExtra_2.2.1       mnormt_1.5-5         
-[16] curl_2.8.1            rvest_0.3.2           quantreg_5.29        
-[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
-[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
-[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
-[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
-[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
-[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
-[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
-[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
-[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
-[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
-[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
-[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
-[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
-[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
-[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
-[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
-[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
-[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
-[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
-[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
-[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+[16] rvest_0.3.2           quantreg_5.29         htmlTable_1.9        
+[19] SparseM_1.74          xml2_1.1.1            labeling_0.3         
+[22] scales_0.5.0          checkmate_1.8.3       psych_1.7.5          
+[25] stringr_1.2.0         digest_0.6.12         foreign_0.8-69       
+[28] minqa_1.2.4           base64enc_0.1-3       pkgconfig_2.0.1      
+[31] htmltools_0.3.6       lme4_1.1-13           highr_0.6            
+[34] htmlwidgets_0.9       rlang_0.1.2.9000      readxl_1.0.0         
+[37] rstudioapi_0.7.0-9000 shiny_1.0.5.9000      bindr_0.1            
+[40] acepack_1.4.1         ModelMetrics_1.1.0    car_2.1-5            
+[43] magrittr_1.5          Formula_1.2-2         Matrix_1.2-8         
+[46] Rcpp_0.12.13          munsell_0.4.3         stringi_1.1.5        
+[49] MASS_7.3-47           plyr_1.8.4            grid_3.3.3           
+[52] parallel_3.3.3        crayon_1.3.4          miniUI_0.1.1         
+[55] haven_1.1.0           splines_3.3.3         hms_0.3              
+[58] ranger_0.8.0          reshape2_1.4.2        codetools_0.2-15     
+[61] stats4_3.3.3          glue_1.1.1            evaluate_0.10.1      
+[64] latticeExtra_0.6-28   data.table_1.10.4     modelr_0.1.1         
+[67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
+[70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         
+[73] assertthat_0.2.0      mime_0.5              xtable_1.8-2         
+[76] e1071_1.6-8           class_7.3-14          survival_2.41-3      
+[79] iterators_1.0.8       cluster_2.0.5        
 ```
 
 
