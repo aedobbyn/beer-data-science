@@ -159,7 +159,7 @@ incremental:false
 How did this come about?
 ========================================================
 - Typical Friday afternoon office conversation
-    - How do you architect the ideal beer flavor profile visualizer
+    - How do you architect the ideal beer flavor profile visualizer?
         - In particular, how do you represent *"hoppy, for a Kölsch"*?
     
 - Does the style Kölsch even describe a tangibly different subset of beer that would be distinguishable in a blind taste test from other styles?
@@ -170,7 +170,7 @@ How did this come about?
 - We categorize it into different styles based on 
   - Type and ratio of ingredients
   - How the beer is made (e.g., how long and at what temperature it's brewed)
-  - Squishy regional differences 
+  - Regional/historical differences 
   
 
 How did this come about?
@@ -181,7 +181,7 @@ BUT
   - Is there actually more inter-style variation than intra-style variation?
   - Is there a more empiricially accurate way to categorize beers into super-groups?
 
-In other words, we're asking, are beer styles just a social construct?
+In other words, we're asking: are beer styles just a social construct?
 
 
 The Order of Things, theoretically
@@ -224,9 +224,7 @@ Quick funciton factory
 ========================================================
 class:small-code
 
-Using `purrr::walk()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
-
-The `fromJSON()` function will actually send the requests for us.
+Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
 
 
 ```r
@@ -552,6 +550,20 @@ Other things are more deeply nested. In these cases, we really only care about t
 
 
 ```r
+get_beer("GZQpRX")$data$style$name
+```
+
+```
+[1] "American-Style Pale Ale"
+```
+
+
+***
+
+Rather than the entire response:
+
+
+```r
 get_beer("GZQpRX")$data$style
 ```
 
@@ -616,18 +628,7 @@ $updateDate
 [1] "2015-04-07 15:25:18"
 ```
 
-***
 
-In this case, that's:
-
-
-```r
-get_beer("GZQpRX")$data$style$name
-```
-
-```
-[1] "American-Style Pale Ale"
-```
 
 
 Unnesting
@@ -655,15 +656,13 @@ unnest_it <- function(df) {
 }
 ```
 
-Note that this is a `for` loop so it's pretty slow.
+Note that this is a `for` loop so it's pretty slow 😔.
 
-Step 1: GET Beer
+Paginating the Request
 ========================================================
 class: small-code
 
-Let's do this iteratively.
-
-We find out how many pages there are total and then keep sending requests and unnesting until we hit `number_of_pages`.
+We find out how many pages there are total and then send requests and unnest each until we hit `number_of_pages`.
 
 
 ```r
@@ -693,15 +692,15 @@ beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 
 Quick note on Ingredients
 ========================================================
-The thing with ingredients is that a lot of beers don't have any hops or malts to speak of. The ones that do often have a few listed. Do these warrant their own columns?
+class:small-code
+Do they warrant their own columns? I took a few apporaches this question:
 
-I took a few apporaches this question:
-
-* First, I concatenated them all into a single string during the unnesting process
-  * These are the columns `hop_name` and `malt_name`
-* Then I split them out into one hop per column and one malt per column
-  * `hops_name_1`, `hops_name_2`, etc. with the funciton to the right
-* Then I created a sparse dataframe where each type of hop (like Cascade, Fuggle, etc.) is its own column and the value is either 1 or 0 
+* Concatenated into a single string during the unnesting process
+  * `hop_name` and `malt_name`
+* Split out into one hop per column and one malt per column
+  * `hops_name_1`, `hops_name_2`, etc. using this funciton  ↪
+* Sparse dataframe with each type of hop (like Cascade, Fuggle, etc.) as its own column 
+  * Value is either 1 or 0 
 
 This gives people a few options for working with ingredients.
 
@@ -843,7 +842,7 @@ We've set `trace_progress = TRUE`
 
 Popular Styles
 ========================================================
-* Let's reduce the levels in our outcome variable by focusing on only popular styles
+* Let's further reduce the levels in our outcome variable by focusing on only popular styles
    * Those with above the mean number of beers in their style (z-score > 0)
    * (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption)
    
@@ -1180,6 +1179,8 @@ We don't need to specify an outcome variable because this is unsupervised.
 
 Clustering: Run It
 ========================================================
+class: small-code
+
 Cluster the beers and stitch together the cluster assignments with the original data
 
 
@@ -1372,8 +1373,6 @@ Narrowing In
 
 
 
-<div class="footer" style="font-size:80%;">
-Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales.</div>
 
 <br> 
 If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
@@ -1394,6 +1393,8 @@ If we focus in on 5 distinct styles and cluster them into 5 clusters, will each 
 
 
 ![plot of chunk cluster_certain_styles](brewsentation-figure/cluster_certain_styles-1.png)
+
+<!-- Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales. -->
 
 
 And now for something completely different
@@ -1432,10 +1433,11 @@ Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 <br>
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
-(Note that this is different than the total *quantity* of hops poured into a beer.)
+
+<small>(This is different than the total *quantity* of hops poured into a beer.)</small>
 
 
-How do hops affect bitterness?
+Hops Munge
 ========================================================
 class: small-code
 
@@ -1470,7 +1472,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
-How do hops affect bitterness?
+Hops Munge
 ========================================================
 class: very-small-code
 
@@ -1517,7 +1519,7 @@ pop_hops_display <- pop_hops_beer_stats %>%
 ```
 
 
-How do hops affect bitterness?
+What's the hop landscape look like?
 ========================================================
 
 |Hop               | Mean IBU| Mean ABV| N Beers|
@@ -1551,7 +1553,7 @@ How do hops affect bitterness?
 
 
 
-How do hops affect bitterness?
+What's the hop landscape look like?
 ========================================================
 incremental: true
 class: small-code
@@ -1560,6 +1562,7 @@ class: small-code
 <img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
 
 ^ Note that there is actually, irl, a strain of hops called Fuggle.
+
 
 
 How do hops affect bitterness?
@@ -1585,7 +1588,7 @@ hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) 
 1 Total Hops    8.635     0.488       0
 ```
 
-We can expect an increase in around 9 IBU for every 1 extra hop.
+<small>We can expect an increase in around 9 IBU for every 1 extra hop.</small>
 
 Okay back on track!
 
@@ -1625,7 +1628,7 @@ class: small-code
 run_neural_net <- function(df, outcome, predictor_vars) {
   out <- list(outcome = outcome)
   
-  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
+  # Create a new column outcome; default to style
   if (outcome == "style_collapsed") {
     df[["outcome"]] <- df[["style_collapsed"]]
   } else {
@@ -1662,7 +1665,7 @@ run_neural_net <- function(df, outcome, predictor_vars) {
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)
 
-  # How accurate is the model? Compare predictions to outcomes from test data
+  # How accurate is the model? 
   nn_preds <- predict(nn, type="class", newdata = df_test)
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
 
@@ -1734,9 +1737,27 @@ nn_collapsed_out$nn_accuracy
 
 Not terrible given we've got 30 collapsed styles; chance would be 3.3%.
 
+***
+
+What's most important?
+
+
+```r
+nn_collapsed_out$most_important_vars
+```
+
+```
+             Overall
+total_hops 56.351555
+total_malt 34.265706
+abv        33.059746
+ibu         3.205657
+srm         3.907766
+```
 
 Neural Net: Glass
 ========================================================
+class:small-code
 What happens if we add in glass, a style-dependent attribute, as a predictor?
 
 
@@ -1746,13 +1767,34 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
 ```
 
+***
 
 
 ```
  Accuracy     Kappa 
-0.4298441 0.3873117 
+0.4409800 0.3956737 
 ```
 
+
+```
+                             Overall
+total_hops                 68.423878
+total_malt                 70.768022
+abv                        33.886420
+ibu                         3.474262
+srm                         4.295299
+glassGoblet               276.438250
+glassMug                  282.545603
+glassOversized Wine Glass 150.329838
+glassPilsner              195.777265
+glassPint                 236.818240
+glassSnifter              259.878825
+glassStange               503.267705
+glassThistle              414.189924
+glassTulip                244.696154
+glassWeizen               150.845423
+glassWilli                260.117329
+```
 
 
 So what's the answer?
@@ -1773,12 +1815,12 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-29](brewsentation-figure/unnamed-chunk-29-1.png)
+![plot of chunk unnamed-chunk-31](brewsentation-figure/unnamed-chunk-31-1.png)
 
 ***
 
-* We can distinguish more at the edges 
-* There don't appear distinct super-groups that are not already covered by style
+* At least on these two dimensions, higher-alcohol and -bitterness styles are more visually distinguishable on these two axes
+* No clear super-groups that are independent of style
 
 
 
@@ -1786,15 +1828,16 @@ Future Directions
 ========================================================
 In no particular order, some thoughts I've had plus suggestions from others:
 
-* Join this data on other data (e.g., Untappd or something scraped from the interwebs) to attach ratings and flavor profiles to some of the beers we have
+* Join on other data
+  * e.g., Untappd or something scraped from the interwebs that provides ratings and flavor profiles
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
-        * i.e., do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
+        * Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
 * Shiny features:
-    * Beer search
-    * Tooltips on hover
+    * Beer searchability
+    * Tooltips over each point on hover
 * Hierarchical clustering; what style is the mother of all styles?
-* Some funky model (neural net?) to generate beer names
+* Some funky algorithm to generate new beer names
 
 
 Cheers, all!
@@ -1846,8 +1889,7 @@ loaded via a namespace (and not attached):
 [67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
 [70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         
 [73] assertthat_0.2.0      mime_0.5              xtable_1.8-2         
-[76] e1071_1.6-8           class_7.3-14          survival_2.41-3      
-[79] iterators_1.0.8       cluster_2.0.5        
+[76] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
 ```
 
 
