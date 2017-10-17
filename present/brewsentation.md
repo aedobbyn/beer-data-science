@@ -13,6 +13,9 @@ autosize: true
       background-size: 100% 100%;
    }
   
+  body {
+    overflow: scroll;
+  }
 
   .cheers {
       background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
@@ -630,7 +633,6 @@ $updateDate
 
 
 
-
 Unnesting
 ========================================================
 class:small-code
@@ -1139,7 +1141,7 @@ incremental:false
 
 <br> 
 
-🤷🏼‍♀️  predictor because chicken and egg problem  
+🤷🏻‍♂️  predictor because chicken and egg problem  
     <small> Do brewers assign style first and then choose which ingredients to add, or vice versa? 🐣 </small>
 
 
@@ -1375,16 +1377,16 @@ Narrowing In
 
 
 <br> 
-If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
+If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster?
 
 
-|               |   1|  2|   3|   4|  5|
-|:--------------|---:|--:|---:|---:|--:|
-|Blonde         | 131| 17|   4|   1|  7|
-|India Pale Ale |  43|  1| 468|  11| 54|
-|Stout          |   6| 10|   3| 180|  5|
-|Tripel         |   1| 57|   1|   3|  3|
-|Wheat          | 289|  9|   6|   5| 12|
+|               |   1|  2|  3|   4|   5|
+|:--------------|---:|--:|--:|---:|---:|
+|Blonde         | 132|  7|  0|   2|  19|
+|India Pale Ale |  45| 54|  3|  11| 464|
+|Stout          |   5|  5| 56| 133|   5|
+|Tripel         |   1|  4|  3|   1|  56|
+|Wheat          | 287| 12|  2|   6|  14|
 
 
     
@@ -1434,7 +1436,7 @@ Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
 
-<small>(This is different than the total *quantity* of hops poured into a beer.)</small>
+<small>(This is different than the total *quantity* of hops used during brewing.)</small>
 
 
 Hops Munge
@@ -1553,7 +1555,7 @@ What's the hop landscape look like?
 
 
 
-What's the hop landscape look like?
+Alcohol, bitterness, and popularity per Hop
 ========================================================
 incremental: true
 class: small-code
@@ -1561,7 +1563,7 @@ class: small-code
 
 <img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
 
-^ Note that there is actually, irl, a strain of hops called Fuggle.
+^ Note that there is actually, irl, a strain of hops called Fuggles.
 
 
 
@@ -1599,9 +1601,11 @@ Okay back on track!
 
 Prediction
 ========================================================
-If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+* The other side of the coin: supervised learning
+    * Random forest
+    * Multinomial neural network. We'll go through the neural net.
 
-I used a random forest and a multinomial neural network. We'll go through the neural net.
+A low prediction error rate should indicate that styles are well-defined, at least by the variables that we have. 
 
 
 Prediction: Neural Net
@@ -1727,12 +1731,12 @@ How'd we do?
 
 
 ```r
-nn_collapsed_out$nn_accuracy
+nn_collapsed_out$nn_accuracy[1]
 ```
 
 ```
- Accuracy     Kappa 
-0.4002541 0.3449254 
+ Accuracy 
+0.4002541 
 ```
 
 Not terrible given we've got 30 collapsed styles; chance would be 3.3%.
@@ -1771,29 +1775,29 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 
 
 ```
- Accuracy     Kappa 
-0.4409800 0.3956737 
+ Accuracy 
+0.4298441 
 ```
 
 
 ```
                              Overall
-total_hops                 68.423878
-total_malt                 70.768022
-abv                        33.886420
-ibu                         3.474262
-srm                         4.295299
-glassGoblet               276.438250
-glassMug                  282.545603
-glassOversized Wine Glass 150.329838
-glassPilsner              195.777265
-glassPint                 236.818240
-glassSnifter              259.878825
-glassStange               503.267705
-glassThistle              414.189924
-glassTulip                244.696154
-glassWeizen               150.845423
-glassWilli                260.117329
+total_hops                 67.664595
+total_malt                 57.560133
+abv                        25.648035
+ibu                         3.919207
+srm                         4.659998
+glassGoblet               385.541056
+glassMug                  341.373373
+glassOversized Wine Glass 191.064835
+glassPilsner              289.745181
+glassPint                 337.963656
+glassSnifter              373.368669
+glassStange               144.500364
+glassThistle              295.494777
+glassTulip                340.047147
+glassWeizen               195.439655
+glassWilli                308.742602
 ```
 
 
@@ -1814,6 +1818,7 @@ Unknowns:
 
 So what's the answer?
 ========================================================
+Plotting the landscape directly:
 
 ![plot of chunk unnamed-chunk-31](brewsentation-figure/unnamed-chunk-31-1.png)
 
@@ -1889,7 +1894,8 @@ loaded via a namespace (and not attached):
 [67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
 [70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         
 [73] assertthat_0.2.0      mime_0.5              xtable_1.8-2         
-[76] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+[76] e1071_1.6-8           class_7.3-14          survival_2.41-3      
+[79] iterators_1.0.8       cluster_2.0.5        
 ```
 
 

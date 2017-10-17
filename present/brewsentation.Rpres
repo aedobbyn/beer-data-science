@@ -13,6 +13,9 @@ autosize: true
       background-size: 100% 100%;
    }
   
+  body {
+    overflow: scroll;
+  }
 
   .cheers {
       background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
@@ -324,7 +327,6 @@ Rather than the entire response:
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$style
 ```
-
 
 
 
@@ -752,7 +754,7 @@ We've got three main dimensions: ABV, IBU, and SRM. We'll plot color against alc
 
 ```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
 clustered_beer_plot_srm_ibu <- ggplot() +
-  geom_jitter(data = clustered_beer %>% dobtools::trim_outliers(cutoff = 2.5), 
+  geom_jitter(data = clustered_beer %>% select(abv, ibu, srm, cluster_assignment) %>% dobtools::trim_outliers(exclude = "cluster_assignment", cutoff = 2.5), 
              aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
   geom_point(data = style_centers,
              aes(mean_srm, mean_ibu), colour = "black") +
@@ -917,7 +919,7 @@ style_centers_certain_styles <- style_centers %>%
 
 
 <br> 
-If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into their own cluster?
+If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster?
 
 ```{r, eval=TRUE, echo=FALSE}
 kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
@@ -984,7 +986,7 @@ Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
 Our question: do more *kinds* of hops generally make a beer more bitter?
 
-<small>(This is different than the total *quantity* of hops poured into a beer.)</small>
+<small>(This is different than the total *quantity* of hops used during brewing.)</small>
 
 
 Hops Munge
@@ -1081,7 +1083,7 @@ kable(pop_hops_display[12:20,])
 
 
 
-What's the hop landscape look like?
+Alcohol, bitterness, and popularity per Hop
 ========================================================
 incremental: true
 class: small-code
@@ -1096,7 +1098,7 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-^ Note that there is actually, irl, a strain of hops called Fuggle.
+^ Note that there is actually, irl, a strain of hops called Fuggles.
 
 
 
@@ -1138,9 +1140,11 @@ Okay back on track!
 
 Prediction
 ========================================================
-If beers are well-defined by their styles we should be able to predict style reasonably well using our other available variables.
+* The other side of the coin: supervised learning
+    * Random forest
+    * Multinomial neural network. We'll go through the neural net.
 
-I used a random forest and a multinomial neural network. We'll go through the neural net.
+A low prediction error rate should indicate that styles are well-defined, at least by the variables that we have. 
 
 
 Prediction: Neural Net
@@ -1239,7 +1243,7 @@ Neural Net: Evaluate
 How'd we do? 
 
 ```{r, eval=TRUE}
-nn_collapsed_out$nn_accuracy
+nn_collapsed_out$nn_accuracy[1]
 ```
 
 Not terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
@@ -1266,7 +1270,7 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 ***
 
 ```{r, eval=TRUE, echo=FALSE}
-nn_collapsed_out_add_glass$nn_accuracy
+nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
 ```{r, eval=TRUE, echo=FALSE}
@@ -1291,6 +1295,7 @@ Unknowns:
 
 So what's the answer?
 ========================================================
+Plotting the landscape directly:
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot() +   
