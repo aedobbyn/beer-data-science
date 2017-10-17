@@ -1,5 +1,5 @@
 
-run_neural_net <- function(df, outcome, predictor_vars, trace=FALSE) {
+run_neural_net <- function(df, multinom = FALSE, outcome, predictor_vars, trace=FALSE) {
   out <- list(outcome = outcome)
   
   # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
@@ -30,6 +30,14 @@ run_neural_net <- function(df, outcome, predictor_vars, trace=FALSE) {
   # Build multinomail neural net
   nn <- multinom(outcome ~ .,
                  data = df_train, maxit=500, trace=trace)
+  
+  if(multinom==TRUE) {
+    nn <- multinom(outcome ~ .,
+                   data = df_train, maxit=500, trace=trace)
+  } else if (multinom==FALSE) {
+    nn <- nnet(outcome ~ ., size = 5,
+                   data = df_train, maxit=500, trace=trace)
+  }
   
   # Which variables are the most important in the neural net?
   most_important_vars <- varImp(nn)

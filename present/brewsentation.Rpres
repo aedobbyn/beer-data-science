@@ -46,17 +46,17 @@ autosize: true
   }
 
   td{
-    font-size: 2pt;
+    font-size: 1pt;
     padding: 0px;
     cellpadding="0";
     cellspacing="0"
   }
   th {
-    font-size: 2pt;
+    font-size: 1pt;
     height: 10px;
     font-weight: bold;
     text-align: right;
-    background-color: #989da5;
+    background-color: #e1e3e8;
   }
   table { 
     border-spacing: 5px;
@@ -144,11 +144,14 @@ library(nnet)
 library(caret)
 library(emo)
 
+# Data
 beer_necessities <- read_feather("./beer_necessities.feather") %>% as_tibble()
 beer_dat <- read_feather("./beer_dat.feather") %>% as_tibble()
-source("./analyze/key.R")
-```
 
+# Helper functions
+source("./analyze/key.R")
+source("./helpers/run_neural_net.R")
+```
 
 
 ```{r beer_caps, echo=FALSE, eval=TRUE}
@@ -156,6 +159,7 @@ source("./analyze/key.R")
 words_to_cap <- c("abv", "ibu", "srm", "id", 
                 "Abv", "Ibu", "Srm", "Id")
 ```
+
 
 First things first
 ========================================================
@@ -172,18 +176,21 @@ UChicago '15
 
 Now at [Earlybird Software](http://earlybird.co/)
 ![eb](./img/eb_planning.jpg)
-
+<!-- ![eb_logo](./img/earlybird.png) -->
 
 First things first
 ========================================================
 incremental:false
 
 *Where's the code at?*
-- Code at: <https://github.com/aedobbyn/beer-data-science>
-    - Includes writeup, Shiny app, and step-by-step scripts for getting and munging data
+
+Code at: <https://github.com/aedobbyn/beer-data-science>
+- Markdown writeup in `/compile`
+- Shiny app in `/clusterfun`
+- Step-by-step scripts for getting and munging data in `/run_it`
 
 ***
-![git_cat](./img/gitcat.png)
+![writeup](./img/writeup.jpg)
 
 
 How did this come about?
@@ -191,8 +198,14 @@ How did this come about?
 - Typical Friday afternoon office conversation
     - How do you architect the ideal beer flavor profile visualizer?
         - In particular, how do you represent *"hoppy, for a Kölsch"*?
+  
+<br>    
     
-- Does the style Kölsch even describe a tangibly different subset of beer that would be distinguishable in a blind taste test from other styles?
+- Does the style Kölsch even describe a well-defined beer sub-group?
+    - Would it be reliably distinguishable from non-Kölschs in a blind taste test?
+    
+<!-- ![beer_radar](./img/beer_radar.jpg) -->
+
     
 How did this come about?
 ========================================================
@@ -390,45 +403,34 @@ beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 Quick note on Ingredients
 ========================================================
 class:small-code
-Do they warrant their own columns? I took a few apporaches this question:
-
-<small> (Another would have been a nested list-col) </small>
+A few apporaches I used:
 
 * Concatenated into a single string during the unnesting process
-  * `hop_name` and `malt_name`
+  * `hop_name` and `malt_name` using this function  `r emo::ji("point_right")`
 * Split out into one hop per column and one malt per column
-  * `hops_name_1`, `hops_name_2`, etc. using this funciton  `r emo::ji("point_right")`
+  * `hops_name_1`, `hops_name_2`, etc.
 * Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column 
   * Value is either 1 or 0 
 
+<small> (Another would have been a nested list-col) </small>
+
 ***
 
-```{r, eval=FALSE, echo=TRUE}
-split_ingredients <- function(df, ingredients_to_split) {
-  
-  ncol_df <- ncol(df)
-  
-  for (ingredient in ingredients_to_split) {
+<br>
 
-    ingredient_split <- str_split(df[[ingredient]], ", ")    
-    num_new_cols <- max(lengths(ingredient_split))    
-  
-    for (num in 1:num_new_cols) {
+```{r, eval=FALSE, echo=TRUE}
+unnest_ingredients <- function(df) {
+  df$hops_name <- NA
+  df$malt_name <- NA
+
+  for (row in 1:nrow(df)) {
+    if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) |
+        !is.null(df[["ingredients.malt"]][[row]][["name"]])) {
       
-      this_col <- ncol_df + 1         
+      df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ")
       
-      df[, this_col] <- NA
-      names(df)[this_col] <- paste0(ingredient, "_", num)
-      ncol_df <- ncol(df)             
-      for (row in seq_along(ingredient_split)) {          
-        if (!is.null(ingredient_split[[row]][num])) {        
-          df[row, this_col] <- ingredient_split[[row]][num]
-        }
-      }
-      df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
+      df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ")
     }
-    
-    ncol_df <- ncol(df)
   }
   return(df)
 }
@@ -462,18 +464,18 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot(data = beer_necessities) +
-  geom_line(aes(abv), alpha = 0.5, colour = "gray", stat = "density") +
-  geom_line(aes(ibu), alpha = 0.5, colour = "brown", stat = "density") +
+  geom_line(aes(abv), alpha = 0.5, colour = "black", stat = "density") +
+  geom_line(aes(ibu), alpha = 0.5, colour = "black", stat = "density") +
   geom_line(aes(srm), alpha = 0.5, colour = "black", stat = "density") +
   # geom_density(aes(abv), alpha = 0.5, fill = "green", alpha = 0.5) +
   # geom_density(aes(ibu), alpha = 0.5, fill = "blue", alpha = 0.5) +
   # geom_density(aes(srm), alpha = 0.5, fill = "brown", alpha = 0.5) +
   theme_minimal() +
-  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "bold", size = 7, 
-            colour = "gray") +
-  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "bold", size = 7,
-            colour = "brown") +
-  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "bold", size = 7,
+  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 7, 
+            colour = "black") +
+  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 7,
+            colour = "black") +
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 7,
             colour = "black") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
@@ -532,7 +534,7 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 Collapsing in Action
 ========================================================
 
-We've set `trace_progress = TRUE`
+Setting `trace_progress = TRUE`:
 
 ![get_beers](./img/collapse_styles.jpg)
 
@@ -551,7 +553,7 @@ Popular Styles
 ========================================================
 * Let's further reduce the levels in our outcome variable by focusing on only popular styles
    * Those with above the mean number of beers in their style (z-score > 0)
-   * (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption)
+   * <small> (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption) </small>
    
 * And then get a sense of where those styles fall in relation to one another
     * Style "centers" = mean ABV, IBU, and SRM of each style
@@ -749,7 +751,9 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We've got three main dimensions: ABV, IBU, and SRM. We'll plot color against alcohol here.
+We've got three main dimensions: ABV, IBU, and SRM. 
+
+We'll plot two.
 
 
 ```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
@@ -1164,11 +1168,6 @@ Neural Net: the Function
 ========================================================
 class: small-code
 
-```{r source_run_nn, eval=TRUE, echo=FALSE}
-source("./helpers/run_neural_net.R")
-```
-
-
 ```{r nn_func, warning=FALSE, echo=TRUE, eval=FALSE}
 run_neural_net <- function(df, outcome, predictor_vars) {
   out <- list(outcome = outcome)
@@ -1251,10 +1250,10 @@ Not terrible given we've got `r length(levels(beer_dat$style_collapsed))` collap
 
 ***
 
-What's most important?
+Which variables are most important?
 
-```{r, eval=TRUE}
-nn_collapsed_out$nn %>% get_nn_importance()
+```{r, eval=TRUE, echo=FALSE}
+nn_collapsed_out$nn %>% get_nn_importance() %>% kable()
 ```
 
 Neural Net: Glass
@@ -1268,20 +1267,19 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
 ```
 
-***
-
 ```{r, eval=TRUE, echo=FALSE}
 nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
+***
+
+
+
 ```{r, eval=TRUE, echo=FALSE}
-nn_collapsed_out_add_glass$nn %>% get_nn_importance()
+nn_collapsed_out_add_glass$nn %>% get_nn_importance() %>% kable()
 ```
 
 
-```{r}
-
-```
 
 
 So what's the answer?
