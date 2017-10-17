@@ -59,7 +59,7 @@ autosize: true
     background-color: #989da5;
   }
   table { 
-    border-spacing: 0px;
+    border-spacing: 5px;
     border-collapse: collapse;
   }
   
@@ -697,14 +697,14 @@ Quick note on Ingredients
 class:small-code
 Do they warrant their own columns? I took a few apporaches this question:
 
+<small> (Another would have been a nested list-col) </small>
+
 * Concatenated into a single string during the unnesting process
   * `hop_name` and `malt_name`
 * Split out into one hop per column and one malt per column
-  * `hops_name_1`, `hops_name_2`, etc. using this funciton  ↪
-* Sparse dataframe with each type of hop (like Cascade, Fuggle, etc.) as its own column 
+  * `hops_name_1`, `hops_name_2`, etc. using this funciton  👉
+* Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column 
   * Value is either 1 or 0 
-
-This gives people a few options for working with ingredients.
 
 ***
 
@@ -777,7 +777,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
 
 
 
-Where did we put it?
+Where to put it?
 ========================================================
 
 ![local_db](./img/local_db.jpg)
@@ -861,229 +861,39 @@ Popular Styles
 ========================================================
 class: small-code
 
-<table>
- <thead>
-  <tr>
-   <th style="text-align:left;"> Collapsed Style </th>
-   <th style="text-align:right;"> Mean ABV </th>
-   <th style="text-align:right;"> Mean IBU </th>
-   <th style="text-align:right;"> Mean SRM </th>
-   <th style="text-align:right;"> Numer of Beers </th>
-  </tr>
- </thead>
-<tbody>
-  <tr>
-   <td style="text-align:left;"> India Pale Ale </td>
-   <td style="text-align:right;"> 6.58 </td>
-   <td style="text-align:right;"> 66.04 </td>
-   <td style="text-align:right;"> 9.99 </td>
-   <td style="text-align:right;"> 6524 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Pale Ale </td>
-   <td style="text-align:right;"> 5.70 </td>
-   <td style="text-align:right;"> 40.87 </td>
-   <td style="text-align:right;"> 8.89 </td>
-   <td style="text-align:right;"> 4280 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Stout </td>
-   <td style="text-align:right;"> 7.99 </td>
-   <td style="text-align:right;"> 43.90 </td>
-   <td style="text-align:right;"> 36.30 </td>
-   <td style="text-align:right;"> 4238 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Wheat </td>
-   <td style="text-align:right;"> 5.16 </td>
-   <td style="text-align:right;"> 17.47 </td>
-   <td style="text-align:right;"> 5.86 </td>
-   <td style="text-align:right;"> 3349 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Double India Pale Ale </td>
-   <td style="text-align:right;"> 8.93 </td>
-   <td style="text-align:right;"> 93.48 </td>
-   <td style="text-align:right;"> 11.01 </td>
-   <td style="text-align:right;"> 2525 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Red </td>
-   <td style="text-align:right;"> 5.74 </td>
-   <td style="text-align:right;"> 33.81 </td>
-   <td style="text-align:right;"> 16.18 </td>
-   <td style="text-align:right;"> 2521 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Lager </td>
-   <td style="text-align:right;"> 5.45 </td>
-   <td style="text-align:right;"> 30.64 </td>
-   <td style="text-align:right;"> 8.46 </td>
-   <td style="text-align:right;"> 2230 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Saison </td>
-   <td style="text-align:right;"> 6.40 </td>
-   <td style="text-align:right;"> 27.25 </td>
-   <td style="text-align:right;"> 7.05 </td>
-   <td style="text-align:right;"> 2167 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Blonde </td>
-   <td style="text-align:right;"> 5.60 </td>
-   <td style="text-align:right;"> 22.39 </td>
-   <td style="text-align:right;"> 5.62 </td>
-   <td style="text-align:right;"> 2044 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Porter </td>
-   <td style="text-align:right;"> 6.18 </td>
-   <td style="text-align:right;"> 33.25 </td>
-   <td style="text-align:right;"> 32.20 </td>
-   <td style="text-align:right;"> 1973 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Brown </td>
-   <td style="text-align:right;"> 6.16 </td>
-   <td style="text-align:right;"> 32.22 </td>
-   <td style="text-align:right;"> 23.59 </td>
-   <td style="text-align:right;"> 1462 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Pilsener </td>
-   <td style="text-align:right;"> 5.23 </td>
-   <td style="text-align:right;"> 33.51 </td>
-   <td style="text-align:right;"> 4.41 </td>
-   <td style="text-align:right;"> 1268 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Specialty Beer </td>
-   <td style="text-align:right;"> 6.45 </td>
-   <td style="text-align:right;"> 33.78 </td>
-   <td style="text-align:right;"> 15.52 </td>
-   <td style="text-align:right;"> 1044 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Bitter </td>
-   <td style="text-align:right;"> 5.32 </td>
-   <td style="text-align:right;"> 38.28 </td>
-   <td style="text-align:right;"> 12.46 </td>
-   <td style="text-align:right;"> 939 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Fruit Beer </td>
-   <td style="text-align:right;"> 5.20 </td>
-   <td style="text-align:right;"> 19.24 </td>
-   <td style="text-align:right;"> 8.67 </td>
-   <td style="text-align:right;"> 905 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Herb and Spice Beer </td>
-   <td style="text-align:right;"> 6.62 </td>
-   <td style="text-align:right;"> 27.77 </td>
-   <td style="text-align:right;"> 18.17 </td>
-   <td style="text-align:right;"> 872 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Sour </td>
-   <td style="text-align:right;"> 6.22 </td>
-   <td style="text-align:right;"> 18.89 </td>
-   <td style="text-align:right;"> 10.04 </td>
-   <td style="text-align:right;"> 797 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Strong Ale </td>
-   <td style="text-align:right;"> 8.83 </td>
-   <td style="text-align:right;"> 36.74 </td>
-   <td style="text-align:right;"> 22.55 </td>
-   <td style="text-align:right;"> 767 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Tripel </td>
-   <td style="text-align:right;"> 9.03 </td>
-   <td style="text-align:right;"> 32.52 </td>
-   <td style="text-align:right;"> 7.68 </td>
-   <td style="text-align:right;"> 734 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Black </td>
-   <td style="text-align:right;"> 6.96 </td>
-   <td style="text-align:right;"> 65.51 </td>
-   <td style="text-align:right;"> 31.08 </td>
-   <td style="text-align:right;"> 622 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Barley Wine </td>
-   <td style="text-align:right;"> 10.78 </td>
-   <td style="text-align:right;"> 74.05 </td>
-   <td style="text-align:right;"> 19.56 </td>
-   <td style="text-align:right;"> 605 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Kölsch </td>
-   <td style="text-align:right;"> 4.98 </td>
-   <td style="text-align:right;"> 23.37 </td>
-   <td style="text-align:right;"> 4.37 </td>
-   <td style="text-align:right;"> 593 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Barrel-Aged </td>
-   <td style="text-align:right;"> 9.00 </td>
-   <td style="text-align:right;"> 39.16 </td>
-   <td style="text-align:right;"> 18.13 </td>
-   <td style="text-align:right;"> 540 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Other Belgian-Style Ales </td>
-   <td style="text-align:right;"> 7.52 </td>
-   <td style="text-align:right;"> 37.56 </td>
-   <td style="text-align:right;"> 17.55 </td>
-   <td style="text-align:right;"> 506 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Pumpkin Beer </td>
-   <td style="text-align:right;"> 6.71 </td>
-   <td style="text-align:right;"> 23.48 </td>
-   <td style="text-align:right;"> 17.92 </td>
-   <td style="text-align:right;"> 458 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Dubbel </td>
-   <td style="text-align:right;"> 7.51 </td>
-   <td style="text-align:right;"> 25.05 </td>
-   <td style="text-align:right;"> 22.94 </td>
-   <td style="text-align:right;"> 399 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Scotch Ale </td>
-   <td style="text-align:right;"> 7.62 </td>
-   <td style="text-align:right;"> 26.37 </td>
-   <td style="text-align:right;"> 24.22 </td>
-   <td style="text-align:right;"> 393 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> German-Style Doppelbock </td>
-   <td style="text-align:right;"> 8.05 </td>
-   <td style="text-align:right;"> 28.89 </td>
-   <td style="text-align:right;"> 25.70 </td>
-   <td style="text-align:right;"> 376 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> Fruit Cider </td>
-   <td style="text-align:right;"> 6.21 </td>
-   <td style="text-align:right;"> 25.60 </td>
-   <td style="text-align:right;"> 12.00 </td>
-   <td style="text-align:right;"> 370 </td>
-  </tr>
-  <tr>
-   <td style="text-align:left;"> German-Style Märzen </td>
-   <td style="text-align:right;"> 5.75 </td>
-   <td style="text-align:right;"> 25.64 </td>
-   <td style="text-align:right;"> 14.32 </td>
-   <td style="text-align:right;"> 370 </td>
-  </tr>
-</tbody>
-</table>
+
+|Collapsed Style          | Mean ABV| Mean IBU| Mean SRM| Numer of Beers|
+|:------------------------|--------:|--------:|--------:|--------------:|
+|India Pale Ale           |     6.58|    66.04|     9.99|           6524|
+|Pale Ale                 |     5.70|    40.87|     8.89|           4280|
+|Stout                    |     7.99|    43.90|    36.30|           4238|
+|Wheat                    |     5.16|    17.47|     5.86|           3349|
+|Double India Pale Ale    |     8.93|    93.48|    11.01|           2525|
+|Red                      |     5.74|    33.81|    16.18|           2521|
+|Lager                    |     5.45|    30.64|     8.46|           2230|
+|Saison                   |     6.40|    27.25|     7.05|           2167|
+|Blonde                   |     5.60|    22.39|     5.62|           2044|
+|Porter                   |     6.18|    33.25|    32.20|           1973|
+|Brown                    |     6.16|    32.22|    23.59|           1462|
+|Pilsener                 |     5.23|    33.51|     4.41|           1268|
+|Specialty Beer           |     6.45|    33.78|    15.52|           1044|
+|Bitter                   |     5.32|    38.28|    12.46|            939|
+|Fruit Beer               |     5.20|    19.24|     8.67|            905|
+|Herb and Spice Beer      |     6.62|    27.77|    18.17|            872|
+|Sour                     |     6.22|    18.89|    10.04|            797|
+|Strong Ale               |     8.83|    36.74|    22.55|            767|
+|Tripel                   |     9.03|    32.52|     7.68|            734|
+|Black                    |     6.96|    65.51|    31.08|            622|
+|Barley Wine              |    10.78|    74.05|    19.56|            605|
+|Kölsch                   |     4.98|    23.37|     4.37|            593|
+|Barrel-Aged              |     9.00|    39.16|    18.13|            540|
+|Other Belgian-Style Ales |     7.52|    37.56|    17.55|            506|
+|Pumpkin Beer             |     6.71|    23.48|    17.92|            458|
+|Dubbel                   |     7.51|    25.05|    22.94|            399|
+|Scotch Ale               |     7.62|    26.37|    24.22|            393|
+|German-Style Doppelbock  |     8.05|    28.89|    25.70|            376|
+|Fruit Cider              |     6.21|    25.60|    12.00|            370|
+|German-Style Märzen      |     5.75|    25.64|    14.32|            370|
 
 ***
 
@@ -1244,7 +1054,7 @@ We've got three main dimensions: ABV, IBU, and SRM. We'll plot color against alc
 
 ***
 
-Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)
+<small>Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)</small>
 
 
 ```r
@@ -1375,9 +1185,9 @@ Narrowing In
 
 
 
+<br>
 
-<br> 
-If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster?
+<small> If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster? </small>
 
 
 |               |   1|  2|  3|   4|   5|
@@ -1392,6 +1202,7 @@ If we focus in on 5 distinct styles and cluster them into 5 clusters, will each 
     
 ***
 
+<br>
 
 
 ![plot of chunk cluster_certain_styles](brewsentation-figure/cluster_certain_styles-1.png)
@@ -1747,16 +1558,18 @@ What's most important?
 
 
 ```r
-nn_collapsed_out$most_important_vars
+nn_collapsed_out$nn %>% get_nn_importance()
 ```
 
 ```
-             Overall
-total_hops 56.351555
-total_malt 34.265706
-abv        33.059746
-ibu         3.205657
-srm         3.907766
+# A tibble: 5 x 2
+    Variable `Importance Percent`
+       <chr>                <chr>
+1 total_hops                43.1%
+2 total_malt                26.2%
+3        abv                25.3%
+4        ibu                 3.0%
+5        srm                 2.5%
 ```
 
 Neural Net: Glass
@@ -1781,24 +1594,29 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 
 
 ```
-                             Overall
-total_hops                 67.664595
-total_malt                 57.560133
-abv                        25.648035
-ibu                         3.919207
-srm                         4.659998
-glassGoblet               385.541056
-glassMug                  341.373373
-glassOversized Wine Glass 191.064835
-glassPilsner              289.745181
-glassPint                 337.963656
-glassSnifter              373.368669
-glassStange               144.500364
-glassThistle              295.494777
-glassTulip                340.047147
-glassWeizen               195.439655
-glassWilli                308.742602
+# A tibble: 16 x 2
+                    Variable `Importance Percent`
+                       <chr>                <chr>
+ 1                total_hops                11.5%
+ 2                total_malt                11.1%
+ 3                       abv                10.2%
+ 4                       ibu                10.1%
+ 5                       srm                10.1%
+ 6               glassGoblet                 9.2%
+ 7                  glassMug                 8.8%
+ 8 glassOversized Wine Glass                 8.6%
+ 9              glassPilsner                 5.8%
+10                 glassPint                 5.7%
+11              glassSnifter                 4.3%
+12               glassStange                 2.0%
+13              glassThistle                 1.7%
+14                glassTulip                 0.8%
+15               glassWeizen                 0.1%
+16                glassWilli                 0.1%
 ```
+
+
+
 
 
 So what's the answer?
@@ -1818,14 +1636,16 @@ Unknowns:
 
 So what's the answer?
 ========================================================
-Plotting the landscape directly:
 
-![plot of chunk unnamed-chunk-31](brewsentation-figure/unnamed-chunk-31-1.png)
+![plot of chunk unnamed-chunk-32](brewsentation-figure/unnamed-chunk-32-1.png)
 
 ***
 
-* At least on these two dimensions, higher-alcohol and -bitterness styles are more visually distinguishable on these two axes
+Plotting the landscape directly on our two main dimensions using a 2D density plot,
+
 * No clear super-groups that are independent of style
+* Syles are very overlapping, especially among lower-alcohol and -bitterness styles
+
 
 
 
@@ -1888,8 +1708,8 @@ loaded via a namespace (and not attached):
 [49] MASS_7.3-47           plyr_1.8.4            grid_3.3.3           
 [52] parallel_3.3.3        crayon_1.3.4          miniUI_0.1.1         
 [55] haven_1.1.0           splines_3.3.3         hms_0.3              
-[58] ranger_0.8.0          stats4_3.3.3          reshape2_1.4.2       
-[61] codetools_0.2-15      glue_1.1.1            evaluate_0.10.1      
+[58] ranger_0.8.0          reshape2_1.4.2        codetools_0.2-15     
+[61] stats4_3.3.3          glue_1.1.1            evaluate_0.10.1      
 [64] latticeExtra_0.6-28   data.table_1.10.4     modelr_0.1.1         
 [67] nloptr_1.0.4          httpuv_1.3.5.9000     foreach_1.4.3        
 [70] MatrixModels_0.4-1    cellranger_1.1.0      gtable_0.2.0         

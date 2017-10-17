@@ -59,7 +59,7 @@ autosize: true
     background-color: #989da5;
   }
   table { 
-    border-spacing: 0px;
+    border-spacing: 5px;
     border-collapse: collapse;
   }
   
@@ -392,14 +392,14 @@ Quick note on Ingredients
 class:small-code
 Do they warrant their own columns? I took a few apporaches this question:
 
+<small> (Another would have been a nested list-col) </small>
+
 * Concatenated into a single string during the unnesting process
   * `hop_name` and `malt_name`
 * Split out into one hop per column and one malt per column
-  * `hops_name_1`, `hops_name_2`, etc. using this funciton  `r emo::ji("left_arrow_curving_right")`
-* Sparse dataframe with each type of hop (like Cascade, Fuggle, etc.) as its own column 
+  * `hops_name_1`, `hops_name_2`, etc. using this funciton  `r emo::ji("point_right")`
+* Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column 
   * Value is either 1 or 0 
-
-This gives people a few options for working with ingredients.
 
 ***
 
@@ -462,19 +462,19 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot(data = beer_necessities) +
-  # geom_line(aes(abv), alpha = 0.5, colour = "#D8B365", stat = "density") +
-  # geom_line(aes(ibu), alpha = 0.5, colour = "#F5F5F5", stat = "density") +
-  # geom_line(aes(srm), alpha = 0.5, colour = "brown", stat = "density") +
-  geom_density(aes(abv), alpha = 0.5, fill = "green", alpha = 0.5) +
-  geom_density(aes(ibu), alpha = 0.5, fill = "blue", alpha = 0.5) +
-  geom_density(aes(srm), alpha = 0.5, fill = "brown", alpha = 0.5) +
+  geom_line(aes(abv), alpha = 0.5, colour = "gray", stat = "density") +
+  geom_line(aes(ibu), alpha = 0.5, colour = "brown", stat = "density") +
+  geom_line(aes(srm), alpha = 0.5, colour = "black", stat = "density") +
+  # geom_density(aes(abv), alpha = 0.5, fill = "green", alpha = 0.5) +
+  # geom_density(aes(ibu), alpha = 0.5, fill = "blue", alpha = 0.5) +
+  # geom_density(aes(srm), alpha = 0.5, fill = "brown", alpha = 0.5) +
   theme_minimal() +
-  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 7, 
-            colour = "green") +
-  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 7,
-            colour = "blue") +
-  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 7,
+  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "bold", size = 7, 
+            colour = "gray") +
+  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "bold", size = 7,
             colour = "brown") +
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "bold", size = 7,
+            colour = "black") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
   labs(x = "Measure", y = "Density")
@@ -484,7 +484,7 @@ ggplot(data = beer_necessities) +
 
 
 
-Where did we put it?
+Where to put it?
 ========================================================
 
 ![local_db](./img/local_db.jpg)
@@ -615,7 +615,7 @@ Popular Styles
 class: small-code
 
 ```{r, echo=FALSE, eval=TRUE}
-kable(style_centers_rename, format = "html", pad=0)
+kable(style_centers_rename)
 ```
 
 ***
@@ -773,7 +773,7 @@ clustered_beer_plot_srm_ibu
 
 ***
 
-Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)
+<small>Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)</small>
 
 ```{r trim_outliers, echo=TRUE, eval=FALSE}
 trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE){
@@ -917,9 +917,9 @@ style_centers_certain_styles <- style_centers %>%
 
 ```
 
+<br>
 
-<br> 
-If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster?
+<small> If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster? </small>
 
 ```{r, eval=TRUE, echo=FALSE}
 kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
@@ -929,6 +929,7 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
     
 ***
 
+<br>
 
 
 ```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
@@ -1253,7 +1254,7 @@ Not terrible given we've got `r length(levels(beer_dat$style_collapsed))` collap
 What's most important?
 
 ```{r, eval=TRUE}
-nn_collapsed_out$most_important_vars
+nn_collapsed_out$nn %>% get_nn_importance()
 ```
 
 Neural Net: Glass
@@ -1274,7 +1275,12 @@ nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
 ```{r, eval=TRUE, echo=FALSE}
-nn_collapsed_out_add_glass$most_important_vars
+nn_collapsed_out_add_glass$nn %>% get_nn_importance()
+```
+
+
+```{r}
+
 ```
 
 
@@ -1295,7 +1301,6 @@ Unknowns:
 
 So what's the answer?
 ========================================================
-Plotting the landscape directly:
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot() +   
@@ -1310,8 +1315,11 @@ ggplot() +
 
 ***
 
-* At least on these two dimensions, higher-alcohol and -bitterness styles are more visually distinguishable on these two axes
+Plotting the landscape directly on our two main dimensions using a 2D density plot,
+
 * No clear super-groups that are independent of style
+* Syles are very overlapping, especially among lower-alcohol and -bitterness styles
+
 
 
 
