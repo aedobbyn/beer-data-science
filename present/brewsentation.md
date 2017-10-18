@@ -61,6 +61,7 @@ autosize: true
   table { 
     border-spacing: 5px;
     border-collapse: collapse;
+    padding: 5px;
   }
   
   .small-code pre code {
@@ -787,8 +788,199 @@ MySQL.
 * This allows us to
    * Easily update the data if anything changes
    * Others easy access to the data if they want to build an app using it
+   
+
+A look at our outcome variable
+========================================================
+class:small-code
+
+We have 170 styles of beer.
 
 
+```r
+levels(beer_necessities$style)
+```
+
+```
+  [1] "Adambier"                                                  
+  [2] "Aged Beer (Ale or Lager)"                                  
+  [3] "American-Style Amber (Low Calorie) Lager"                  
+  [4] "American-Style Amber Lager"                                
+  [5] "American-Style Amber/Red Ale"                              
+  [6] "American-Style Barley Wine Ale"                            
+  [7] "American-Style Black Ale"                                  
+  [8] "American-Style Brown Ale"                                  
+  [9] "American-Style Cream Ale or Lager"                         
+ [10] "American-Style Dark Lager"                                 
+ [11] "American-Style Ice Lager"                                  
+ [12] "American-Style Imperial Porter"                            
+ [13] "American-Style Imperial Stout"                             
+ [14] "American-Style India Pale Ale"                             
+ [15] "American-Style Lager"                                      
+ [16] "American-Style Light (Low Calorie) Lager"                  
+ [17] "American-Style Low-Carbohydrate Light Lager"               
+ [18] "American-Style Malt Liquor"                                
+ [19] "American-Style Märzen / Oktoberfest"                       
+ [20] "American-Style Pale Ale"                                   
+ [21] "American-Style Pilsener"                                   
+ [22] "American-Style Premium Lager"                              
+ [23] "American-Style Sour Ale"                                   
+ [24] "American-Style Stout"                                      
+ [25] "American-Style Strong Pale Ale"                            
+ [26] "American-Style Wheat Wine Ale"                             
+ [27] "Apple Wine"                                                
+ [28] "Australasian, Latin American or Tropical-Style Light Lager"
+ [29] "Australian-Style Pale Ale"                                 
+ [30] "Baltic-Style Porter"                                       
+ [31] "Bamberg-Style Bock Rauchbier"                              
+ [32] "Bamberg-Style Helles Rauchbier"                            
+ [33] "Bamberg-Style Märzen Rauchbier"                            
+ [34] "Bamberg-Style Weiss (Smoke) Rauchbier (Dunkel or Helles)"  
+ [35] "Belgian-Style Blonde Ale"                                  
+ [36] "Belgian-Style Dark Strong Ale"                             
+ [37] "Belgian-Style Dubbel"                                      
+ [38] "Belgian-Style Flanders Oud Bruin or Oud Red Ales"          
+ [39] "Belgian-style Fruit Beer"                                  
+ [40] "Belgian-Style Fruit Lambic"                                
+ [41] "Belgian-Style Gueuze Lambic"                               
+ [42] "Belgian-Style Lambic"                                      
+ [43] "Belgian-Style Pale Ale"                                    
+ [44] "Belgian-Style Pale Strong Ale"                             
+ [45] "Belgian-Style Quadrupel"                                   
+ [46] "Belgian-Style Table Beer"                                  
+ [47] "Belgian-Style Tripel"                                      
+ [48] "Belgian-Style White (or Wit) / Belgian-Style Wheat"        
+ [49] "Berliner-Style Weisse (Wheat)"                             
+ [50] "Bohemian-Style Pilsener"                                   
+ [51] "Braggot"                                                   
+ [52] "Brett Beer"                                                
+ [53] "British-Style Barley Wine Ale"                             
+ [54] "British-Style Imperial Stout"                              
+ [55] "Brown Porter"                                              
+ [56] "California Common Beer"                                    
+ [57] "Chili Pepper Beer"                                         
+ [58] "Chocolate / Cocoa-Flavored Beer"                           
+ [59] "Classic English-Style Pale Ale"                            
+ [60] "Classic Irish-Style Dry Stout"                             
+ [61] "Coffee-Flavored Beer"                                      
+ [62] "Common Cider"                                              
+ [63] "Common Perry"                                              
+ [64] "Contemporary Gose"                                         
+ [65] "Cyser (Apple Melomel)"                                     
+ [66] "Dark American Wheat Ale or Lager with Yeast"               
+ [67] "Dark American Wheat Ale or Lager without Yeast"            
+ [68] "Dark American-Belgo-Style Ale"                             
+ [69] "Dortmunder / European-Style Export"                        
+ [70] "Double Red Ale"                                            
+ [71] "Dry Lager"                                                 
+ [72] "Dry Mead"                                                  
+ [73] "Dutch-Style Kuit, Kuyt or Koyt"                            
+ [74] "Energy Enhanced Malt Beverage"                             
+ [75] "English Cider"                                             
+ [76] "English-Style Brown Ale"                                   
+ [77] "English-Style Dark Mild Ale"                               
+ [78] "English-Style India Pale Ale"                              
+ [79] "English-Style Pale Mild Ale"                               
+ [80] "English-Style Summer Ale"                                  
+ [81] "European-Style Dark / Münchner Dunkel"                     
+ [82] "Experimental Beer (Lager or Ale)"                          
+ [83] "Extra Special Bitter"                                      
+ [84] "Field Beer"                                                
+ [85] "Flavored Malt Beverage"                                    
+ [86] "Foreign (Export)-Style Stout"                              
+ [87] "French & Belgian-Style Saison"                             
+ [88] "French Cider"                                              
+ [89] "French-Style Bière de Garde"                               
+ [90] "Fresh \"Wet\" Hop Ale"                                     
+ [91] "Fruit Beer"                                                
+ [92] "Fruit Cider"                                               
+ [93] "Fruit Wheat Ale or Lager with or without Yeast"            
+ [94] "German-Style Altbier"                                      
+ [95] "German-Style Doppelbock"                                   
+ [96] "German-Style Eisbock"                                      
+ [97] "German-Style Heller Bock/Maibock"                          
+ [98] "German-Style Kölsch / Köln-Style Kölsch"                   
+ [99] "German-Style Leichtbier"                                   
+[100] "German-Style Leichtes Weizen / Weissbier"                  
+[101] "German-Style Märzen"                                       
+[102] "German-Style Oktoberfest / Wiesen (Meadow)"                
+[103] "German-Style Pilsener"                                     
+[104] "German-Style Rye Ale (Roggenbier) with or without Yeast"   
+[105] "German-Style Schwarzbier"                                  
+[106] "Ginjo Beer or Sake-Yeast Beer"                             
+[107] "Gluten-Free Beer"                                          
+[108] "Golden or Blonde Ale"                                      
+[109] "Grodziskie"                                                
+[110] "Herb and Spice Beer"                                       
+[111] "Historical Beer"                                           
+[112] "Imperial or Double India Pale Ale"                         
+[113] "Imperial Red Ale"                                          
+[114] "Indigenous Beer (Lager or Ale)"                            
+[115] "International-Style Pale Ale"                              
+[116] "International-Style Pilsener"                              
+[117] "Irish-Style Red Ale"                                       
+[118] "Kellerbier (Cellar beer) or Zwickelbier - Ale"             
+[119] "Kellerbier (Cellar beer) or Zwickelbier - Lager"           
+[120] "Leipzig-Style Gose"                                        
+[121] "Light American Wheat Ale or Lager with Yeast"              
+[122] "Light American Wheat Ale or Lager without Yeast"           
+[123] "Metheglin"                                                 
+[124] "Mixed Culture Brett Beer"                                  
+[125] "Münchner (Munich)-Style Helles"                            
+[126] "New England Cider"                                         
+[127] "Non-Alcoholic (Beer) Malt Beverages"                       
+[128] "Oatmeal Stout"                                             
+[129] "Old Ale"                                                   
+[130] "Open Category Mead"                                        
+[131] "Ordinary Bitter"                                           
+[132] "Other Belgian-Style Ales"                                  
+[133] "Other Fruit Melomel"                                       
+[134] "Other Specialty Cider or Perry"                            
+[135] "Other Strong Ale or Lager"                                 
+[136] "Pale American-Belgo-Style Ale"                             
+[137] "Pumpkin Beer"                                              
+[138] "Pyment (Grape Melomel)"                                    
+[139] "Robust Porter"                                             
+[140] "Rye Ale or Lager with or without Yeast"                    
+[141] "Scotch Ale"                                                
+[142] "Scottish-Style Export Ale"                                 
+[143] "Scottish-Style Heavy Ale"                                  
+[144] "Scottish-Style Light Ale"                                  
+[145] "Semi-Sweet Mead"                                           
+[146] "Session Beer"                                              
+[147] "Session India Pale Ale"                                    
+[148] "Smoke Beer (Lager or Ale)"                                 
+[149] "Smoke Porter"                                              
+[150] "South German-Style Bernsteinfarbenes Weizen / Weissbier"   
+[151] "South German-Style Dunkel Weizen / Dunkel Weissbier"       
+[152] "South German-Style Hefeweizen / Hefeweissbier"             
+[153] "South German-Style Kristall Weizen / Kristall Weissbier"   
+[154] "South German-Style Weizenbock / Weissbock"                 
+[155] "Special Bitter or Best Bitter"                             
+[156] "Specialty Beer"                                            
+[157] "Specialty Honey Lager or Ale"                              
+[158] "Specialty Stouts"                                          
+[159] "Strong Ale"                                                
+[160] "Sweet Mead"                                                
+[161] "Sweet or Cream Stout"                                      
+[162] "Traditional German-Style Bock"                             
+[163] "Traditional Perry"                                         
+[164] "Vienna-Style Lager"                                        
+[165] "Wild Beer"                                                 
+[166] "Wood- and Barrel-Aged Beer"                                
+[167] "Wood- and Barrel-Aged Dark Beer"                           
+[168] "Wood- and Barrel-Aged Pale to Amber Beer"                  
+[169] "Wood- and Barrel-Aged Sour Beer"                           
+[170] "Wood- and Barrel-Aged Strong Beer"                         
+```
+
+***
+
+<br> 
+
+We'll want to condense a few of these. 
+
+For instance, we want to lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -827,7 +1019,7 @@ Collapsing in Action
 
 Setting `trace_progress = TRUE`:
 
-![get_beers](./img/collapse_styles.jpg)
+![get_beers](./img/collapse_styles.jpg)a
 
 ***
 * Keywords are ordered from most general to most specific
@@ -842,10 +1034,15 @@ Setting `trace_progress = TRUE`:
 
 Popular Styles
 ========================================================
-* Let's further reduce the levels in our outcome variable by focusing on only popular styles
-   * Those with above the mean number of beers in their style (z-score > 0)
-   * <small> (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption) </small>
+
+Let's see where most of the data is concentrated. 
+
+* Popular defined as
+   * Styles with above the mean number of beers per style (z-score > 0)
+   * <small> (Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style) </small>
    
+<br>
+
 * And then get a sense of where those styles fall in relation to one another
     * Style "centers" = mean ABV, IBU, and SRM of each style
 
@@ -897,7 +1094,7 @@ class: small-code
 
 From this we can plot the centers of each style.
 
-![plot of chunk unnamed-chunk-12](brewsentation-figure/unnamed-chunk-12-1.png)
+![plot of chunk unnamed-chunk-13](brewsentation-figure/unnamed-chunk-13-1.png)
 
 
 To the main question
@@ -1045,9 +1242,7 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We've got three main dimensions: ABV, IBU, and SRM. 
-
-We'll plot two.
+We'll plot two of our three dimensions:
 
 
 <img src="brewsentation-figure/cluster_srm_ibu-1.png" title="plot of chunk cluster_srm_ibu" alt="plot of chunk cluster_srm_ibu" style="display: block; margin: auto;" />
@@ -1256,6 +1451,8 @@ class: small-code
 
 Let's munge a bit. We'll need to split out ingredients from one column into many. 
 
+<small>This is the second approach in our ingredients discussion earlier.</small>
+
 
 ```r
 split_ingredients <- function(df, ingredients_to_split) {
@@ -1372,7 +1569,7 @@ incremental: true
 class: small-code
 
 
-<img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-22-1.png" title="plot of chunk unnamed-chunk-22" alt="plot of chunk unnamed-chunk-22" style="display: block; margin: auto;" />
 
 ^ Note that there is actually, irl, a strain of hops called Fuggles.
 
@@ -1383,7 +1580,7 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-22](brewsentation-figure/unnamed-chunk-22-1.png)
+![plot of chunk unnamed-chunk-23](brewsentation-figure/unnamed-chunk-23-1.png)
 
 Is the relationship significant?
 
@@ -1397,7 +1594,7 @@ hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) 
 
 
 ```
-    Variable Estimate Std.Error P.Value
+    Variable Estimate Std Error P Value
 1 Total Hops    8.635     0.488       0
 ```
 
@@ -1412,11 +1609,16 @@ Okay back on track!
 
 Prediction
 ========================================================
-* The other side of the coin: supervised learning
+* The other side of the coin: supervised learning classification problem
     * Random forest
-    * Multinomial neural network. We'll go through the neural net.
+    * Multinomial neural network
+        * This fits a log-linear model (similar to a GLM) using neural networks
+    
+We'll go through the neural net.
 
-A low prediction error rate should indicate that styles are well-defined, at least by the variables that we have. 
+<br> 
+
+A <em>low prediction error rate</em> should indicate that styles are well-defined, at least by the variables that we have. 
 
 
 Prediction: Neural Net
@@ -1571,13 +1773,13 @@ What happens if we add in glass, a style-dependent attribute, as a predictor?
 ```r
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE, multinom = TRUE)
 ```
 
 
 ```
- Accuracy 
-0.4298441 
+Accuracy 
+ 0.44098 
 ```
 
 ***
@@ -1587,20 +1789,20 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 
 |Variable                  |Importance Percent |
 |:-------------------------|:------------------|
-|total_hops                |11.5%              |
-|total_malt                |11.1%              |
-|abv                       |10.2%              |
-|ibu                       |10.1%              |
-|srm                       |10.1%              |
-|glassGoblet               |9.2%               |
-|glassMug                  |8.8%               |
-|glassOversized Wine Glass |8.6%               |
-|glassPilsner              |5.8%               |
-|glassPint                 |5.7%               |
-|glassSnifter              |4.3%               |
-|glassStange               |2.0%               |
-|glassThistle              |1.7%               |
-|glassTulip                |0.8%               |
+|total_hops                |15.9%              |
+|total_malt                |13.1%              |
+|abv                       |9.0%               |
+|ibu                       |8.8%               |
+|srm                       |8.2%               |
+|glassGoblet               |8.2%               |
+|glassMug                  |7.8%               |
+|glassOversized Wine Glass |7.5%               |
+|glassPilsner              |6.2%               |
+|glassPint                 |4.8%               |
+|glassSnifter              |4.8%               |
+|glassStange               |2.2%               |
+|glassThistle              |2.2%               |
+|glassTulip                |1.1%               |
 |glassWeizen               |0.1%               |
 |glassWilli                |0.1%               |
 
@@ -1625,14 +1827,14 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-31](brewsentation-figure/unnamed-chunk-31-1.png)
+![plot of chunk unnamed-chunk-30](brewsentation-figure/unnamed-chunk-30-1.png)
 
 ***
 
-Plotting the landscape directly on our two main dimensions using a 2D density plot,
+Plotting the landscape directly on our two main dimensions,
 
-* No clear super-groups that are independent of style
 * Syles are very overlapping, especially among lower-alcohol and -bitterness styles
+* But, no clear super-groups that are independent of style
 
 
 
@@ -1642,13 +1844,12 @@ Future Directions
 In no particular order, some thoughts I've had plus suggestions from others:
 
 * Join on other data
-  * e.g., Untappd or something scraped from the interwebs that provides ratings and flavor profiles
+  * e.g., Untappd or something scraped from the interwebs
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
-        * Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
-* Shiny features:
-    * Beer searchability
-    * Tooltips over each point on hover
+        * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
+* Shiny app features:
+    * Beer searchability, tooltips over each point on hover
 * Hierarchical clustering; what style is the mother of all styles?
 * Some funky algorithm to generate new beer names
 
@@ -1677,32 +1878,33 @@ other attached packages:
 [17] jsonlite_1.5     broom_0.4.2      knitr_1.17      
 
 loaded via a namespace (and not attached):
- [1] httr_1.3.1            splines_3.3.3         foreach_1.4.3        
- [4] modelr_0.1.1          Formula_1.2-2         shiny_1.0.5.9000     
- [7] assertthat_0.2.0      highr_0.6             stats4_3.3.3         
-[10] latticeExtra_0.6-28   cellranger_1.1.0      backports_1.1.0      
-[13] quantreg_5.29         glue_1.1.1            digest_0.6.12        
-[16] RColorBrewer_1.1-2    checkmate_1.8.3       rvest_0.3.2          
-[19] minqa_1.2.4           colorspace_1.3-2      htmltools_0.3.6      
-[22] httpuv_1.3.5.9000     Matrix_1.2-8          plyr_1.8.4           
-[25] psych_1.7.5           pkgconfig_2.0.1       SparseM_1.74         
-[28] haven_1.1.0           xtable_1.8-2          scales_0.5.0         
-[31] ranger_0.8.0          MatrixModels_0.4-1    lme4_1.1-13          
-[34] htmlTable_1.9         mgcv_1.8-17           car_2.1-5            
-[37] lazyeval_0.2.0        pbkrtest_0.4-7        mnormt_1.5-5         
-[40] readxl_1.0.0          survival_2.41-3       magrittr_1.5         
-[43] crayon_1.3.4          mime_0.5              evaluate_0.10.1      
-[46] nlme_3.1-131          MASS_7.3-47           xml2_1.1.1           
-[49] foreign_0.8-69        tools_3.3.3           data.table_1.10.4    
-[52] hms_0.3               stringr_1.2.0         munsell_0.4.3        
-[55] cluster_2.0.5         rlang_0.1.2.9000      grid_3.3.3           
-[58] nloptr_1.0.4          iterators_1.0.8       rstudioapi_0.7.0-9000
-[61] htmlwidgets_0.9       miniUI_0.1.1          labeling_0.3         
-[64] base64enc_0.1-3       gtable_0.2.0          ModelMetrics_1.1.0   
-[67] codetools_0.2-15      reshape2_1.4.2        R6_2.2.2             
-[70] gridExtra_2.2.1       lubridate_1.6.0       bindr_0.1            
-[73] Hmisc_4.0-3           stringi_1.1.5         parallel_3.3.3       
-[76] Rcpp_0.12.13          rpart_4.1-11          acepack_1.4.1        
+ [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
+ [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
+ [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
+[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
+[13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
+[16] mnormt_1.5-5          rvest_0.3.2           quantreg_5.29        
+[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
+[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
+[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
+[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
+[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
+[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
+[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
+[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
+[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
+[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
+[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
+[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
+[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
+[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
+[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
+[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
+[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
+[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
+[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
+[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
+[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
 ```
 
 

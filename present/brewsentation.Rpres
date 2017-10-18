@@ -61,6 +61,7 @@ autosize: true
   table { 
     border-spacing: 5px;
     border-collapse: collapse;
+    padding: 5px;
   }
   
   .small-code pre code {
@@ -464,18 +465,18 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
 
 ```{r, echo=FALSE, eval=TRUE}
 ggplot(data = beer_necessities) +
-  geom_line(aes(abv), alpha = 0.5, colour = "black", stat = "density") +
-  geom_line(aes(ibu), alpha = 0.5, colour = "black", stat = "density") +
-  geom_line(aes(srm), alpha = 0.5, colour = "black", stat = "density") +
+  geom_line(aes(abv), alpha = 1, colour = "black", stat = "density") +
+  geom_line(aes(ibu), alpha = 1, colour = "black", stat = "density", linetype = "dashed") +
+  geom_line(aes(srm), alpha = 1, colour = "black", stat = "density", linetype = "dotted") +
   # geom_density(aes(abv), alpha = 0.5, fill = "green", alpha = 0.5) +
   # geom_density(aes(ibu), alpha = 0.5, fill = "blue", alpha = 0.5) +
   # geom_density(aes(srm), alpha = 0.5, fill = "brown", alpha = 0.5) +
   theme_minimal() +
-  geom_text(aes(label = "ABV", x = 20, y = 0.25), fontface = "italic", size = 7, 
+  geom_text(aes(label = "ABV", x = 20, y = 0.25), size = 7, 
             colour = "black") +
-  geom_text(aes(label = "IBU", x = 70, y = 0.03), fontface = "italic", size = 7,
+  geom_text(aes(label = "IBU", x = 70, y = 0.03), size = 7,
             colour = "black") +
-  geom_text(aes(label = "SRM", x = 21, y = 0.07), fontface = "italic", size = 7,
+  geom_text(aes(label = "SRM", x = 21, y = 0.07), size = 7,
             colour = "black") +
   xlim(0, 125) +
   ggtitle("Distribution of ABV, IBU, SRM") +
@@ -498,8 +499,25 @@ MySQL.
 * This allows us to
    * Easily update the data if anything changes
    * Others easy access to the data if they want to build an app using it
+   
 
+A look at our outcome variable
+========================================================
+class:small-code
 
+We have `r length(levels(beer_necessities$style))` styles of beer.
+
+```{r, eval=TRUE}
+levels(beer_necessities$style)
+```
+
+***
+
+<br> 
+
+We'll want to condense a few of these. 
+
+For instance, we want to lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -536,7 +554,7 @@ Collapsing in Action
 
 Setting `trace_progress = TRUE`:
 
-![get_beers](./img/collapse_styles.jpg)
+![get_beers](./img/collapse_styles.jpg)a
 
 ***
 * Keywords are ordered from most general to most specific
@@ -551,10 +569,15 @@ Setting `trace_progress = TRUE`:
 
 Popular Styles
 ========================================================
-* Let's further reduce the levels in our outcome variable by focusing on only popular styles
-   * Those with above the mean number of beers in their style (z-score > 0)
-   * <small> (Of course, this is just a reflection of the number of different beers we get from BreweryDB that are classified into that style, not a measure of popular consumption) </small>
+
+Let's see where most of the data is concentrated. 
+
+* Popular defined as
+   * Styles with above the mean number of beers per style (z-score > 0)
+   * <small> (Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style) </small>
    
+<br>
+
 * And then get a sense of where those styles fall in relation to one another
     * Style "centers" = mean ABV, IBU, and SRM of each style
 
@@ -751,9 +774,7 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We've got three main dimensions: ABV, IBU, and SRM. 
-
-We'll plot two.
+We'll plot two of our three dimensions:
 
 
 ```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
@@ -1000,6 +1021,8 @@ class: small-code
 
 Let's munge a bit. We'll need to split out ingredients from one column into many. 
 
+<small>This is the second approach in our ingredients discussion earlier.</small>
+
 ```{r, eval=TRUE, echo=TRUE}
 split_ingredients <- function(df, ingredients_to_split) {
   ncol_df <- ncol(df)
@@ -1099,7 +1122,7 @@ ggplot(data = pop_hops_beer_stats) +
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
   labs(x = "Mean ABV per Hop Type", y = "Mean IBU per Hop Type", colour = "Hop Name", 
-       size = "Number of Beers") +
+       size = "N Beers") +
   theme_minimal()
 ```
 
@@ -1131,7 +1154,7 @@ hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) 
 ```
 
 ```{r, echo=FALSE, eval=TRUE, fig.align="center"}
-hops_ibu_lm %>% data.frame()
+hops_ibu_lm %>% as.data.frame()
 ```
 
 <small>We can expect an increase in around `r round(hops_ibu_lm$Estimate, digits = 0)` IBU for every 1 extra hop.</small>
@@ -1145,11 +1168,16 @@ Okay back on track!
 
 Prediction
 ========================================================
-* The other side of the coin: supervised learning
+* The other side of the coin: supervised learning classification problem
     * Random forest
-    * Multinomial neural network. We'll go through the neural net.
+    * Multinomial neural network
+        * This fits a log-linear model (similar to a GLM) using neural networks
+    
+We'll go through the neural net.
 
-A low prediction error rate should indicate that styles are well-defined, at least by the variables that we have. 
+<br> 
+
+A <em>low prediction error rate</em> should indicate that styles are well-defined, at least by the variables that we have. 
 
 
 Prediction: Neural Net
@@ -1261,13 +1289,13 @@ Neural Net: Glass
 class:small-code
 What happens if we add in glass, a style-dependent attribute, as a predictor?
 
-```{r, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
+```{r add_glass, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE)
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE, multinom = TRUE)
 ```
 
-```{r, eval=TRUE, echo=FALSE}
+```{r add_glass_accuracy, eval=TRUE, echo=FALSE}
 nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
@@ -1313,10 +1341,10 @@ ggplot() +
 
 ***
 
-Plotting the landscape directly on our two main dimensions using a 2D density plot,
+Plotting the landscape directly on our two main dimensions,
 
-* No clear super-groups that are independent of style
 * Syles are very overlapping, especially among lower-alcohol and -bitterness styles
+* But, no clear super-groups that are independent of style
 
 
 
@@ -1326,13 +1354,12 @@ Future Directions
 In no particular order, some thoughts I've had plus suggestions from others:
 
 * Join on other data
-  * e.g., Untappd or something scraped from the interwebs that provides ratings and flavor profiles
+  * e.g., Untappd or something scraped from the interwebs
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
-        * Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more?
-* Shiny features:
-    * Beer searchability
-    * Tooltips over each point on hover
+        * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
+* Shiny app features:
+    * Beer searchability, tooltips over each point on hover
 * Hierarchical clustering; what style is the mother of all styles?
 * Some funky algorithm to generate new beer names
 
