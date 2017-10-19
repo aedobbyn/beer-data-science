@@ -1589,7 +1589,8 @@ Is the relationship significant?
 
 
 ```r
-hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm()
+library(tidyverse)
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm() 
 ```
 
 
@@ -1749,7 +1750,7 @@ nn_collapsed_out$nn_accuracy[1]
 0.4002541 
 ```
 
-Not terrible given we've got 30 collapsed styles; chance would be 3.3%.
+Not terrible given we've got 108 collapsed styles; chance would be 0.9%.
 
 ***
 
@@ -1786,25 +1787,18 @@ Accuracy
 
 
 
+Here summing up the contributions from all glasses.
 
-|Variable                  |Importance Percent |
-|:-------------------------|:------------------|
-|total_hops                |15.9%              |
-|total_malt                |13.1%              |
-|abv                       |9.0%               |
-|ibu                       |8.8%               |
-|srm                       |8.2%               |
-|glassGoblet               |8.2%               |
-|glassMug                  |7.8%               |
-|glassOversized Wine Glass |7.5%               |
-|glassPilsner              |6.2%               |
-|glassPint                 |4.8%               |
-|glassSnifter              |4.8%               |
-|glassStange               |2.2%               |
-|glassThistle              |2.2%               |
-|glassTulip                |1.1%               |
-|glassWeizen               |0.1%               |
-|glassWilli                |0.1%               |
+
+
+| Importance|Variable   |Importance Percent |
+|----------:|:----------|:------------------|
+|   503.2677|total_hops |15.9%              |
+|   414.1899|total_malt |13.1%              |
+|   282.5456|abv        |9.0%               |
+|   276.4383|ibu        |8.8%               |
+|   260.1173|srm        |8.2%               |
+|  1419.1936|glass      |45%                |
 
 
 

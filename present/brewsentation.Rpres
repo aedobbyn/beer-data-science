@@ -1149,8 +1149,9 @@ Is the relationship significant?
 ***
 
 
-```{r, echo=TRUE, eval=TRUE}
-hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm()
+```{r hops_ibu_lm, echo=TRUE, eval=TRUE, cache=FALSE, dependson="source_in"}
+library(tidyverse)
+hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm() 
 ```
 
 ```{r, echo=FALSE, eval=TRUE, fig.align="center"}
@@ -1274,7 +1275,7 @@ How'd we do?
 nn_collapsed_out$nn_accuracy[1]
 ```
 
-Not terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
+Not terrible given we've got `r length(levels(beer_necessities$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_necessities$style_collapsed))), digits = 1)`%.
 
 ***
 
@@ -1301,10 +1302,35 @@ nn_collapsed_out_add_glass$nn_accuracy[1]
 
 ***
 
+```{r, eval=TRUE, echo=FALSE}
+# Sum up glass contributions
+nn_glass_imp <- nn_collapsed_out_add_glass$nn %>% get_nn_importance(keep_gini = TRUE)
+glass_cols <- nn_glass_imp$Variable[grepl("glass", nn_glass_imp$Variable)]
+
+glass_sums <- nn_glass_imp %>% 
+  filter(Variable %in% !!glass_cols) %>% 
+  # group_by(Importance, `Importance Percent`) %>% 
+  summarise(
+    Importance = sum(Importance),
+    `Importance Percent` = (sum(as.numeric(sub("%", "", `Importance Percent`)))/100) %>% scales::percent()
+  ) %>% mutate(
+    Variable = "glass"
+  )
+
+nn_glass_imp_all <- nn_glass_imp %>% 
+  filter(!Variable %in% !!glass_cols) %>% 
+  bind_rows(
+   glass_sums
+  ) %>% select(
+    -Importance
+  )
+```
+
+Here summing up the contributions from all glasses.
 
 
 ```{r, eval=TRUE, echo=FALSE}
-nn_collapsed_out_add_glass$nn %>% get_nn_importance() %>% kable()
+nn_glass_imp_all %>% kable()
 ```
 
 
