@@ -15,6 +15,7 @@ autosize: true
   
   body {
     overflow: scroll;
+    border-style: solid;
   }
 
   .cheers {
@@ -62,6 +63,7 @@ autosize: true
     border-spacing: 5px;
     border-collapse: collapse;
     padding: 5px;
+    border-style: solid;
   }
   
   .small-code pre code {
@@ -233,6 +235,202 @@ From where?
 ![get_beers](./img/example_beer.jpg)
 
 
+Step 1: GET one Beer
+========================================================
+
+Once we've got a key, we can use a beer's unique BreweryDB ID and our key to tet data on that beer.
+
+<small>`http://api.brewerydb.com/v2/beer/<BEER_ID_HERE>/?key=/<YOUR_KEY_HERE>` </small>
+
+In the browser, that looks like:
+
+<center>![got_a_beer](./img/got_a_beer.jpg)</center>
+
+
+Step 1: GET one Beer
+========================================================
+class: small-code
+
+
+```r
+base_url <- "http://api.brewerydb.com/v2"
+key_preface <- "/?key="
+
+get_a_beer <- function(id) {
+  fromJSON(paste0(base_url, "/beer/", id, "/", key_preface, key))
+}
+```
+
+
+We can make a little function from this that'll take a single ID and use `fromJSON` to convert from, well, JSON into a nested list starting with our 200 success message.
+
+
+```r
+get_a_beer("GZQpRX")
+```
+
+```
+$message
+[1] "READ ONLY MODE: Request Successful"
+
+$data
+$data$id
+[1] "GZQpRX"
+
+$data$name
+[1] "Alpha King"
+
+$data$nameDisplay
+[1] "Alpha King"
+
+$data$description
+[1] "A bold yet balanced American Pale Ale with slight caramel sweetness and aggressive citrus hoppiness. This is our flagship beer."
+
+$data$abv
+[1] "6.7"
+
+$data$ibu
+[1] "68"
+
+$data$glasswareId
+[1] 5
+
+$data$srmId
+[1] 21
+
+$data$availableId
+[1] 1
+
+$data$styleId
+[1] 25
+
+$data$isOrganic
+[1] "N"
+
+$data$labels
+$data$labels$icon
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-icon.png"
+
+$data$labels$medium
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-medium.png"
+
+$data$labels$large
+[1] "https://s3.amazonaws.com/brewerydbapi/beer/GZQpRX/upload_t1NkG7-large.png"
+
+
+$data$status
+[1] "verified"
+
+$data$statusDisplay
+[1] "Verified"
+
+$data$createDate
+[1] "2012-01-03 02:42:40"
+
+$data$updateDate
+[1] "2017-01-10 21:43:48"
+
+$data$glass
+$data$glass$id
+[1] 5
+
+$data$glass$name
+[1] "Pint"
+
+$data$glass$createDate
+[1] "2012-01-03 02:41:33"
+
+
+$data$srm
+$data$srm$id
+[1] 21
+
+$data$srm$name
+[1] "21"
+
+$data$srm$hex
+[1] "952D00"
+
+
+$data$available
+$data$available$id
+[1] 1
+
+$data$available$name
+[1] "Year Round"
+
+$data$available$description
+[1] "Available year round as a staple beer."
+
+
+$data$style
+$data$style$id
+[1] 25
+
+$data$style$categoryId
+[1] 3
+
+$data$style$category
+$data$style$category$id
+[1] 3
+
+$data$style$category$name
+[1] "North American Origin Ales"
+
+$data$style$category$createDate
+[1] "2012-03-21 20:06:45"
+
+
+$data$style$name
+[1] "American-Style Pale Ale"
+
+$data$style$shortName
+[1] "American Pale"
+
+$data$style$description
+[1] "American pale ales range from deep golden to copper in color. The style is characterized by fruity, floral and citrus-like American-variety hop character producing medium to medium-high hop bitterness, flavor, and aroma. Note that the \"traditional\" style of this beer has its origins with certain floral, fruity, citrus-like, piney, resinous, or sulfur-like American hop varietals. One or more of these hop characters is the perceived end, but the perceived hop characters may be a result of the skillful use of hops of other national origins. American pale ales have medium body and low to medium maltiness. Low caramel character is allowable. Fruity-ester flavor and aroma should be moderate to strong. Diacetyl should be absent or present at very low levels. Chill haze is allowable at cold temperatures."
+
+$data$style$ibuMin
+[1] "30"
+
+$data$style$ibuMax
+[1] "42"
+
+$data$style$abvMin
+[1] "4.5"
+
+$data$style$abvMax
+[1] "5.6"
+
+$data$style$srmMin
+[1] "6"
+
+$data$style$srmMax
+[1] "14"
+
+$data$style$ogMin
+[1] "1.044"
+
+$data$style$fgMin
+[1] "1.008"
+
+$data$style$fgMax
+[1] "1.014"
+
+$data$style$createDate
+[1] "2012-03-21 20:06:45"
+
+$data$style$updateDate
+[1] "2015-04-07 15:25:18"
+
+
+
+$status
+[1] "success"
+```
+
+
+
 Quick funciton factory
 ========================================================
 class:small-code
@@ -241,9 +439,6 @@ Using `purrr::walk()` and `assign()` we can create functions to GET any beer, br
 
 
 ```r
-base_url <- "http://api.brewerydb.com/v2"
-key_preface <- "/?key="
-
 endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
 
 # Base function
@@ -263,7 +458,6 @@ Testing testing
 ========================================================
 class:small-code
 
-We get a 200 success response and a nested list of all the data associated with this hop that `fromJSON` converted from, well, JSON into a nested list.
 
 
 ```r
@@ -361,11 +555,11 @@ $status
 ```
 
 
-Now with beer
+Digging In
 ========================================================
 class:very-small-code
 
-What does the data look like when we request a certain beer?
+What are the parts of the data that we want and where do they live? 
 
 
 ```r
@@ -555,25 +749,11 @@ get_beer("GZQpRX")[["data"]][4][[1]]
 ```
 
 
-Now with beer
+Digging In
 ========================================================
 class:very-small-code
 
-Other things are more deeply nested. In these cases, we really only care about the name portion.
-
-
-```r
-get_beer("GZQpRX")$data$style$name
-```
-
-```
-[1] "American-Style Pale Ale"
-```
-
-
-***
-
-Rather than the entire response:
+Other things are more deeply nested. 
 
 
 ```r
@@ -641,6 +821,19 @@ $updateDate
 [1] "2015-04-07 15:25:18"
 ```
 
+***
+
+In these cases, we really only care about the `name` portion.
+
+
+```r
+get_beer("GZQpRX")$data$style$name
+```
+
+```
+[1] "American-Style Pale Ale"
+```
+
 
 
 Unnesting
@@ -668,7 +861,7 @@ unnest_it <- function(df) {
 }
 ```
 
-Note that this is a `for` loop so it's pretty slow 😔.
+<small>Note that this is a `for` loop so it's pretty slow 😔. Optimizing it is on the docket.</small>
 
 Paginating the Request
 ========================================================
@@ -697,8 +890,6 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
   }
   return(full_request)
 } 
-
-beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 ```
 
 
@@ -741,6 +932,13 @@ unnest_ingredients <- function(df) {
 
 What have we got?
 ========================================================
+class: small-code
+
+
+```r
+beer_necessities <- paginated_request("beers", "&withIngredients=Y")
+```
+
 
 
 |id     |name                                     |style                                              |style_collapsed       |glass | abv| ibu| srm|hops_name                                  |malt_name                                                                     |
@@ -771,7 +969,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
       
 ***
 
-![plot of chunk unnamed-chunk-10](brewsentation-figure/unnamed-chunk-10-1.png)
+![plot of chunk unnamed-chunk-13](brewsentation-figure/unnamed-chunk-13-1.png)
 
 
 
@@ -783,7 +981,7 @@ Where to put it?
 
 ***
 
-MySQL. 
+MySQL
 
 * This allows us to
    * Easily update the data if anything changes
@@ -978,9 +1176,9 @@ levels(beer_necessities$style)
 
 <br> 
 
-We'll want to condense a few of these. 
+I wanted to condense these styles by,
 
-For instance, we want to lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager
+e.g., lumping American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -1039,7 +1237,7 @@ Let's see where most of the data is concentrated.
 
 * Popular defined as
    * Styles with above the mean number of beers per style (z-score > 0)
-   * <small> (Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style) </small>
+       * <small> Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style </small>
    
 <br>
 
@@ -1094,7 +1292,7 @@ class: small-code
 
 From this we can plot the centers of each style.
 
-![plot of chunk unnamed-chunk-13](brewsentation-figure/unnamed-chunk-13-1.png)
+![plot of chunk unnamed-chunk-16](brewsentation-figure/unnamed-chunk-16-1.png)
 
 
 To the main question
@@ -1181,23 +1379,33 @@ do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
 }
 ```
 
-We don't need to specify an outcome variable because this is unsupervised.
+<br>
+
+<small> We don't need to specify an outcome variable because this is unsupervised. </small>
 
 
 Clustering: Run It
 ========================================================
 class: small-code
 
-Cluster the beers and stitch together the cluster assignments with the original data
+We'll cluster the beers on the scaled versions of ABV, IBU, and SRM 
 
 
 ```r
 to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
 
 to_cluster_on <- c("abv", "ibu", "srm")
+```
 
+<br>
+
+and stitch together the cluster assignments, scaled columns, and the original data.
+
+
+```r
 clustered_beer <- do_cluster(beer_necessities, to_include, to_cluster_on)
 ```
+
 
 
 Clustering: Output
@@ -1242,14 +1450,16 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We'll plot two of our three dimensions:
+We'll plot two of our three dimensions, color on the x and bitterness on the y, and overlay the popular style centers we calculated earlier.
 
 
 <img src="brewsentation-figure/cluster_srm_ibu-1.png" title="plot of chunk cluster_srm_ibu" alt="plot of chunk cluster_srm_ibu" style="display: block; margin: auto;" />
 
 ***
 
-<small>Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)</small>
+<br>
+
+<small>Here I've trimmed outliers using this function with a `cutoff = 2.5`.</small>
 
 
 ```r
@@ -1280,7 +1490,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-
+<small> You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like. </small>
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -1298,6 +1508,8 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 Clusterfun with Shiny: UI
 ========================================================
 class: small-code 
+
+Snapshot of what we're including on the frontend:
 
 
 ```r
@@ -1336,6 +1548,8 @@ sidebarLayout(
 Clusterfun with Shiny: Server
 ========================================================
 class: small-code 
+
+And how the backend is serving up that data, conditional on what the user asks it to display.
 
 
 ```r
@@ -1569,7 +1783,7 @@ incremental: true
 class: small-code
 
 
-<img src="brewsentation-figure/unnamed-chunk-22-1.png" title="plot of chunk unnamed-chunk-22" alt="plot of chunk unnamed-chunk-22" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-26-1.png" title="plot of chunk unnamed-chunk-26" alt="plot of chunk unnamed-chunk-26" style="display: block; margin: auto;" />
 
 ^ Note that there is actually, irl, a strain of hops called Fuggles.
 
@@ -1580,16 +1794,19 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-23](brewsentation-figure/unnamed-chunk-23-1.png)
+![plot of chunk unnamed-chunk-27](brewsentation-figure/unnamed-chunk-27-1.png)
 
 Is the relationship significant?
 
 ***
 
+<br>
+
+
+
 
 
 ```r
-library(tidyverse)
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm() 
 ```
 
@@ -1699,39 +1916,64 @@ Neural Net: Run It
 ========================================================
 class: small-code
 
+Our predictors will include the total number of hops and malts in the beer, plus our usual ABV, IBU, SRM.
+
 
 ```r
 p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+```
 
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
-                         predictor_vars = p_vars, trace=TRUE)
+We'll use data filtered to just the most popular styles and run it. 
+
+
+```r
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = TRUE, multinom = TRUE)
 ```
 
 ```
-# weights:  210 (174 variable)
-initial  value 10693.364568 
-iter  10 value 9007.861736
-iter  20 value 8383.735156
-iter  30 value 8154.843641
-iter  40 value 8017.693678
-iter  50 value 7670.274347
-iter  60 value 7507.313838
-iter  70 value 7307.286325
-iter  80 value 7103.609163
-iter  90 value 6802.044987
-iter 100 value 6634.900333
-iter 110 value 6543.160440
-iter 120 value 6441.293317
-iter 130 value 6404.665876
-iter 140 value 6384.745396
-iter 150 value 6379.883760
-iter 160 value 6379.179600
-iter 170 value 6378.814775
-iter 180 value 6378.691773
-iter 190 value 6378.660759
-iter 200 value 6378.646203
-iter 210 value 6378.605387
-final  value 6378.598978 
+# weights:  203 (168 variable)
+initial  value 10586.778089 
+iter  10 value 9044.309073
+iter  20 value 8464.581525
+iter  30 value 8207.599285
+iter  40 value 7984.327813
+iter  50 value 7639.074802
+iter  60 value 7390.246816
+iter  70 value 7175.498011
+iter  80 value 6932.391006
+iter  90 value 6671.241707
+iter 100 value 6553.815380
+iter 110 value 6454.591859
+iter 120 value 6401.457791
+iter 130 value 6375.681765
+iter 140 value 6370.381017
+iter 150 value 6369.422994
+iter 160 value 6369.297692
+iter 170 value 6369.279516
+iter 180 value 6369.257996
+final  value 6369.248110 
+converged
+# weights:  203 (168 variable)
+initial  value 10586.778089 
+iter  10 value 9044.309073
+iter  20 value 8464.581525
+iter  30 value 8207.599285
+iter  40 value 7984.327813
+iter  50 value 7639.074802
+iter  60 value 7390.246816
+iter  70 value 7175.498011
+iter  80 value 6932.391006
+iter  90 value 6671.241707
+iter 100 value 6553.815380
+iter 110 value 6454.591859
+iter 120 value 6401.457791
+iter 130 value 6375.681765
+iter 140 value 6370.381017
+iter 150 value 6369.422994
+iter 160 value 6369.297692
+iter 170 value 6369.279516
+iter 180 value 6369.257996
+final  value 6369.248110 
 converged
 ```
 
@@ -1747,10 +1989,10 @@ nn_collapsed_out$nn_accuracy[1]
 
 ```
  Accuracy 
-0.4002541 
+0.4185751 
 ```
 
-Not terrible given we've got 108 collapsed styles; chance would be 0.9%.
+41.9% isn't terrible given we've got 30 collapsed styles; chance would be 3.3%.
 
 ***
 
@@ -1759,22 +2001,26 @@ Which variables are most important?
 
 |Variable   |Importance Percent |
 |:----------|:------------------|
-|total_hops |43.1%              |
-|total_malt |26.2%              |
-|abv        |25.3%              |
-|ibu        |3.0%               |
-|srm        |2.5%               |
+|total_hops |43.6%              |
+|total_malt |31.4%              |
+|abv        |17.7%              |
+|ibu        |4.2%               |
+|srm        |3.1%               |
 
 Neural Net: Glass
 ========================================================
 class:small-code
+
 What happens if we add in glass, a style-dependent attribute, as a predictor?
 
 
 ```r
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+```
 
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE, multinom = TRUE)
+
+```r
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE)
 ```
 
 
@@ -1791,14 +2037,14 @@ Here summing up the contributions from all glasses.
 
 
 
-| Importance|Variable   |Importance Percent |
-|----------:|:----------|:------------------|
-|   503.2677|total_hops |15.9%              |
-|   414.1899|total_malt |13.1%              |
-|   282.5456|abv        |9.0%               |
-|   276.4383|ibu        |8.8%               |
-|   260.1173|srm        |8.2%               |
-|  1419.1936|glass      |45%                |
+|Variable   |Importance Percent |
+|:----------|:------------------|
+|glass      |45%                |
+|total_hops |15.9%              |
+|total_malt |13.1%              |
+|abv        |9.0%               |
+|ibu        |8.8%               |
+|srm        |8.2%               |
 
 
 
@@ -1811,17 +2057,17 @@ I'd give it a fuzzy yes.
 
 Fuzzy because:
 * We couldn't do better than ~40% accuracy
-* We had a lot of missing predictors
+* We had a lot of rows with missing predictors
 
 Unknowns:
 * Was our style collapsing scheme successful in putting beers in the "right" buckets?
-* Would taste-related information have been a useful variable?
+* Would taste-related information have accounted for much of the remaining variance we couldn't explain?
 
 
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-30](brewsentation-figure/unnamed-chunk-30-1.png)
+![plot of chunk unnamed-chunk-36](brewsentation-figure/unnamed-chunk-36-1.png)
 
 ***
 

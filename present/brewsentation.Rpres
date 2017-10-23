@@ -15,6 +15,7 @@ autosize: true
   
   body {
     overflow: scroll;
+    border-style: solid;
   }
 
   .cheers {
@@ -62,6 +63,7 @@ autosize: true
     border-spacing: 5px;
     border-collapse: collapse;
     padding: 5px;
+    border-style: solid;
   }
   
   .small-code pre code {
@@ -264,6 +266,40 @@ From where?
 ![get_beers](./img/example_beer.jpg)
 
 
+Step 1: GET one Beer
+========================================================
+
+Once we've got a key, we can use a beer's unique BreweryDB ID and our key to tet data on that beer.
+
+<small>`http://api.brewerydb.com/v2/beer/<BEER_ID_HERE>/?key=/<YOUR_KEY_HERE>` </small>
+
+In the browser, that looks like:
+
+<center>![got_a_beer](./img/got_a_beer.jpg)</center>
+
+
+Step 1: GET one Beer
+========================================================
+class: small-code
+
+```{r eval=TRUE}
+base_url <- "http://api.brewerydb.com/v2"
+key_preface <- "/?key="
+
+get_a_beer <- function(id) {
+  fromJSON(paste0(base_url, "/beer/", id, "/", key_preface, key))
+}
+```
+
+
+We can make a little function from this that'll take a single ID and use `fromJSON` to convert from, well, JSON into a nested list starting with our 200 success message.
+
+```{r, eval=TRUE}
+get_a_beer("GZQpRX")
+```
+
+
+
 Quick funciton factory
 ========================================================
 class:small-code
@@ -271,9 +307,6 @@ class:small-code
 Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
 
 ```{r func_fac, eval = TRUE, echo=TRUE}
-base_url <- "http://api.brewerydb.com/v2"
-key_preface <- "/?key="
-
 endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
 
 # Base function
@@ -293,18 +326,17 @@ Testing testing
 ========================================================
 class:small-code
 
-We get a 200 success response and a nested list of all the data associated with this hop that `fromJSON` converted from, well, JSON into a nested list.
 
 ```{r, eval=TRUE, echo=TRUE}
 get_hop("3")
 ```
 
 
-Now with beer
+Digging In
 ========================================================
 class:very-small-code
 
-What does the data look like when we request a certain beer?
+What are the parts of the data that we want and where do they live? 
 
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")
@@ -323,23 +355,22 @@ get_beer("GZQpRX")[["data"]][4][[1]]
 ```
 
 
-Now with beer
+Digging In
 ========================================================
 class:very-small-code
 
-Other things are more deeply nested. In these cases, we really only care about the name portion.
-
-```{r, echo=TRUE, eval=TRUE}
-get_beer("GZQpRX")$data$style$name
-```
-
-
-***
-
-Rather than the entire response:
+Other things are more deeply nested. 
 
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$style
+```
+
+***
+
+In these cases, we really only care about the `name` portion.
+
+```{r, echo=TRUE, eval=TRUE}
+get_beer("GZQpRX")$data$style$name
 ```
 
 
@@ -368,7 +399,7 @@ unnest_it <- function(df) {
 }
 ```
 
-Note that this is a `for` loop so it's pretty slow `r emo::ji("pensive")`.
+<small>Note that this is a `for` loop so it's pretty slow `r emo::ji("pensive")`. Optimizing it is on the docket.</small>
 
 Paginating the Request
 ========================================================
@@ -396,8 +427,6 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
   }
   return(full_request)
 } 
-
-beer_necessities <- paginated_request("beers", "&withIngredients=Y")
 ```
 
 
@@ -439,6 +468,12 @@ unnest_ingredients <- function(df) {
 
 What have we got?
 ========================================================
+class: small-code
+
+```{r, echo=TRUE, eval=FALSE}
+beer_necessities <- paginated_request("beers", "&withIngredients=Y")
+```
+
 
 ```{r, echo=FALSE, eval=TRUE, fig.align="center"}
 kable(beer_necessities[115:120, ] %>% select(id, name, style, style_collapsed, glass, abv, ibu, srm, hops_name, malt_name))
@@ -494,7 +529,7 @@ Where to put it?
 
 ***
 
-MySQL. 
+MySQL
 
 * This allows us to
    * Easily update the data if anything changes
@@ -515,9 +550,9 @@ levels(beer_necessities$style)
 
 <br> 
 
-We'll want to condense a few of these. 
+I wanted to condense these styles by,
 
-For instance, we want to lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager
+e.g., lumping American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -574,7 +609,7 @@ Let's see where most of the data is concentrated.
 
 * Popular defined as
    * Styles with above the mean number of beers per style (z-score > 0)
-   * <small> (Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style) </small>
+       * <small> Of course, this isn't a measure of popular consumption; just a reflection of the number of different beers we get from BreweryDB that are classified into that style </small>
    
 <br>
 
@@ -742,22 +777,31 @@ do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
 }
 ```
 
-We don't need to specify an outcome variable because this is unsupervised.
+<br>
+
+<small> We don't need to specify an outcome variable because this is unsupervised. </small>
 
 
 Clustering: Run It
 ========================================================
 class: small-code
 
-Cluster the beers and stitch together the cluster assignments with the original data
+We'll cluster the beers on the scaled versions of ABV, IBU, and SRM 
 
-```{r run_do_cluster, eval=TRUE}
+```{r, eval=TRUE}
 to_include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm")
 
 to_cluster_on <- c("abv", "ibu", "srm")
+```
 
+<br>
+
+and stitch together the cluster assignments, scaled columns, and the original data.
+
+```{r run_do_cluster, eval=TRUE}
 clustered_beer <- do_cluster(beer_necessities, to_include, to_cluster_on)
 ```
+
 
 
 Clustering: Output
@@ -774,7 +818,7 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We'll plot two of our three dimensions:
+We'll plot two of our three dimensions, color on the x and bitterness on the y, and overlay the popular style centers we calculated earlier.
 
 
 ```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
@@ -798,7 +842,9 @@ clustered_beer_plot_srm_ibu
 
 ***
 
-<small>Here I've trimmed outliers with this function (you can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub.)</small>
+<br>
+
+<small>Here I've trimmed outliers using this function with a `cutoff = 2.5`.</small>
 
 ```{r trim_outliers, echo=TRUE, eval=FALSE}
 trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE){
@@ -828,7 +874,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-
+<small> You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like. </small>
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -846,6 +892,8 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 Clusterfun with Shiny: UI
 ========================================================
 class: small-code 
+
+Snapshot of what we're including on the frontend:
 
 ```{r}
 sidebarLayout(
@@ -883,6 +931,8 @@ sidebarLayout(
 Clusterfun with Shiny: Server
 ========================================================
 class: small-code 
+
+And how the backend is serving up that data, conditional on what the user asks it to display.
 
 ```{r, eval=FALSE}
   output$cluster_plot <- renderPlot({
@@ -1148,9 +1198,14 @@ Is the relationship significant?
 
 ***
 
+<br>
 
-```{r hops_ibu_lm, echo=TRUE, eval=TRUE, cache=FALSE, dependson="source_in"}
+```{r, echo=FALSE, eval=TRUE}
 library(tidyverse)
+```
+
+
+```{r hops_ibu_lm, echo=TRUE, eval=TRUE}
 hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm() 
 ```
 
@@ -1259,11 +1314,16 @@ Neural Net: Run It
 ========================================================
 class: small-code
 
-```{r nn_run, eval=TRUE, echo=TRUE, dependson="source_run_nn"}
-p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+Our predictors will include the total number of hops and malts in the beer, plus our usual ABV, IBU, SRM.
 
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", 
-                         predictor_vars = p_vars, trace=TRUE)
+```{r eval=TRUE}
+p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
+```
+
+We'll use data filtered to just the most popular styles and run it. 
+
+```{r nn_run, eval=TRUE, echo=TRUE, dependson="source_run_nn"}
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = TRUE, multinom = TRUE)
 ```
 
 
@@ -1275,7 +1335,7 @@ How'd we do?
 nn_collapsed_out$nn_accuracy[1]
 ```
 
-Not terrible given we've got `r length(levels(beer_necessities$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_necessities$style_collapsed))), digits = 1)`%.
+`r round((nn_collapsed_out$nn_accuracy[1] * 100), digits=1)`% isn't terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
 
 ***
 
@@ -1288,12 +1348,15 @@ nn_collapsed_out$nn %>% get_nn_importance() %>% kable()
 Neural Net: Glass
 ========================================================
 class:small-code
+
 What happens if we add in glass, a style-dependent attribute, as a predictor?
 
-```{r add_glass, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
+```{r p_vars_add_glass, eval=TRUE, echo=TRUE}
 p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
+```
 
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace=FALSE, multinom = TRUE)
+``` {r add_glass, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE)
 ```
 
 ```{r add_glass_accuracy, eval=TRUE, echo=FALSE}
@@ -1321,7 +1384,8 @@ nn_glass_imp_all <- nn_glass_imp %>%
   filter(!Variable %in% !!glass_cols) %>% 
   bind_rows(
    glass_sums
-  ) %>% select(
+  ) %>% arrange(desc(Importance)) %>% 
+  select(
     -Importance
   )
 ```
@@ -1344,11 +1408,11 @@ I'd give it a fuzzy yes.
 
 Fuzzy because:
 * We couldn't do better than ~40% accuracy
-* We had a lot of missing predictors
+* We had a lot of rows with missing predictors
 
 Unknowns:
 * Was our style collapsing scheme successful in putting beers in the "right" buckets?
-* Would taste-related information have been a useful variable?
+* Would taste-related information have accounted for much of the remaining variance we couldn't explain?
 
 
 So what's the answer?
