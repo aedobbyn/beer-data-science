@@ -46,7 +46,7 @@ autosize: true
       background-size: 100% 100%;
   }
 
-  td{
+  td {
     font-size: 1pt;
     padding: 0px;
     cellpadding="0";
@@ -64,6 +64,7 @@ autosize: true
     border-collapse: collapse;
     padding: 5px;
     border-style: solid;
+    overflow: scroll;
   }
   
   .small-code pre code {
@@ -1361,7 +1362,7 @@ do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
   df_for_clustering <- df %>% select(!!vars) %>% na.omit()
 
   # Scale the ones to be scaled and append _scaled to their names
-  df_vars_scale <- df_for_clustering %>% select(!!to_scale) %>%
+  df_vars_scale <- df_for_clustering %>% select(!!to_cluster_on) %>%
     scale() %>% as_tibble()
   names(df_vars_scale) <- names(df_vars_scale) %>% stringr::str_c("_scaled")
 
@@ -1777,15 +1778,25 @@ What's the hop landscape look like?
 
 
 
-Alcohol, bitterness, and popularity per Hop
+Hop Landscape
 ========================================================
-incremental: true
+incremental: false
 class: small-code
 
+<br>
+
+Per hop, plotting the number of beers that contain that hop and their average alcohol content and bitterness.
+
+<br>
+
+Note that there is actually, irl, a strain of hops called Fuggles.
+
+***
+
+<br>
 
 <img src="brewsentation-figure/unnamed-chunk-26-1.png" title="plot of chunk unnamed-chunk-26" alt="plot of chunk unnamed-chunk-26" style="display: block; margin: auto;" />
 
-^ Note that there is actually, irl, a strain of hops called Fuggles.
 
 
 
@@ -1829,8 +1840,7 @@ Prediction
 ========================================================
 * The other side of the coin: supervised learning classification problem
     * Random forest
-    * Multinomial neural network
-        * This fits a log-linear model (similar to a GLM) using neural networks
+    * Neural net
     
 We'll go through the neural net.
 
@@ -1978,6 +1988,21 @@ converged
 ```
 
 
+Neural Net: Visual
+========================================================
+class: small-code
+
+We can check out the structure of the neural net using the `NeuralNetTools` package.
+
+
+```r
+NeuralNetTools::plotnet(nn_collapsed_out$nn, bias=FALSE)
+```
+
+![plot of chunk unnamed-chunk-32](brewsentation-figure/unnamed-chunk-32-1.png)
+
+
+
 Neural Net: Evaluate
 ========================================================
 How'd we do? 
@@ -2020,7 +2045,7 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 
 
 ```r
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE)
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = FALSE)
 ```
 
 
@@ -2039,12 +2064,12 @@ Here summing up the contributions from all glasses.
 
 |Variable   |Importance Percent |
 |:----------|:------------------|
-|glass      |45%                |
-|total_hops |15.9%              |
-|total_malt |13.1%              |
-|abv        |9.0%               |
-|ibu        |8.8%               |
-|srm        |8.2%               |
+|glass      |48%                |
+|total_hops |11.7%              |
+|total_malt |10.7%              |
+|abv        |10.5%              |
+|ibu        |9.7%               |
+|srm        |9.5%               |
 
 
 
@@ -2067,7 +2092,7 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-![plot of chunk unnamed-chunk-36](brewsentation-figure/unnamed-chunk-36-1.png)
+![plot of chunk unnamed-chunk-37](brewsentation-figure/unnamed-chunk-37-1.png)
 
 ***
 
@@ -2118,33 +2143,32 @@ other attached packages:
 [17] jsonlite_1.5     broom_0.4.2      knitr_1.17      
 
 loaded via a namespace (and not attached):
- [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
- [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
- [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
-[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
-[13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
-[16] mnormt_1.5-5          rvest_0.3.2           quantreg_5.29        
-[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
-[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
-[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
-[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
-[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
-[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
-[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
-[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
-[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
-[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
-[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
-[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
-[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
-[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
-[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
-[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
-[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
-[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
-[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
-[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
-[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+ [1] httr_1.3.1            splines_3.3.3         foreach_1.4.3        
+ [4] modelr_0.1.1          Formula_1.2-2         shiny_1.0.5.9000     
+ [7] assertthat_0.2.0      highr_0.6             stats4_3.3.3         
+[10] latticeExtra_0.6-28   cellranger_1.1.0      backports_1.1.0      
+[13] quantreg_5.29         glue_1.1.1            digest_0.6.12        
+[16] RColorBrewer_1.1-2    checkmate_1.8.3       rvest_0.3.2          
+[19] minqa_1.2.4           colorspace_1.3-2      htmltools_0.3.6      
+[22] httpuv_1.3.5.9000     Matrix_1.2-8          plyr_1.8.4           
+[25] psych_1.7.5           pkgconfig_2.0.1       SparseM_1.74         
+[28] haven_1.1.0           xtable_1.8-2          scales_0.5.0         
+[31] ranger_0.8.0          MatrixModels_0.4-1    lme4_1.1-13          
+[34] htmlTable_1.9         mgcv_1.8-17           car_2.1-5            
+[37] lazyeval_0.2.0        pbkrtest_0.4-7        mnormt_1.5-5         
+[40] readxl_1.0.0          survival_2.41-3       magrittr_1.5         
+[43] crayon_1.3.4          mime_0.5              evaluate_0.10.1      
+[46] nlme_3.1-131          MASS_7.3-47           xml2_1.1.1           
+[49] foreign_0.8-69        tools_3.3.3           data.table_1.10.4    
+[52] hms_0.3               stringr_1.2.0         munsell_0.4.3        
+[55] cluster_2.0.5         rlang_0.1.2.9000      grid_3.3.3           
+[58] nloptr_1.0.4          iterators_1.0.8       rstudioapi_0.7.0-9000
+[61] htmlwidgets_0.9       miniUI_0.1.1          labeling_0.3         
+[64] base64enc_0.1-3       gtable_0.2.0          ModelMetrics_1.1.0   
+[67] codetools_0.2-15      reshape2_1.4.2        R6_2.2.2             
+[70] gridExtra_2.2.1       lubridate_1.6.0       bindr_0.1            
+[73] Hmisc_4.0-3           stringi_1.1.5         parallel_3.3.3       
+[76] Rcpp_0.12.13          rpart_4.1-11          acepack_1.4.1        
 ```
 
 

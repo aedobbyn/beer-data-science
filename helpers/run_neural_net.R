@@ -1,5 +1,5 @@
 
-run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, trace=FALSE) {
+run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit = 500, size = 5, trace = FALSE) {
   out <- list(outcome = outcome)
   
   # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
@@ -8,7 +8,7 @@ run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, trace=F
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-  
+    
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
@@ -17,7 +17,7 @@ run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, trace=F
     droplevels()
   
   # Select 80% of the data for training
-  df_train <- sample_n(df, nrow(df)*(0.8))
+  df_train <- sample_n(df, nrow(df)*(0.8)) %>% droplevels()
   
   # The rest is for testing
   df_test <- df %>%
@@ -27,24 +27,27 @@ run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, trace=F
   df_train <- df_train %>%
     select(-row)
   
-  # Build multinomail neural net
-  nn <- multinom(outcome ~ .,
-                 data = df_train, maxit=500, trace=trace)
-  
+  # browser()
+
   if(multinom==TRUE) {
     nn <- multinom(outcome ~ .,
-                   data = df_train, maxit=500, trace=trace)
+                   data = df_train, maxit=maxit, trace=trace)
+    
+    # Which variables are the most important in the neural net?
+    most_important_vars <- varImp(nn)
+    
   } else if (multinom==FALSE) {
-    nn <- nnet(outcome ~ ., size = 5,
-                   data = df_train, maxit=500, trace=trace)
+    nn <- nnet(outcome ~ ., size = size,
+                   data = df_train, maxit=maxit, trace=trace)
+    most_important_vars <- NULL
+
   }
   
-  # Which variables are the most important in the neural net?
-  most_important_vars <- varImp(nn)
-  
   # How accurate is the model? Compare predictions to outcomes from test data
-  nn_preds <- predict(nn, type="class", newdata = df_test)
+  nn_preds <- predict(nn, type="class", newdata = df_test) %>% factor()
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
+  
+
   
   out <- list(out, nn = nn, 
               most_important_vars = most_important_vars,

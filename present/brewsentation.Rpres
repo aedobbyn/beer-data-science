@@ -46,7 +46,7 @@ autosize: true
       background-size: 100% 100%;
   }
 
-  td{
+  td {
     font-size: 1pt;
     padding: 0px;
     cellpadding="0";
@@ -64,6 +64,7 @@ autosize: true
     border-collapse: collapse;
     padding: 5px;
     border-style: solid;
+    overflow: scroll;
   }
   
   .small-code pre code {
@@ -146,6 +147,7 @@ library(feather)
 library(nnet)
 library(caret)
 library(emo)
+library(NeuralNetTools)
 
 # Data
 beer_necessities <- read_feather("./beer_necessities.feather") %>% as_tibble()
@@ -759,7 +761,7 @@ do_cluster <- function (df, vars, to_cluster_on, n_centers = 5) {
   df_for_clustering <- df %>% select(!!vars) %>% na.omit()
 
   # Scale the ones to be scaled and append _scaled to their names
-  df_vars_scale <- df_for_clustering %>% select(!!to_scale) %>%
+  df_vars_scale <- df_for_clustering %>% select(!!to_cluster_on) %>%
     scale() %>% as_tibble()
   names(df_vars_scale) <- names(df_vars_scale) %>% stringr::str_c("_scaled")
 
@@ -1161,11 +1163,22 @@ kable(pop_hops_display[12:20,])
 
 
 
-Alcohol, bitterness, and popularity per Hop
+Hop Landscape
 ========================================================
-incremental: true
+incremental: false
 class: small-code
 
+<br>
+
+Per hop, plotting the number of beers that contain that hop and their average alcohol content and bitterness.
+
+<br>
+
+Note that there is actually, irl, a strain of hops called Fuggles.
+
+***
+
+<br>
 
 ```{r, eval=TRUE, echo=FALSE, fig.align="center"}
 ggplot(data = pop_hops_beer_stats) + 
@@ -1176,7 +1189,6 @@ ggplot(data = pop_hops_beer_stats) +
   theme_minimal()
 ```
 
-^ Note that there is actually, irl, a strain of hops called Fuggles.
 
 
 
@@ -1186,7 +1198,7 @@ class:small-code
 incremental:true
 
 ```{r, eval=TRUE, echo=FALSE}
-ggplot(data = beer_dat %>% filter(total_hops > 0), aes(total_hops, ibu)) +
+ggplot(data = beer_dat %>% filter(style_collapsed %in% keywords) %>% filter(total_hops > 0), aes(total_hops, ibu)) +
   geom_jitter(aes(total_hops, ibu, colour = style_collapsed), width = 0.5, alpha = 0.5) +
   geom_smooth(method = "loess", se = FALSE, colour = "black") + 
   ggtitle("Hops Per Beer vs. Bitterness") +
@@ -1226,8 +1238,7 @@ Prediction
 ========================================================
 * The other side of the coin: supervised learning classification problem
     * Random forest
-    * Multinomial neural network
-        * This fits a log-linear model (similar to a GLM) using neural networks
+    * Neural net
     
 We'll go through the neural net.
 
@@ -1327,6 +1338,18 @@ nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome 
 ```
 
 
+Neural Net: Visual
+========================================================
+class: small-code
+
+We can check out the structure of the neural net using the `NeuralNetTools` package.
+
+```{r, echo=TRUE, eval=TRUE}
+NeuralNetTools::plotnet(nn_collapsed_out$nn, bias=FALSE)
+```
+
+
+
 Neural Net: Evaluate
 ========================================================
 How'd we do? 
@@ -1356,7 +1379,7 @@ p_vars_add_glass <- c("total_hops", "total_malt", "abv", "ibu", "srm", "glass")
 ```
 
 ``` {r add_glass, eval=TRUE, echo=TRUE, message=FALSE, dependson="source_run_nn"}
-nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE)
+nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = FALSE)
 ```
 
 ```{r add_glass_accuracy, eval=TRUE, echo=FALSE}
@@ -1372,10 +1395,9 @@ glass_cols <- nn_glass_imp$Variable[grepl("glass", nn_glass_imp$Variable)]
 
 glass_sums <- nn_glass_imp %>% 
   filter(Variable %in% !!glass_cols) %>% 
-  # group_by(Importance, `Importance Percent`) %>% 
   summarise(
     Importance = sum(Importance),
-    `Importance Percent` = (sum(as.numeric(sub("%", "", `Importance Percent`)))/100) %>% scales::percent()
+    `Importance Percent` = (sum(as.numeric(sub("%", "", `Importance Percent`)))/100) %>% round(digits = 1) %>% scales::percent()
   ) %>% mutate(
     Variable = "glass"
   )
