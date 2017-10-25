@@ -27,8 +27,6 @@ run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit =
   df_train <- df_train %>%
     select(-row)
   
-  # browser()
-
   if(multinom==TRUE) {
     nn <- multinom(outcome ~ .,
                    data = df_train, maxit=maxit, trace=trace)

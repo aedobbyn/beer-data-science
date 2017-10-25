@@ -17,6 +17,11 @@ autosize: true
     overflow: scroll;
     border-style: solid;
   }
+  
+  strong { 
+    font-weight: bold;
+    color: black;
+  }
 
   .cheers {
       background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
@@ -161,6 +166,7 @@ Code at: <https://github.com/aedobbyn/beer-data-science>
 - Markdown writeup in `/compile`
 - Shiny app in `/clusterfun`
 - Step-by-step scripts for getting and munging data in `/run_it`
+- This presentation in `/present`
 
 ***
 ![writeup](./img/writeup.jpg)
@@ -212,7 +218,7 @@ Implications
 
 * If styles do demarcate the beer landscape well, we should expect to see distinct **clusters** dominated mostly by beers classified into a *single* style
 
-* It should also be easy to **predict** style from the other variables
+* It should also be easy to <strong>predict</strong> style from the other variables
 
 This all assumes the variables we have (more on those in a sec) can account for most of the variance between styles.
 
@@ -729,7 +735,7 @@ $status
 
 ***
 
-Let's unnest just the fourth element of the `data` part of the response. This is the beer's `description`. 
+We can grab just the fourth element of the `data` part of the response, the beer's `description` in a couple ways:
 
 ```r
 get_beer("GZQpRX")$data$description
@@ -982,7 +988,9 @@ Where to put it?
 
 ***
 
-MySQL
+<br>
+
+I threw it into MySQL
 
 * This allows us to
    * Easily update the data if anything changes
@@ -1177,9 +1185,9 @@ levels(beer_necessities$style)
 
 <br> 
 
-I wanted to condense these styles by,
+What's the best way to condense these?
 
-e.g., lumping American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
+I want to e.g., lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -1221,8 +1229,8 @@ Setting `trace_progress = TRUE`:
 ![get_beers](./img/collapse_styles.jpg)a
 
 ***
-* Keywords are ordered from most general to most specific
-  * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in keyword 
+* `keywords` are ordered from most general to most specific
+  * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in `keywords`
     
     
 `American-Style Pale Ale`  ➡  `Pale Ale`
@@ -1345,7 +1353,7 @@ incremental:false
 
 <br> 
 
-🤷🏻‍♂️  predictor because chicken and egg problem  
+🤷🏼‍♀️  predictor because chicken and egg problem  
     <small> Do brewers assign style first and then choose which ingredients to add, or vice versa? 🐣 </small>
 
 
@@ -1415,36 +1423,36 @@ Clustering: Output
 
 |Cluster Assignment | ABV Scaled| IBU Scaled| SRM Scaled|ID     |Name                                                         |Style                                              |Style Collapsed       | ABV|  IBU| SRM|
 |:------------------|----------:|----------:|----------:|:------|:------------------------------------------------------------|:--------------------------------------------------|:---------------------|---:|----:|---:|
-|4                  |  0.2659786| -0.6403452|  2.1973592|tmEthz |"Admiral" Stache                                             |Baltic-Style Porter                                |Porter                | 7.0| 23.0|  37|
-|4                  | -0.5491578|  0.4345392|  2.4813777|b7SfHG |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter                | 5.4| 51.0|  40|
-|5                  | -0.3453737|  0.4345392| -0.5481524|PBEXhV |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale              | 5.8| 51.0|   8|
-|5                  | -0.5491578|  0.5497053| -0.2641340|AXmvOd |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale              | 5.4| 54.0|  11|
-|1                  | -0.4472658| -0.4407238| -0.8321709|Hr5A0t |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 5.6| 28.2|   5|
-|1                  | -0.8038879| -0.7555114| -0.8321709|mrVjY4 |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde                | 4.9| 20.0|   5|
-|1                  | -0.7019959| -1.1010099| -0.9268437|xFM8w5 |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | 5.1| 11.0|   4|
-|1                  | -0.7019959| -0.7555114| -0.4534796|hB0QeO |#9                                                           |American-Style Pale Ale                            |Pale Ale              | 5.1| 20.0|   9|
-|1                  | -0.8548340| -0.4867903| -1.0215165|m8f62Y |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 4.8| 27.0|   3|
-|1                  | -0.6001038| -0.8322888| -0.8321709|35lHUq |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager                 | 5.3| 18.0|   5|
-|5                  |  0.2659786| -0.3716241| -0.6428253|qbRV90 |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison                | 7.0| 30.0|   7|
-|1                  | -0.7529419| -0.7555114| -0.4534796|qhaIVA |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | 5.0| 20.0|   9|
-|4                  | -0.2434817| -0.1412917|  0.6825942|tciJOF |(512) ALT                                                    |German-Style Altbier                               |Altbier               | 6.0| 36.0|  21|
-|5                  |  0.5716547| -0.3716241|  0.6825942|VwR7Xg |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown                 | 7.6| 30.0|  21|
-|5                  |  0.5207087| -0.1796805| -0.5481524|oJFZwK |(512) FOUR                                                   |Strong Ale                                         |Strong Ale            | 7.5| 35.0|   8|
-|2                  |  0.2659786|  0.9719813| -0.5481524|ezGh5N |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale        | 7.0| 65.0|   8|
-|5                  |  0.7754388| -0.6787339| -0.5481524|s8rdpK |(512) ONE                                                    |Belgian-Style Pale Strong Ale                      |Strong Ale            | 8.0| 22.0|   8|
-|1                  | -0.2434817| -0.3716241| -0.6428253|2fXsvw |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale              | 6.0| 30.0|   7|
-|4                  |  0.5207087| -0.5635677|  1.3453039|9O3QPg |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel                | 7.5| 25.0|  28|
-|5                  |  1.5396292| -0.6787339| -0.3588068|A78JSF |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  10|
-|3                  |  1.5396292| -0.6787339|  2.4813777|WKSYBT |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  40|
-|2                  |  1.2848991|  2.2771980| -0.4534796|X4KcGF |(512) TWO                                                    |Imperial or Double India Pale Ale                  |Double India Pale Ale | 9.0| 99.0|   9|
-|1                  | -0.6001038|  0.5880941| -0.9268437|bXwskR |(512) White IPA                                              |American-Style India Pale Ale                      |India Pale Ale        | 5.3| 55.0|   4|
-|1                  | -0.7019959| -1.1393986| -0.8321709|QLp4mV |(512) Wit                                                    |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | 5.1| 10.0|   5|
-|1                  | -1.0586181| -0.7939001| -0.9268437|thTbY7 |(904) Weissguy                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | 4.4| 19.0|   4|
-|1                  | -0.6510499| -0.1796805| -0.5481524|EPnv3B |(916)                                                        |American-Style Pale Ale                            |Pale Ale              | 5.2| 35.0|   8|
-|5                  | -0.0906436| -0.6019565| -0.0747884|QT9hB8 |+1 Pumpkin                                                   |Pumpkin Beer                                       |Pumpkin Beer          | 6.3| 24.0|  13|
-|2                  |  0.6735468|  1.5478122| -0.8321709|btwcy1 |077XX India Pale Ale                                         |Imperial or Double India Pale Ale                  |Double India Pale Ale | 7.8| 80.0|   5|
-|5                  |  1.2339530|  0.2042068| -0.8321709|FWiYZi |08.08.08 Vertical Epic Ale                                   |Belgian-Style Pale Ale                             |Pale Ale              | 8.9| 45.0|   5|
-|5                  | -0.4982118|  0.6264828| -0.4534796|M6vu9P |10 Blocks South                                              |American-Style Pale Ale                            |Pale Ale              | 5.5| 56.0|   9|
+|5                  |  0.2659786| -0.6403452|  2.1973592|tmEthz |"Admiral" Stache                                             |Baltic-Style Porter                                |Porter                | 7.0| 23.0|  37|
+|5                  | -0.5491578|  0.4345392|  2.4813777|b7SfHG |"Ah Me Joy" Porter                                           |Robust Porter                                      |Porter                | 5.4| 51.0|  40|
+|2                  | -0.3453737|  0.4345392| -0.5481524|PBEXhV |"Bison Eye Rye" Pale Ale &#124; 2 of 4 Part Pale Ale Series  |American-Style Pale Ale                            |Pale Ale              | 5.8| 51.0|   8|
+|2                  | -0.5491578|  0.5497053| -0.2641340|AXmvOd |"Dust Up" Cloudy Pale Ale &#124; 1 of 4 Part Pale Ale Series |American-Style Pale Ale                            |Pale Ale              | 5.4| 54.0|  11|
+|2                  | -0.4472658| -0.4407238| -0.8321709|Hr5A0t |"God Country" Kolsch                                         |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 5.6| 28.2|   5|
+|2                  | -0.8038879| -0.7555114| -0.8321709|mrVjY4 |"Jemez Field Notes" Golden Lager                             |Golden or Blonde Ale                               |Blonde                | 4.9| 20.0|   5|
+|2                  | -0.7019959| -1.1010099| -0.9268437|xFM8w5 |#10 Hefewiezen                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | 5.1| 11.0|   4|
+|2                  | -0.7019959| -0.7555114| -0.4534796|hB0QeO |#9                                                           |American-Style Pale Ale                            |Pale Ale              | 5.1| 20.0|   9|
+|2                  | -0.8548340| -0.4867903| -1.0215165|m8f62Y |#KoLSCH                                                      |German-Style Kölsch / Köln-Style Kölsch            |Kölsch                | 4.8| 27.0|   3|
+|2                  | -0.6001038| -0.8322888| -0.8321709|35lHUq |'Inappropriate' Cream Ale                                    |American-Style Cream Ale or Lager                  |Lager                 | 5.3| 18.0|   5|
+|1                  |  0.2659786| -0.3716241| -0.6428253|qbRV90 |'tis the Saison                                              |French & Belgian-Style Saison                      |Saison                | 7.0| 30.0|   7|
+|2                  | -0.7529419| -0.7555114| -0.4534796|qhaIVA |(306) URBAN WHEAT BEER                                       |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | 5.0| 20.0|   9|
+|5                  | -0.2434817| -0.1412917|  0.6825942|tciJOF |(512) ALT                                                    |German-Style Altbier                               |Altbier               | 6.0| 36.0|  21|
+|1                  |  0.5716547| -0.3716241|  0.6825942|VwR7Xg |(512) Bruin (A.K.A. Brown Bear)                              |American-Style Brown Ale                           |Brown                 | 7.6| 30.0|  21|
+|1                  |  0.5207087| -0.1796805| -0.5481524|oJFZwK |(512) FOUR                                                   |Strong Ale                                         |Strong Ale            | 7.5| 35.0|   8|
+|3                  |  0.2659786|  0.9719813| -0.5481524|ezGh5N |(512) IPA                                                    |American-Style India Pale Ale                      |India Pale Ale        | 7.0| 65.0|   8|
+|1                  |  0.7754388| -0.6787339| -0.5481524|s8rdpK |(512) ONE                                                    |Belgian-Style Pale Strong Ale                      |Strong Ale            | 8.0| 22.0|   8|
+|2                  | -0.2434817| -0.3716241| -0.6428253|2fXsvw |(512) Pale                                                   |American-Style Pale Ale                            |Pale Ale              | 6.0| 30.0|   7|
+|5                  |  0.5207087| -0.5635677|  1.3453039|9O3QPg |(512) SIX                                                    |Belgian-Style Dubbel                               |Dubbel                | 7.5| 25.0|  28|
+|1                  |  1.5396292| -0.6787339| -0.3588068|A78JSF |(512) THREE                                                  |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  10|
+|4                  |  1.5396292| -0.6787339|  2.4813777|WKSYBT |(512) THREE (Cabernet Barrel Aged)                           |Belgian-Style Tripel                               |Tripel                | 9.5| 22.0|  40|
+|3                  |  1.2848991|  2.2771980| -0.4534796|X4KcGF |(512) TWO                                                    |Imperial or Double India Pale Ale                  |Double India Pale Ale | 9.0| 99.0|   9|
+|2                  | -0.6001038|  0.5880941| -0.9268437|bXwskR |(512) White IPA                                              |American-Style India Pale Ale                      |India Pale Ale        | 5.3| 55.0|   4|
+|2                  | -0.7019959| -1.1393986| -0.8321709|QLp4mV |(512) Wit                                                    |Belgian-Style White (or Wit) / Belgian-Style Wheat |Wheat                 | 5.1| 10.0|   5|
+|2                  | -1.0586181| -0.7939001| -0.9268437|thTbY7 |(904) Weissguy                                               |South German-Style Hefeweizen / Hefeweissbier      |Wheat                 | 4.4| 19.0|   4|
+|2                  | -0.6510499| -0.1796805| -0.5481524|EPnv3B |(916)                                                        |American-Style Pale Ale                            |Pale Ale              | 5.2| 35.0|   8|
+|2                  | -0.0906436| -0.6019565| -0.0747884|QT9hB8 |+1 Pumpkin                                                   |Pumpkin Beer                                       |Pumpkin Beer          | 6.3| 24.0|  13|
+|3                  |  0.6735468|  1.5478122| -0.8321709|btwcy1 |077XX India Pale Ale                                         |Imperial or Double India Pale Ale                  |Double India Pale Ale | 7.8| 80.0|   5|
+|1                  |  1.2339530|  0.2042068| -0.8321709|FWiYZi |08.08.08 Vertical Epic Ale                                   |Belgian-Style Pale Ale                             |Pale Ale              | 8.9| 45.0|   5|
+|2                  | -0.4982118|  0.6264828| -0.4534796|M6vu9P |10 Blocks South                                              |American-Style Pale Ale                            |Pale Ale              | 5.5| 56.0|   9|
 
 
 Clustering: Plot
@@ -1491,7 +1499,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-<small> You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like. </small>
+<small> (You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like.) </small>
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -1557,7 +1565,7 @@ And how the backend is serving up that data, conditional on what the user asks i
   output$cluster_plot <- renderPlot({
   
     # If our checkbox is checked saying we do want style centers, show them. Else, don't.
-    if (input$show_centers == TRUE & input$show_all == FALSE) {
+    if (input$show_all == FALSE & input$show_centers == TRUE) {
       
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
       
@@ -1600,13 +1608,13 @@ Narrowing In
 <small> If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster? </small>
 
 
-|               |   1|  2|  3|   4|   5|
-|:--------------|---:|--:|--:|---:|---:|
-|Blonde         | 132|  7|  0|   2|  19|
-|India Pale Ale |  45| 54|  3|  11| 464|
-|Stout          |   5|  5| 56| 133|   5|
-|Tripel         |   1|  4|  3|   1|  56|
-|Wheat          | 287| 12|  2|   6|  14|
+|               |   1|   2|   3|  4|  5|
+|:--------------|---:|---:|---:|--:|--:|
+|Blonde         |   4| 131|   1| 17|  7|
+|India Pale Ale | 468|  43|  11|  1| 54|
+|Stout          |   3|   6| 180| 10|  5|
+|Tripel         |   1|   1|   3| 57|  3|
+|Wheat          |   6| 289|   5|  9| 12|
 
 
     
@@ -1795,7 +1803,7 @@ Note that there is actually, irl, a strain of hops called Fuggles.
 
 <br>
 
-<img src="brewsentation-figure/unnamed-chunk-26-1.png" title="plot of chunk unnamed-chunk-26" alt="plot of chunk unnamed-chunk-26" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-23-1.png" title="plot of chunk unnamed-chunk-23" alt="plot of chunk unnamed-chunk-23" style="display: block; margin: auto;" />
 
 
 
@@ -1805,7 +1813,7 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-27](brewsentation-figure/unnamed-chunk-27-1.png)
+![plot of chunk unnamed-chunk-24](brewsentation-figure/unnamed-chunk-24-1.png)
 
 Is the relationship significant?
 
@@ -1840,7 +1848,7 @@ Prediction
 ========================================================
 * The other side of the coin: supervised learning classification problem
     * Random forest
-    * Neural net
+    * Multinomial logistic regression fit using neural networks
     
 We'll go through the neural net.
 
@@ -1867,29 +1875,32 @@ class: small-code
 
 
 ```r
-run_neural_net <- function(df, outcome, predictor_vars) {
+run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit = 500, size = 5, trace = FALSE) {
   out <- list(outcome = outcome)
   
-  # Create a new column outcome; default to style
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
   if (outcome == "style_collapsed") {
     df[["outcome"]] <- df[["style_collapsed"]]
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-
+    
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
     select_(.dots = cols_to_keep) %>%
     mutate(row = 1:nrow(df)) %>% 
     droplevels()
-
+  
   # Select 80% of the data for training
-  df_train <- sample_n(df, nrow(df)*(0.8))
+  df_train <- sample_n(df, nrow(df)*(0.8)) %>% droplevels()
   
   # The rest is for testing
   df_test <- df %>%
     filter(! (row %in% df_train$row)) %>%
+    select(-row)
+  
+  df_train <- df_train %>%
     select(-row)
 ```
 
@@ -1897,26 +1908,32 @@ run_neural_net <- function(df, outcome, predictor_vars) {
 
 
 ```r
-  df_train <- df_train %>%
-    select(-row)
+  if(multinom==TRUE) {
+    nn <- multinom(outcome ~ .,
+                   data = df_train, maxit=maxit, trace=trace)
+    
+    # Which variables are the most important in the neural net?
+    most_important_vars <- varImp(nn)
+    
+  } else if (multinom==FALSE) {
+    nn <- nnet(outcome ~ ., size = size,
+                   data = df_train, maxit=maxit, trace=trace)
+    most_important_vars <- NULL
+
+  }
   
-  # Build multinomail neural net
-  nn <- multinom(outcome ~ .,
-                 data = df_train, maxit=500, trace=TRUE)
-
-  # Which variables are the most important in the neural net?
-  most_important_vars <- varImp(nn)
-
-  # How accurate is the model? 
-  nn_preds <- predict(nn, type="class", newdata = df_test)
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test) %>% factor()
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
+  
 
+  
   out <- list(out, nn = nn, 
               most_important_vars = most_important_vars,
               df_test = df_test,
               nn_preds = nn_preds,
               nn_accuracy = nn_accuracy)
-
+  
   return(out)
 }
 ```
@@ -1937,54 +1954,64 @@ We'll use data filtered to just the most popular styles and run it.
 
 
 ```r
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = TRUE, multinom = TRUE)
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, size = 10, trace = TRUE, multinom = FALSE)
 ```
 
 ```
-# weights:  203 (168 variable)
-initial  value 10586.778089 
-iter  10 value 9044.309073
-iter  20 value 8464.581525
-iter  30 value 8207.599285
-iter  40 value 7984.327813
-iter  50 value 7639.074802
-iter  60 value 7390.246816
-iter  70 value 7175.498011
-iter  80 value 6932.391006
-iter  90 value 6671.241707
-iter 100 value 6553.815380
-iter 110 value 6454.591859
-iter 120 value 6401.457791
-iter 130 value 6375.681765
-iter 140 value 6370.381017
-iter 150 value 6369.422994
-iter 160 value 6369.297692
-iter 170 value 6369.279516
-iter 180 value 6369.257996
-final  value 6369.248110 
-converged
-# weights:  203 (168 variable)
-initial  value 10586.778089 
-iter  10 value 9044.309073
-iter  20 value 8464.581525
-iter  30 value 8207.599285
-iter  40 value 7984.327813
-iter  50 value 7639.074802
-iter  60 value 7390.246816
-iter  70 value 7175.498011
-iter  80 value 6932.391006
-iter  90 value 6671.241707
-iter 100 value 6553.815380
-iter 110 value 6454.591859
-iter 120 value 6401.457791
-iter 130 value 6375.681765
-iter 140 value 6370.381017
-iter 150 value 6369.422994
-iter 160 value 6369.297692
-iter 170 value 6369.279516
-iter 180 value 6369.257996
-final  value 6369.248110 
-converged
+# weights:  390
+initial  value 12511.531368 
+iter  10 value 8350.690264
+iter  20 value 7975.364580
+iter  30 value 7726.073742
+iter  40 value 7353.515672
+iter  50 value 7093.657839
+iter  60 value 6749.742125
+iter  70 value 6455.931102
+iter  80 value 6238.333945
+iter  90 value 6060.441224
+iter 100 value 5940.440715
+iter 110 value 5860.549257
+iter 120 value 5811.165366
+iter 130 value 5763.838641
+iter 140 value 5730.540521
+iter 150 value 5699.637333
+iter 160 value 5680.742023
+iter 170 value 5667.958381
+iter 180 value 5661.425022
+iter 190 value 5654.869951
+iter 200 value 5649.330623
+iter 210 value 5645.551853
+iter 220 value 5642.769879
+iter 230 value 5639.990476
+iter 240 value 5636.328738
+iter 250 value 5630.405961
+iter 260 value 5622.994886
+iter 270 value 5616.538977
+iter 280 value 5610.118293
+iter 290 value 5600.624007
+iter 300 value 5594.340622
+iter 310 value 5577.690942
+iter 320 value 5572.385465
+iter 330 value 5566.435394
+iter 340 value 5562.019067
+iter 350 value 5558.511758
+iter 360 value 5556.491854
+iter 370 value 5554.990699
+iter 380 value 5553.125868
+iter 390 value 5551.550373
+iter 400 value 5550.129993
+iter 410 value 5549.157815
+iter 420 value 5548.335815
+iter 430 value 5547.613453
+iter 440 value 5546.915671
+iter 450 value 5546.307836
+iter 460 value 5545.783006
+iter 470 value 5545.279473
+iter 480 value 5545.122387
+iter 490 value 5545.116243
+iter 500 value 5545.093877
+final  value 5545.093877 
+stopped after 500 iterations
 ```
 
 
@@ -1994,17 +2021,25 @@ class: small-code
 
 We can check out the structure of the neural net using the `NeuralNetTools` package.
 
+We can see we've got one hidden layer and two bias nodes.
+
 
 ```r
-NeuralNetTools::plotnet(nn_collapsed_out$nn, bias=FALSE)
+NeuralNetTools::plotnet(nn_collapsed_out$nn)
 ```
 
-![plot of chunk unnamed-chunk-32](brewsentation-figure/unnamed-chunk-32-1.png)
+<img src="brewsentation-figure/unnamed-chunk-29-1.png" title="plot of chunk unnamed-chunk-29" alt="plot of chunk unnamed-chunk-29" style="display: block; margin: auto;" />
+
+
+
+
+
 
 
 
 Neural Net: Evaluate
 ========================================================
+class: small-code
 How'd we do? 
 
 
@@ -2014,23 +2049,36 @@ nn_collapsed_out$nn_accuracy[1]
 
 ```
  Accuracy 
-0.4185751 
+0.4882108 
 ```
 
-41.9% isn't terrible given we've got 30 collapsed styles; chance would be 3.3%.
+48.8% isn't terrible given we've got 30 collapsed styles; chance would be 3.3%.
+
+Which variables are most important? 
+* We can get variable importance if we use the `nnet::multinom` function
+    * Calls `nnet` and produces a multinomial logistic regression fit using neural networks
+* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
 
 ***
 
-Which variables are most important?
+
+
+```r
+nn_collapsed_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = FALSE, multinom = TRUE)
+
+nn_collapsed_multinom$nn %>% get_nn_importance() %>% kable()
+```
+
 
 
 |Variable   |Importance Percent |
 |:----------|:------------------|
-|total_hops |43.6%              |
-|total_malt |31.4%              |
-|abv        |17.7%              |
-|ibu        |4.2%               |
-|srm        |3.1%               |
+|total_hops |45.2%              |
+|total_malt |28.5%              |
+|abv        |20.4%              |
+|ibu        |3.5%               |
+|srm        |2.4%               |
+
 
 Neural Net: Glass
 ========================================================
@@ -2050,11 +2098,14 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 
 
 ```
-Accuracy 
- 0.44098 
+ Accuracy 
+0.6666667 
 ```
 
 ***
+
+
+
 
 
 
@@ -2062,117 +2113,12 @@ Here summing up the contributions from all glasses.
 
 
 
-|Variable   |Importance Percent |
-|:----------|:------------------|
-|glass      |48%                |
-|total_hops |11.7%              |
-|total_malt |10.7%              |
-|abv        |10.5%              |
-|ibu        |9.7%               |
-|srm        |9.5%               |
 
 
 
 
-So what's the answer?
-========================================================
-*Are beer styles a useful construct to use as a proxy for natural clusters in beer?*
-
-I'd give it a fuzzy yes.
-
-Fuzzy because:
-* We couldn't do better than ~40% accuracy
-* We had a lot of rows with missing predictors
-
-Unknowns:
-* Was our style collapsing scheme successful in putting beers in the "right" buckets?
-* Would taste-related information have accounted for much of the remaining variance we couldn't explain?
-
-
-So what's the answer?
-========================================================
-
-![plot of chunk unnamed-chunk-37](brewsentation-figure/unnamed-chunk-37-1.png)
-
-***
-
-Plotting the landscape directly on our two main dimensions,
-
-* Syles are very overlapping, especially among lower-alcohol and -bitterness styles
-* But, no clear super-groups that are independent of style
-
-
-
-
-Future Directions
-========================================================
-In no particular order, some thoughts I've had plus suggestions from others:
-
-* Join on other data
-  * e.g., Untappd or something scraped from the interwebs
-* Beer consumption: how is this trending over time, for each style?
-    * What drives the trend? Supply or demand?
-        * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
-* Shiny app features:
-    * Beer searchability, tooltips over each point on hover
-* Hierarchical clustering; what style is the mother of all styles?
-* Some funky algorithm to generate new beer names
-
-
-Cheers, all!
-========================================================
-class: very-small-code-transparent  
 
 
 ```
-R version 3.3.3 (2017-03-06)
-Platform: x86_64-apple-darwin13.4.0 (64-bit)
-Running under: macOS Sierra 10.12.6
-
-locale:
-[1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
-
-attached base packages:
-[1] stats     graphics  grDevices utils     datasets  methods   base     
-
-other attached packages:
- [1] bindrcpp_0.2     emo_0.0.0.9000   caret_6.0-76     lattice_0.20-35 
- [5] nnet_7.3-12      feather_0.3.1    forcats_0.2.0    dplyr_0.7.4.9000
- [9] purrr_0.2.3      readr_1.1.1      tidyr_0.7.1      tibble_1.3.4    
-[13] tidyverse_1.1.1  dobtools_0.1.0   ggrepel_0.6.5    ggplot2_2.2.1   
-[17] jsonlite_1.5     broom_0.4.2      knitr_1.17      
-
-loaded via a namespace (and not attached):
- [1] httr_1.3.1            splines_3.3.3         foreach_1.4.3        
- [4] modelr_0.1.1          Formula_1.2-2         shiny_1.0.5.9000     
- [7] assertthat_0.2.0      highr_0.6             stats4_3.3.3         
-[10] latticeExtra_0.6-28   cellranger_1.1.0      backports_1.1.0      
-[13] quantreg_5.29         glue_1.1.1            digest_0.6.12        
-[16] RColorBrewer_1.1-2    checkmate_1.8.3       rvest_0.3.2          
-[19] minqa_1.2.4           colorspace_1.3-2      htmltools_0.3.6      
-[22] httpuv_1.3.5.9000     Matrix_1.2-8          plyr_1.8.4           
-[25] psych_1.7.5           pkgconfig_2.0.1       SparseM_1.74         
-[28] haven_1.1.0           xtable_1.8-2          scales_0.5.0         
-[31] ranger_0.8.0          MatrixModels_0.4-1    lme4_1.1-13          
-[34] htmlTable_1.9         mgcv_1.8-17           car_2.1-5            
-[37] lazyeval_0.2.0        pbkrtest_0.4-7        mnormt_1.5-5         
-[40] readxl_1.0.0          survival_2.41-3       magrittr_1.5         
-[43] crayon_1.3.4          mime_0.5              evaluate_0.10.1      
-[46] nlme_3.1-131          MASS_7.3-47           xml2_1.1.1           
-[49] foreign_0.8-69        tools_3.3.3           data.table_1.10.4    
-[52] hms_0.3               stringr_1.2.0         munsell_0.4.3        
-[55] cluster_2.0.5         rlang_0.1.2.9000      grid_3.3.3           
-[58] nloptr_1.0.4          iterators_1.0.8       rstudioapi_0.7.0-9000
-[61] htmlwidgets_0.9       miniUI_0.1.1          labeling_0.3         
-[64] base64enc_0.1-3       gtable_0.2.0          ModelMetrics_1.1.0   
-[67] codetools_0.2-15      reshape2_1.4.2        R6_2.2.2             
-[70] gridExtra_2.2.1       lubridate_1.6.0       bindr_0.1            
-[73] Hmisc_4.0-3           stringi_1.1.5         parallel_3.3.3       
-[76] Rcpp_0.12.13          rpart_4.1-11          acepack_1.4.1        
+Error in eval(expr, envir, enclos) : object 'nn_glass_imp_all' not found
 ```
-
-
-
-
-
-

@@ -17,5 +17,5 @@ nnet
 lattice
 caret
 emo
-bindrcpp
 NeuralNetTools
+bindrcpp

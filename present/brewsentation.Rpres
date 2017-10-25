@@ -17,6 +17,11 @@ autosize: true
     overflow: scroll;
     border-style: solid;
   }
+  
+  strong { 
+    font-weight: bold;
+    color: black;
+  }
 
   .cheers {
       background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
@@ -193,6 +198,7 @@ Code at: <https://github.com/aedobbyn/beer-data-science>
 - Markdown writeup in `/compile`
 - Shiny app in `/clusterfun`
 - Step-by-step scripts for getting and munging data in `/run_it`
+- This presentation in `/present`
 
 ***
 ![writeup](./img/writeup.jpg)
@@ -244,7 +250,7 @@ Implications
 
 * If styles do demarcate the beer landscape well, we should expect to see distinct **clusters** dominated mostly by beers classified into a *single* style
 
-* It should also be easy to **predict** style from the other variables
+* It should also be easy to <strong>predict</strong> style from the other variables
 
 This all assumes the variables we have (more on those in a sec) can account for most of the variance between styles.
 
@@ -346,7 +352,7 @@ get_beer("GZQpRX")
 
 ***
 
-Let's unnest just the fourth element of the `data` part of the response. This is the beer's `description`. 
+We can grab just the fourth element of the `data` part of the response, the beer's `description` in a couple ways:
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$description
 ```
@@ -531,7 +537,9 @@ Where to put it?
 
 ***
 
-MySQL
+<br>
+
+I threw it into MySQL
 
 * This allows us to
    * Easily update the data if anything changes
@@ -552,9 +560,9 @@ levels(beer_necessities$style)
 
 <br> 
 
-I wanted to condense these styles by,
+What's the best way to condense these?
 
-e.g., lumping American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
+I want to e.g., lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -594,8 +602,8 @@ Setting `trace_progress = TRUE`:
 ![get_beers](./img/collapse_styles.jpg)a
 
 ***
-* Keywords are ordered from most general to most specific
-  * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in keyword 
+* `keywords` are ordered from most general to most specific
+  * If a beer's name matches multiple keywords, its `style_collapsed` is the **last** of those that appear in `keywords`
     
     
 `American-Style Pale Ale`  `r emo::ji("right_arrow")`  `Pale Ale`
@@ -743,7 +751,7 @@ incremental:false
 
 <br> 
 
-`r emo::ji("shrug")`  predictor because chicken and egg problem  
+`r emo::ji("woman_shrugging_medium_light_skin_tone")`  predictor because chicken and egg problem  
     <small> Do brewers assign style first and then choose which ingredients to add, or vice versa? `r emo::ji("hatching_chick")` </small>
 
 
@@ -876,7 +884,7 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 }
 ```
 
-<small> You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like. </small>
+<small> (You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like.) </small>
 
 <!-- Clusterfun with Shiny Embed -->
 <!-- ======================================================== -->
@@ -897,7 +905,7 @@ class: small-code
 
 Snapshot of what we're including on the frontend:
 
-```{r}
+```{r shiny_ui, eval=FALSE}
 sidebarLayout(
     sidebarPanel(
       h4("Control Panel"),
@@ -936,11 +944,11 @@ class: small-code
 
 And how the backend is serving up that data, conditional on what the user asks it to display.
 
-```{r, eval=FALSE}
+```{r shiny_server, eval=FALSE}
   output$cluster_plot <- renderPlot({
   
     # If our checkbox is checked saying we do want style centers, show them. Else, don't.
-    if (input$show_centers == TRUE & input$show_all == FALSE) {
+    if (input$show_all == FALSE & input$show_centers == TRUE) {
       
       this_style_center <- reactive({style_centers %>% filter(style_collapsed == input$style_collapsed)})
       
@@ -976,7 +984,7 @@ Clusterfun with Shiny
 Narrowing In
 ========================================================
 
-```{r, eval=TRUE, echo=FALSE}
+```{r style_centers_certain_styles, eval=TRUE, echo=FALSE}
 styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
 bd_certain_styles <- beer_dat %>%
   filter(
@@ -987,7 +995,7 @@ bd_certain_styles <- beer_dat %>%
 include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm", "total_hops", "total_malt")
 to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
 
-certain_styles_clustered <- do_cluster(bd_certain_styles, include, to_scale)
+certain_styles_clustered <- dobtools::do_cluster(bd_certain_styles, include, to_scale)
 
 style_centers_certain_styles <- style_centers %>% 
   filter(style_collapsed %in% styles_to_keep)
@@ -1010,8 +1018,12 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 
 
 ```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
+# to_exclude <- c("cluster_assignment", names(certain_styles_clustered)[-which(to_scale %in% names(certain_styles_clustered))])
+# 
+# certain_styles_clustered_trim <- certain_styles_clustered %>% trim_outliers(exclude = to_exclude)
+
 by_style_plot <- ggplot() +   
-  geom_point(data = certain_styles_clustered %>% trim_outliers(cutoff = 3), 
+  geom_point(data = certain_styles_clustered %>% filter(abv < 15 & ibu < 150), 
              aes(x = abv, y = ibu,
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
@@ -1238,7 +1250,7 @@ Prediction
 ========================================================
 * The other side of the coin: supervised learning classification problem
     * Random forest
-    * Neural net
+    * Multinomial logistic regression fit using neural networks
     
 We'll go through the neural net.
 
@@ -1264,58 +1276,65 @@ Neural Net: the Function
 class: small-code
 
 ```{r nn_func, warning=FALSE, echo=TRUE, eval=FALSE}
-run_neural_net <- function(df, outcome, predictor_vars) {
+run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit = 500, size = 5, trace = FALSE) {
   out <- list(outcome = outcome)
   
-  # Create a new column outcome; default to style
+  # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
   if (outcome == "style_collapsed") {
     df[["outcome"]] <- df[["style_collapsed"]]
   } else {
     df[["outcome"]] <- df[["style"]]
   }
-
+    
   cols_to_keep <- c("outcome", predictor_vars)
   
   df <- df %>%
     select_(.dots = cols_to_keep) %>%
     mutate(row = 1:nrow(df)) %>% 
     droplevels()
-
+  
   # Select 80% of the data for training
-  df_train <- sample_n(df, nrow(df)*(0.8))
+  df_train <- sample_n(df, nrow(df)*(0.8)) %>% droplevels()
   
   # The rest is for testing
   df_test <- df %>%
     filter(! (row %in% df_train$row)) %>%
     select(-row)
-
+  
+  df_train <- df_train %>%
+    select(-row)
 ```
 
 ***
 
 ```{r, echo=TRUE, eval=FALSE}
 
-  
-  df_train <- df_train %>%
-    select(-row)
-  
-  # Build multinomail neural net
-  nn <- multinom(outcome ~ .,
-                 data = df_train, maxit=500, trace=TRUE)
+  if(multinom==TRUE) {
+    nn <- multinom(outcome ~ .,
+                   data = df_train, maxit=maxit, trace=trace)
+    
+    # Which variables are the most important in the neural net?
+    most_important_vars <- varImp(nn)
+    
+  } else if (multinom==FALSE) {
+    nn <- nnet(outcome ~ ., size = size,
+                   data = df_train, maxit=maxit, trace=trace)
+    most_important_vars <- NULL
 
-  # Which variables are the most important in the neural net?
-  most_important_vars <- varImp(nn)
-
-  # How accurate is the model? 
-  nn_preds <- predict(nn, type="class", newdata = df_test)
+  }
+  
+  # How accurate is the model? Compare predictions to outcomes from test data
+  nn_preds <- predict(nn, type="class", newdata = df_test) %>% factor()
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
+  
 
+  
   out <- list(out, nn = nn, 
               most_important_vars = most_important_vars,
               df_test = df_test,
               nn_preds = nn_preds,
               nn_accuracy = nn_accuracy)
-
+  
   return(out)
 }
 ```
@@ -1334,7 +1353,7 @@ p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 We'll use data filtered to just the most popular styles and run it. 
 
 ```{r nn_run, eval=TRUE, echo=TRUE, dependson="source_run_nn"}
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = TRUE, multinom = TRUE)
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, size = 10, trace = TRUE, multinom = FALSE)
 ```
 
 
@@ -1344,14 +1363,25 @@ class: small-code
 
 We can check out the structure of the neural net using the `NeuralNetTools` package.
 
-```{r, echo=TRUE, eval=TRUE}
-NeuralNetTools::plotnet(nn_collapsed_out$nn, bias=FALSE)
+We can see we've got one hidden layer and two bias nodes.
+
+```{r, echo=TRUE, eval=TRUE, dependson="nn_run", fig.align="center", fig.width=12}
+NeuralNetTools::plotnet(nn_collapsed_out$nn)
 ```
+
+
+
+```{r, echo=FALSE, eval=FALSE, dependson="nn_run"}
+nnet_plot <- NeuralNetTools::plotnet(nn_collapsed_out$nn)
+wts <- NeuralNetTools::plotnet(nn_collapsed_out$nn, wts_only=TRUE)
+```
+
 
 
 
 Neural Net: Evaluate
 ========================================================
+class: small-code
 How'd we do? 
 
 ```{r, eval=TRUE}
@@ -1360,13 +1390,20 @@ nn_collapsed_out$nn_accuracy[1]
 
 `r round((nn_collapsed_out$nn_accuracy[1] * 100), digits=1)`% isn't terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
 
+Which variables are most important? 
+* We can get variable importance if we use the `nnet::multinom` function
+    * Calls `nnet` and produces a multinomial logistic regression fit using neural networks
+* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
+
 ***
 
-Which variables are most important?
 
-```{r, eval=TRUE, echo=FALSE}
-nn_collapsed_out$nn %>% get_nn_importance() %>% kable()
+```{r, eval=TRUE, echo=TRUE}
+nn_collapsed_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = FALSE, multinom = TRUE)
+
+nn_collapsed_multinom$nn %>% get_nn_importance() %>% kable()
 ```
+
 
 Neural Net: Glass
 ========================================================
@@ -1388,16 +1425,22 @@ nn_collapsed_out_add_glass$nn_accuracy[1]
 
 ***
 
-```{r, eval=TRUE, echo=FALSE}
+``` {r add_glass_multinom, eval=TRUE, echo=FALSE, message=FALSE, dependson="source_run_nn"}
+nn_collapsed_out_add_glass_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE) 
+```
+
+
+```{r, eval=FALSE, echo=FALSE, dependson="add_glass_multinom"}
 # Sum up glass contributions
-nn_glass_imp <- nn_collapsed_out_add_glass$nn %>% get_nn_importance(keep_gini = TRUE)
+ 
+nn_glass_imp <- nn_collapsed_out_add_glass_multinom$nn %>% get_nn_importance(keep_gini = TRUE)
 glass_cols <- nn_glass_imp$Variable[grepl("glass", nn_glass_imp$Variable)]
 
-glass_sums <- nn_glass_imp %>% 
+glass_sums <- nn_glass_imp %>%  
   filter(Variable %in% !!glass_cols) %>% 
   summarise(
     Importance = sum(Importance),
-    `Importance Percent` = (sum(as.numeric(sub("%", "", `Importance Percent`)))/100) %>% round(digits = 1) %>% scales::percent()
+    `Importance Percent` = (sum(as.numeric(sub("%", "", `Importance Percent`)))/100) %>% round(digits = 5) %>% scales::percent()
   ) %>% mutate(
     Variable = "glass"
   )
