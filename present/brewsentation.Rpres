@@ -1111,6 +1111,11 @@ split_ingredients <- function(df, ingredients_to_split) {
 }
 ```
 
+```{r make_beer_dat, eval=FALSE, echo=TRUE}
+beer_dat <- split_ingredients(beer_necessities, 
+                              ingredients_to_split = c("hops", "malt"))
+```
+
 
 Hops Munge
 ========================================================
@@ -1390,10 +1395,10 @@ nn_collapsed_out$nn_accuracy[1]
 Which variables are most important? 
 * We can get variable importance if we use the `nnet::multinom` function
     * Calls `nnet` and produces a multinomial logistic regression fit using neural networks
-* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
 
 ***
 
+* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
 
 ```{r, eval=TRUE, echo=TRUE}
 nn_collapsed_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = FALSE, multinom = TRUE)
@@ -1420,16 +1425,20 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
 nn_collapsed_out_add_glass$nn_accuracy[1]
 ```
 
+<br> 
+
+That's `r round(((nn_collapsed_out_add_glass$nn_accuracy[1] - nn_collapsed_out$nn_accuracy[1]) * 100), digits=2)` percentage points more accurate than the model without glass included.
+
+
 ***
 
 ``` {r add_glass_multinom, eval=TRUE, echo=FALSE, message=FALSE, dependson="source_run_nn"}
-nn_collapsed_out_add_glass_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE) 
+nn_collapsed_out_add_glass_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_add_glass), outcome = "style_collapsed", predictor_vars = p_vars_add_glass, trace = FALSE, multinom = TRUE)  
 ```
 
 
 ```{r, eval=FALSE, echo=FALSE, dependson="add_glass_multinom"}
 # Sum up glass contributions
- 
 nn_glass_imp <- nn_collapsed_out_add_glass_multinom$nn %>% get_nn_importance(keep_gini = TRUE)
 glass_cols <- nn_glass_imp$Variable[grepl("glass", nn_glass_imp$Variable)]
 

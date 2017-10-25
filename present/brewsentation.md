@@ -1705,6 +1705,12 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 
+```r
+beer_dat <- split_ingredients(beer_necessities, 
+                              ingredients_to_split = c("hops", "malt"))
+```
+
+
 Hops Munge
 ========================================================
 class: very-small-code
@@ -2057,10 +2063,10 @@ nn_collapsed_out$nn_accuracy[1]
 Which variables are most important? 
 * We can get variable importance if we use the `nnet::multinom` function
     * Calls `nnet` and produces a multinomial logistic regression fit using neural networks
-* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
 
 ***
 
+* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
 
 
 ```r
@@ -2101,6 +2107,11 @@ nn_collapsed_out_add_glass <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars_
  Accuracy 
 0.6666667 
 ```
+
+<br> 
+
+That's 17.85 percentage points more accurate than the model without glass included.
+
 
 ***
 
