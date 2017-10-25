@@ -1018,12 +1018,9 @@ kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_
 
 
 ```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
-# to_exclude <- c("cluster_assignment", names(certain_styles_clustered)[-which(to_scale %in% names(certain_styles_clustered))])
-# 
-# certain_styles_clustered_trim <- certain_styles_clustered %>% trim_outliers(exclude = to_exclude)
-
 by_style_plot <- ggplot() +   
-  geom_point(data = certain_styles_clustered %>% filter(abv < 15 & ibu < 150), 
+  geom_point(data = certain_styles_clustered %>% select(abv, ibu, srm, cluster_assignment, style_collapsed) %>% 
+               dobtools::trim_outliers(exclude = c("cluster_assignment", "style_collapsed"), cutoff=3), 
              aes(x = abv, y = ibu,
                  colour = cluster_assignment), alpha = 0.5) +
   facet_grid(. ~ style_collapsed) +
