@@ -714,23 +714,24 @@ kable(style_centers_rename)
 
 
 
-To the main question
+
+Style Centers
 ========================================================
 
+If beer styles are really self-contained, beer in each style should cluster tightly around these points.
 
-<!-- From this we can plot the centers of each style. -->
-
-<!-- ```{r, echo=FALSE, eval=TRUE} -->
-<!-- ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) +  -->
-<!--   geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) + -->
-<!--   ggtitle("Style Centers and their Popularity") + -->
-<!--   labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles",  -->
-<!--        size = "Number of Beers") + -->
-<!--   theme_minimal() -->
-<!-- ``` -->
+```{r, echo=FALSE, eval=TRUE, fig.align="center", fig.width=12, fig.height=12}
+ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) +
+  geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) +
+  ggtitle("Style Centers and their Popularity") +
+  labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles",
+       size = "Number of Beers") +
+  theme_minimal()
+```
 
 
-<!-- *** -->
+To the main question
+========================================================
 
 *Do styles truly define distinct pockets of beer?*
 

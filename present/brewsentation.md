@@ -1230,23 +1230,17 @@ Popular Styles
 
 
 
-To the main question
+
+Style Centers
 ========================================================
 
+If beer styles are really self-contained, beer in each style should cluster tightly around these points.
 
-<!-- From this we can plot the centers of each style. -->
-
-<!-- ```{r, echo=FALSE, eval=TRUE} -->
-<!-- ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) +  -->
-<!--   geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) + -->
-<!--   ggtitle("Style Centers and their Popularity") + -->
-<!--   labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles",  -->
-<!--        size = "Number of Beers") + -->
-<!--   theme_minimal() -->
-<!-- ``` -->
+<img src="brewsentation-figure/unnamed-chunk-14-1.png" title="plot of chunk unnamed-chunk-14" alt="plot of chunk unnamed-chunk-14" style="display: block; margin: auto;" />
 
 
-<!-- *** -->
+To the main question
+========================================================
 
 *Do styles truly define distinct pockets of beer?*
 
@@ -1744,7 +1738,7 @@ Q: Do more *kinds* of hops generally make a beer more bitter?
 
 <br>
 
-<img src="brewsentation-figure/unnamed-chunk-20-1.png" title="plot of chunk unnamed-chunk-20" alt="plot of chunk unnamed-chunk-20" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
 
 
 
@@ -1754,7 +1748,7 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-21](brewsentation-figure/unnamed-chunk-21-1.png)
+![plot of chunk unnamed-chunk-22](brewsentation-figure/unnamed-chunk-22-1.png)
 
 Is the relationship significant?
 
@@ -1962,7 +1956,7 @@ par(mar=c(4.1, 0.1, 4.1, 7.1))
 NeuralNetTools::plotnet(nn_collapsed_out$nn, line_stag = 0.01, max_sp = TRUE)
 ```
 
-<img src="brewsentation-figure/unnamed-chunk-25-1.png" title="plot of chunk unnamed-chunk-25" alt="plot of chunk unnamed-chunk-25" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-26-1.png" title="plot of chunk unnamed-chunk-26" alt="plot of chunk unnamed-chunk-26" style="display: block; margin: auto;" />
 
 
 
@@ -2084,7 +2078,7 @@ So what's the answer?
 
 <br>
 
-<img src="brewsentation-figure/unnamed-chunk-30-1.png" title="plot of chunk unnamed-chunk-30" alt="plot of chunk unnamed-chunk-30" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-31-1.png" title="plot of chunk unnamed-chunk-31" alt="plot of chunk unnamed-chunk-31" style="display: block; margin: auto;" />
 
 ***
 
@@ -2138,35 +2132,33 @@ other attached packages:
 [19] broom_0.4.2          knitr_1.17          
 
 loaded via a namespace (and not attached):
- [1] nlme_3.1-131        pbkrtest_0.4-7      lubridate_1.6.0    
- [4] devtools_1.13.3     RColorBrewer_1.1-2  httr_1.3.1         
- [7] tools_3.3.3         backports_1.1.0     R6_2.2.2           
-[10] rpart_4.1-11        Hmisc_4.0-3         lazyeval_0.2.0     
-[13] mgcv_1.8-17         colorspace_1.3-2    withr_2.0.0        
-[16] tidyselect_0.2.2    gridExtra_2.2.1     mnormt_1.5-5       
-[19] curl_2.8.1          git2r_0.18.0        rvest_0.3.2        
-[22] quantreg_5.29       htmlTable_1.9       SparseM_1.74       
-[25] xml2_1.1.1          labeling_0.3        scales_0.5.0       
-[28] checkmate_1.8.3     psych_1.7.5         stringr_1.2.0      
-[31] digest_0.6.12       foreign_0.8-69      minqa_1.2.4        
-[34] base64enc_0.1-3     pkgconfig_2.0.1     htmltools_0.3.6    
-[37] lme4_1.1-13         highr_0.6           htmlwidgets_0.9    
-[40] rlang_0.1.2.9000    readxl_1.0.0        shiny_1.0.5.9000   
-[43] bindr_0.1           acepack_1.4.1       ModelMetrics_1.1.0 
-[46] car_2.1-5           magrittr_1.5        Formula_1.2-2      
-[49] Matrix_1.2-8        Rcpp_0.12.13        munsell_0.4.3      
-[52] stringi_1.1.5       MASS_7.3-47         plyr_1.8.4         
-[55] grid_3.3.3          parallel_3.3.3      crayon_1.3.4       
-[58] miniUI_0.1.1        haven_1.1.0         splines_3.3.3      
-[61] hms_0.3             ranger_0.8.0        reshape2_1.4.2     
-[64] codetools_0.2-15    stats4_3.3.3        glue_1.1.1         
-[67] evaluate_0.10.1     latticeExtra_0.6-28 data.table_1.10.4  
-[70] modelr_0.1.1        nloptr_1.0.4        httpuv_1.3.5.9000  
-[73] foreach_1.4.3       MatrixModels_0.4-1  cellranger_1.1.0   
-[76] gtable_0.2.0        assertthat_0.2.0    mime_0.5           
-[79] xtable_1.8-2        e1071_1.6-8         class_7.3-14       
-[82] survival_2.41-3     iterators_1.0.8     memoise_1.1.0      
-[85] cluster_2.0.5      
+ [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
+ [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
+ [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
+[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
+[13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
+[16] mnormt_1.5-5          rvest_0.3.2           quantreg_5.29        
+[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
+[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
+[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
+[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
+[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
+[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
+[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
+[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
+[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
+[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
+[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
+[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
+[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
+[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
+[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
+[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
+[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
+[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
+[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
+[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
+[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
 ```
 
 
