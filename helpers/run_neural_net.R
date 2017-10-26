@@ -1,5 +1,8 @@
 
-run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit = 500, size = 5, trace = FALSE) {
+run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, 
+                           maxit = 500, size = 5, trace = FALSE, seed = 9) {
+  set.seed(seed)
+  
   out <- list(outcome = outcome)
   
   # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise

@@ -40,7 +40,6 @@ autosize: true
       background-repeat: no-repeat;
       background-size: 100% 100%;
       color: white;
-      <!-- background:transparent; -->
     }
     
   .section .reveal .state-background {
@@ -51,24 +50,21 @@ autosize: true
       background-size: 100% 100%;
   }
 
-  td {
+  table, td, th {
+    border: 1px solid black;
     font-size: 1pt;
-    padding: 0px;
+    padding: 5px;
     cellpadding="0";
-    cellspacing="0"
+    cellspacing="0";
+    text-align: right;
+    font-size: 1pt;
   }
   th {
-    font-size: 1pt;
-    height: 10px;
-    font-weight: bold;
-    text-align: right;
     background-color: #e1e3e8;
   }
+  
   table { 
     border-spacing: 5px;
-    border-collapse: collapse;
-    padding: 5px;
-    border-style: solid;
     overflow: scroll;
   }
   
@@ -186,21 +182,25 @@ UChicago '15
 
 Now at [Earlybird Software](http://earlybird.co/)
 ![eb](./img/eb_planning.jpg)
-<!-- ![eb_logo](./img/earlybird.png) -->
 
 First things first
 ========================================================
 incremental:false
 
-*Where's the code at?*
+<br>
 
-Code at: <https://github.com/aedobbyn/beer-data-science>
+*Where's the code?*
+
+<https://github.com/aedobbyn/beer-data-science>
 - Markdown writeup in `/compile`
 - Shiny app in `/clusterfun`
 - Step-by-step scripts for getting and munging data in `/run_it`
 - This presentation in `/present`
 
 ***
+
+<br>
+
 ![writeup](./img/writeup.jpg)
 
 
@@ -215,12 +215,10 @@ How did this come about?
 - Does the style Kölsch even describe a well-defined beer sub-group?
     - Would it be reliably distinguishable from non-Kölschs in a blind taste test?
     
-<!-- ![beer_radar](./img/beer_radar.jpg) -->
-
     
 How did this come about?
 ========================================================
-`Beer = water + malt + hops + yeast + sometimes other stuff like fruit`
+`Beer   ==   water + malted barley + hops + yeast + sometimes other stuff like fruit`
 - We categorize it into different styles based on 
   - Type and ratio of ingredients
   - How the beer is made (e.g., how long and at what temperature it's brewed)
@@ -294,7 +292,7 @@ class: small-code
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
-get_a_beer <- function(id) {
+get_beer <- function(id) {
   fromJSON(paste0(base_url, "/beer/", id, "/", key_preface, key))
 }
 ```
@@ -303,41 +301,41 @@ get_a_beer <- function(id) {
 We can make a little function from this that'll take a single ID and use `fromJSON` to convert from, well, JSON into a nested list starting with our 200 success message.
 
 ```{r, eval=TRUE}
-get_a_beer("GZQpRX")
+get_beer("GZQpRX")
 ```
 
 
 
-Quick funciton factory
-========================================================
-class:small-code
+<!-- Quick funciton factory -->
+<!-- ======================================================== -->
+<!-- class:small-code -->
 
-Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
+<!-- Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID. -->
 
-```{r func_fac, eval = TRUE, echo=TRUE}
-endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
+<!-- ```{r func_fac, eval = TRUE, echo=TRUE} -->
+<!-- endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu") -->
 
-# Base function
-get_ <- function(id, ep) {
-  jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
-}
+<!-- # Base function -->
+<!-- get_ <- function(id, ep) { -->
+<!--   jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key)) -->
+<!-- } -->
 
-# Create new get_<ep> functions
-endpoints %>% walk(~ assign(x = paste0("get_", .x),
-                             value = partial(get_, ep = .x),
-                             envir = .GlobalEnv))
-```
+<!-- # Create new get_<ep> functions -->
+<!-- endpoints %>% walk(~ assign(x = paste0("get_", .x), -->
+<!--                              value = partial(get_, ep = .x), -->
+<!--                              envir = .GlobalEnv)) -->
+<!-- ``` -->
 
-Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment.
+<!-- Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment. -->
 
-Testing testing
-========================================================
-class:small-code
+<!-- Testing testing -->
+<!-- ======================================================== -->
+<!-- class:small-code -->
 
 
-```{r, eval=TRUE, echo=TRUE}
-get_hop("3")
-```
+<!-- ```{r, eval=TRUE, echo=TRUE} -->
+<!-- get_hop("3") -->
+<!-- ``` -->
 
 
 Digging In
@@ -409,6 +407,13 @@ unnest_it <- function(df) {
 
 <small>Note that this is a `for` loop so it's pretty slow `r emo::ji("pensive")`. Optimizing it is on the docket.</small>
 
+Grabbing all Beers
+========================================================
+Instead of `/beer/<BEER_ID>` we're now asking for `/beers`
+
+<center>![grab_all_beers](./img/grab_all_beers.jpg)</center>
+
+
 Paginating the Request
 ========================================================
 class: small-code
@@ -438,48 +443,50 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 ```
 
 
-Quick note on Ingredients
-========================================================
-class:small-code
-A few apporaches I used:
+<!-- Quick note on Ingredients -->
+<!-- ======================================================== -->
+<!-- class:small-code -->
+<!-- A few apporaches I used: -->
 
-* Concatenated into a single string during the unnesting process
-  * `hop_name` and `malt_name` using this function  `r emo::ji("point_right")`
-* Split out into one hop per column and one malt per column
-  * `hops_name_1`, `hops_name_2`, etc.
-* Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column 
-  * Value is either 1 or 0 
+<!-- * Concatenated into a single string during the unnesting process -->
+<!--   * `hop_name` and `malt_name` using this function  `r emo::ji("point_right")` -->
+<!-- * Split out into one hop per column and one malt per column -->
+<!--   * `hops_name_1`, `hops_name_2`, etc. -->
+<!-- * Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column  -->
+<!--   * Value is either 1 or 0  -->
 
-<small> (Another would have been a nested list-col) </small>
+<!-- <small> (Another would have been a nested list-col) </small> -->
 
-***
+<!-- *** -->
 
-<br>
+<!-- <br> -->
 
-```{r, eval=FALSE, echo=TRUE}
-unnest_ingredients <- function(df) {
-  df$hops_name <- NA
-  df$malt_name <- NA
+<!-- ```{r, eval=FALSE, echo=TRUE} -->
+<!-- unnest_ingredients <- function(df) { -->
+<!--   df$hops_name <- NA -->
+<!--   df$malt_name <- NA -->
 
-  for (row in 1:nrow(df)) {
-    if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) |
-        !is.null(df[["ingredients.malt"]][[row]][["name"]])) {
-      
-      df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ")
-      
-      df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ")
-    }
-  }
-  return(df)
-}
-```
+<!--   for (row in 1:nrow(df)) { -->
+<!--     if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) | -->
+<!--         !is.null(df[["ingredients.malt"]][[row]][["name"]])) { -->
+
+<!--       df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ") -->
+
+<!--       df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ") -->
+<!--     } -->
+<!--   } -->
+<!--   return(df) -->
+<!-- } -->
+<!-- ``` -->
+
+
 
 What have we got?
 ========================================================
 class: small-code
 
 ```{r, echo=TRUE, eval=FALSE}
-beer_necessities <- paginated_request("beers", "&withIngredients=Y")
+beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
 ```
 
 
@@ -533,6 +540,8 @@ ggplot(data = beer_necessities) +
 Where to put it?
 ========================================================
 
+<br>
+
 ![local_db](./img/local_db.jpg)
 
 ***
@@ -562,14 +571,14 @@ levels(beer_necessities$style)
 
 What's the best way to condense these?
 
-I want to e.g., lump American-Style Amber (Low Calorie) Lager in with American-Style Amber Lager.
+I want to e.g., lump American-Style India Pale Ale in with English-Style India Pale Ale.
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
 class: small-code
 
 ```{r keywords, eval=TRUE}
-keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
+keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
 ```
 
 
@@ -599,7 +608,7 @@ Collapsing in Action
 
 Setting `trace_progress = TRUE`:
 
-![get_beers](./img/collapse_styles.jpg)a
+![get_beers](./img/collapse_styles.jpg)
 
 ***
 * `keywords` are ordered from most general to most specific
@@ -682,39 +691,43 @@ style_centers_rename <- style_centers %>%
 
 Popular Styles
 ========================================================
-class: small-code
 
 ```{r, echo=FALSE, eval=TRUE}
 kable(style_centers_rename)
 ```
 
-***
-
-From this we can plot the centers of each style.
-
-```{r, echo=FALSE, eval=TRUE}
-ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) + 
-  geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) +
-  ggtitle("Style Centers and their Popularity") +
-  labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles", 
-       size = "Number of Beers") +
-  theme_minimal()
-```
 
 
 To the main question
 ========================================================
+
+
+<!-- From this we can plot the centers of each style. -->
+
+<!-- ```{r, echo=FALSE, eval=TRUE} -->
+<!-- ggplot(data = style_centers %>% filter(style_collapsed %in% keywords)) +  -->
+<!--   geom_point(aes(mean_abv, mean_ibu, colour = style_collapsed, size = n)) + -->
+<!--   ggtitle("Style Centers and their Popularity") + -->
+<!--   labs(x = "Mean ABV", y = "Mean IBU", colour = "Collapsed Styles",  -->
+<!--        size = "Number of Beers") + -->
+<!--   theme_minimal() -->
+<!-- ``` -->
+
+
+<!-- *** -->
+
 *Do styles truly define distinct pockets of beer?*
 
 If they do, we could expect styles to align with **clusters** generated using an unsupervised learning algorithm. 
 
 * k-means
-    * Takes numeric inputs splits for each observation and splits those observations into `k` clusters (we choose `k`)
-    * Goal is to minimize the sum of squares between each datapoint and its assigned cluster center
+    * Splits observations into `k` clusters (we choose `k`)
+    * Try to minimize the sum of squares between each datapoint and its assigned cluster center
 
 <small>Note that we'll have to throw away rows that contain `NA` values in any of the variables we're using.</small>
 
 What variables should we include?
+
 
 
 What's in a Predictor?
@@ -809,7 +822,7 @@ to_cluster_on <- c("abv", "ibu", "srm")
 and stitch together the cluster assignments, scaled columns, and the original data.
 
 ```{r run_do_cluster, eval=TRUE}
-clustered_beer <- do_cluster(beer_necessities, to_include, to_cluster_on)
+clustered_beer <- do_cluster(beer_dat, to_include, to_cluster_on)
 ```
 
 
@@ -828,10 +841,10 @@ Clustering: Plot
 ========================================================
 class:very-small-code
 
-We'll plot two of our three dimensions, color on the x and bitterness on the y, and overlay the popular style centers we calculated earlier.
+<small> Color vs. bitterness with style centers overlaid: </small>
 
 
-```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center"}
+```{r cluster_srm_ibu, echo=FALSE, eval=TRUE, fig.align="center", fig.width=9, fig.height=8}
 clustered_beer_plot_srm_ibu <- ggplot() +
   geom_jitter(data = clustered_beer %>% select(abv, ibu, srm, cluster_assignment) %>% dobtools::trim_outliers(exclude = "cluster_assignment", cutoff = 2.5), 
              aes(x = srm, y = ibu, colour = cluster_assignment), alpha = 0.5) +
@@ -886,18 +899,62 @@ trim_outliers <- function(df, cutoff = 1.96, exclude = NULL, keep_scaled = TRUE)
 
 <small> (You can grab it from my [`dobtools`](https://github.com/aedobbyn/dobtools) package on GitHub if you like.) </small>
 
-<!-- Clusterfun with Shiny Embed -->
-<!-- ======================================================== -->
-<!-- ```{r, echo = FALSE, eval=TRUE} -->
-<!-- shinyAppDir( -->
-<!--   system.file("/Users/amanda/Desktop/Projects/beer_data_science/present/clusterfun", package="shiny"), -->
-<!--   options=list( -->
-<!--     width="100%", height="100%" -->
-<!--   ) -->
-<!-- ) -->
 
 
-<!-- ``` -->
+Narrowing In
+========================================================
+incremental:false
+
+```{r style_centers_certain_styles, eval=TRUE, echo=FALSE}
+styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
+bd_certain_styles <- beer_dat %>%
+  filter(
+    style_collapsed %in% styles_to_keep
+  ) %>% 
+  droplevels()
+
+include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm", "total_hops", "total_malt")
+to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
+
+certain_styles_clustered <- dobtools::do_cluster(bd_certain_styles, include, to_scale)
+
+style_centers_certain_styles <- style_centers %>% 
+  filter(style_collapsed %in% styles_to_keep)
+
+```
+
+<br>
+
+<small> If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster? </small>
+
+```{r, eval=TRUE, echo=FALSE, fig.width=12, fig.height=12}
+kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
+```
+
+
+    
+***
+
+
+```{r cluster_certain_styles, eval=TRUE, echo=FALSE, fig.width=9, fig.height=9, fig.align="center"}
+by_style_plot <- ggplot() +   
+  geom_point(data = certain_styles_clustered %>% select(abv, ibu, srm, cluster_assignment, style_collapsed) %>% 
+               dobtools::trim_outliers(exclude = c("cluster_assignment", "style_collapsed"), cutoff=3), 
+             aes(x = abv, y = ibu,
+                 colour = cluster_assignment), alpha = 0.5) +
+  facet_grid(. ~ style_collapsed) +
+  geom_point(data = style_centers_certain_styles,
+           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4) +
+  ggtitle("Selected Styles Cluster Assignment") +
+  labs(x = "ABV", y = "IBU") +
+  labs(colour = "Cluster") +
+  theme_bw()
+by_style_plot
+```
+
+<!-- Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales. -->
+
+
 
 Clusterfun with Shiny: UI
 ========================================================
@@ -981,61 +1038,6 @@ Clusterfun with Shiny
 
 
 
-Narrowing In
-========================================================
-
-```{r style_centers_certain_styles, eval=TRUE, echo=FALSE}
-styles_to_keep <- c("Blonde", "India Pale Ale", "Stout", "Tripel", "Wheat")
-bd_certain_styles <- beer_dat %>%
-  filter(
-    style_collapsed %in% styles_to_keep
-  ) %>% 
-  droplevels()
-
-include <- c("id", "name", "style", "style_collapsed", "abv", "ibu", "srm", "total_hops", "total_malt")
-to_scale <- c("abv", "ibu", "srm", "total_hops", "total_malt")
-
-certain_styles_clustered <- dobtools::do_cluster(bd_certain_styles, include, to_scale)
-
-style_centers_certain_styles <- style_centers %>% 
-  filter(style_collapsed %in% styles_to_keep)
-
-```
-
-<br>
-
-<small> If we focus in on 5 distinct styles and cluster them into 5 clusters, will each style be siphoned off into its own cluster? </small>
-
-```{r, eval=TRUE, echo=FALSE}
-kable(table(style = certain_styles_clustered$style_collapsed, cluster = certain_styles_clustered$cluster_assignment))
-```
-
-
-    
-***
-
-<br>
-
-
-```{r cluster_certain_styles, eval=TRUE, echo=FALSE}
-by_style_plot <- ggplot() +   
-  geom_point(data = certain_styles_clustered %>% select(abv, ibu, srm, cluster_assignment, style_collapsed) %>% 
-               dobtools::trim_outliers(exclude = c("cluster_assignment", "style_collapsed"), cutoff=3), 
-             aes(x = abv, y = ibu,
-                 colour = cluster_assignment), alpha = 0.5) +
-  facet_grid(. ~ style_collapsed) +
-  geom_point(data = style_centers_certain_styles,
-           aes(mean_abv, mean_ibu), shape = 1, colour = "black", fill="black", size = 4) +
-  ggtitle("Selected Styles Cluster Assignment") +
-  labs(x = "ABV", y = "IBU") +
-  labs(colour = "Cluster") +
-  theme_bw()
-by_style_plot
-```
-
-<!-- Not bad; without some taste data or other ingredients, it would be difficult to distinguish wheat beers and blonde ales. -->
-
-
 And now for something completely different
 ========================================================
 <div class="midcenter" style="width:90%; height:90%; margin-right:30%"> <img src="./img/now_for_something_completely_different.gif"></img></div>
@@ -1047,7 +1049,6 @@ Hops
 ========================================================
 incremental:true
 
-<!-- ![mad_hops](./img/mad_hops.jpg) -->
 
 <div class="midcenter" style="margin-left:-300px; margin-top:-300px;">
 <img src="./img/mad_hops.jpg"></img>
@@ -1071,7 +1072,7 @@ Hops `\häps\`, *n*: 1. It's what makes beer bitter and flavorful.
 
 <br>
 
-Our question: do more *kinds* of hops generally make a beer more bitter?
+One question: do more *kinds* of hops generally make a beer more bitter?
 
 <small>(This is different than the total *quantity* of hops used during brewing.)</small>
 
@@ -1080,7 +1081,7 @@ Hops Munge
 ========================================================
 class: small-code
 
-Let's munge a bit. We'll need to split out ingredients from one column into many. 
+Let's munge a bit. We'll need to split out ingredients from one column into many.
 
 <small>This is the second approach in our ingredients discussion earlier.</small>
 
@@ -1112,14 +1113,15 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 ```{r make_beer_dat, eval=FALSE, echo=TRUE}
-beer_dat <- split_ingredients(beer_necessities, 
+beer_dat <- split_ingredients(beer_dat, 
                               ingredients_to_split = c("hops", "malt"))
 ```
 
 
 Hops Munge
 ========================================================
-class: very-small-code
+class: small-code
+
 ```{r get_pop_hops_2, echo=TRUE, eval=TRUE}
 # Gather up all the hops columns into one called `hop_name`
 beer_necessities_hops_gathered <- beer_necessities %>%
@@ -1139,19 +1141,14 @@ hops_beer_stats <- beer_necessities_w_hops %>%
   ungroup() %>% 
   group_by(hop_name) %>% 
   summarise(
-    mean_ibu = mean(ibu, na.rm = TRUE), 
-    mean_abv = mean(abv, na.rm = TRUE),
+    mean_ibu = mean(ibu, na.rm = TRUE) %>% round(digits=2), 
+    mean_abv = mean(abv, na.rm = TRUE) %>% round(digits=2),
     n = n()
   ) %>% 
   arrange(desc(n))
 
 # Pare to hops that are used in at least 50 beers
 pop_hops_beer_stats <- hops_beer_stats[hops_beer_stats$n > 50, ] 
-
-# Keep just beers that contain these most popular hops
-beer_necessities_w_popular_hops <- beer_necessities_w_hops %>% 
-  filter(hop_name %in% pop_hops_beer_stats$hop_name) %>% 
-  droplevels()
 
 pop_hops_display <- pop_hops_beer_stats %>% 
     rename(
@@ -1165,11 +1162,16 @@ pop_hops_display <- pop_hops_beer_stats %>%
 
 What's the hop landscape look like?
 ========================================================
+
+Hops contained in >50 beers:
+
 ```{r, echo=FALSE, eval=TRUE, dependson="get_pop_hops_2"}
 kable(pop_hops_display[1:11,])
 ```
 
 ***
+
+<br>
 
 ```{r eval=TRUE, echo=FALSE, dependson="get_pop_hops_2"}
 kable(pop_hops_display[12:20,])
@@ -1184,17 +1186,21 @@ class: small-code
 
 <br>
 
-Per hop, plotting the number of beers that contain that hop and their average alcohol content and bitterness.
+Per hop, number beers containing that hop and their average ABV and IBU.
 
 <br>
 
 Note that there is actually, irl, a strain of hops called Fuggles.
 
+<br>
+
+Q: Do more *kinds* of hops generally make a beer more bitter?
+
 ***
 
 <br>
 
-```{r, eval=TRUE, echo=FALSE, fig.align="center"}
+```{r, eval=TRUE, echo=FALSE, fig.align="center", fig.width=9, fig.height=8}
 ggplot(data = pop_hops_beer_stats) + 
   geom_point(aes(mean_abv, mean_ibu, colour = hop_name, size = n)) +
   ggtitle("Most Popular Hops' Effect on Alcohol and Bitterness") +
@@ -1224,15 +1230,10 @@ Is the relationship significant?
 
 ***
 
-<br>
-
-```{r, echo=FALSE, eval=TRUE}
-library(tidyverse)
-```
-
-
 ```{r hops_ibu_lm, echo=TRUE, eval=TRUE}
-hops_ibu_lm <- lm(ibu ~ total_hops, data = beer_dat %>% filter(total_hops > 0)) %>% broom::tidy() %>% dobtools::style_lm() 
+hops_ibu_lm <- lm(ibu ~ total_hops, 
+  data = beer_dat %>% filter(total_hops > 0)) %>% 
+  broom::tidy() %>% dobtools::style_lm() 
 ```
 
 ```{r, echo=FALSE, eval=TRUE, fig.align="center"}
@@ -1252,7 +1253,7 @@ Prediction
 ========================================================
 * The other side of the coin: supervised learning classification problem
     * Random forest
-    * Multinomial logistic regression fit using neural networks
+    * Neural network
     
 We'll go through the neural net.
 
@@ -1278,7 +1279,8 @@ Neural Net: the Function
 class: small-code
 
 ```{r nn_func, warning=FALSE, echo=TRUE, eval=FALSE}
-run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit = 500, size = 5, trace = FALSE) {
+run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars,
+                           maxit = 500, size = 5, trace = FALSE, seed = NULL) {
   out <- list(outcome = outcome)
   
   # Create a new column outcome; it's style_collapsed if you set outcome to style_collapsed, and style otherwise
@@ -1329,8 +1331,6 @@ run_neural_net <- function(df, multinom = TRUE, outcome, predictor_vars, maxit =
   nn_preds <- predict(nn, type="class", newdata = df_test) %>% factor()
   nn_accuracy <- postResample(df_test$outcome, nn_preds)
   
-
-  
   out <- list(out, nn = nn, 
               most_important_vars = most_important_vars,
               df_test = df_test,
@@ -1355,7 +1355,7 @@ p_vars <- c("total_hops", "total_malt", "abv", "ibu", "srm")
 We'll use data filtered to just the most popular styles and run it. 
 
 ```{r nn_run, eval=TRUE, echo=TRUE, dependson="source_run_nn"}
-nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, size = 10, trace = TRUE, multinom = FALSE)
+nn_collapsed_out <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, size = 10, trace = TRUE, multinom = FALSE, seed = 9)
 ```
 
 
@@ -1368,13 +1368,14 @@ We can check out the structure of the neural net using the `NeuralNetTools` pack
 We can see we've got one hidden layer and two bias nodes.
 
 ```{r, echo=TRUE, eval=TRUE, dependson="nn_run", fig.align="center", fig.width=12}
-NeuralNetTools::plotnet(nn_collapsed_out$nn)
+par(mar=c(4.1, 0.1, 4.1, 7.1))
+NeuralNetTools::plotnet(nn_collapsed_out$nn, line_stag = 0.01, max_sp = TRUE)
 ```
 
 
 
 ```{r, echo=FALSE, eval=FALSE, dependson="nn_run"}
-nnet_plot <- NeuralNetTools::plotnet(nn_collapsed_out$nn)
+nnet_plot <- NeuralNetTools::plotnet(nn_collapsed_out$nn) %>% recordPlot()
 wts <- NeuralNetTools::plotnet(nn_collapsed_out$nn, wts_only=TRUE)
 ```
 
@@ -1384,23 +1385,54 @@ wts <- NeuralNetTools::plotnet(nn_collapsed_out$nn, wts_only=TRUE)
 Neural Net: Evaluate
 ========================================================
 class: small-code
+
+<br> 
+
 How'd we do? 
 
 ```{r, eval=TRUE}
 nn_collapsed_out$nn_accuracy[1]
 ```
 
+<br> 
+
 `r round((nn_collapsed_out$nn_accuracy[1] * 100), digits=1)`% isn't terrible given we've got `r length(levels(beer_dat$style_collapsed))` collapsed styles; chance would be `r round((100 / length(levels(beer_dat$style_collapsed))), digits = 1)`%.
 
-Which variables are most important? 
-* We can get variable importance if we use the `nnet::multinom` function
-    * Calls `nnet` and produces a multinomial logistic regression fit using neural networks
 
 ***
 
-* `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights
+<br> 
 
-```{r, eval=TRUE, echo=TRUE}
+Which variables are most important?
+
+<small> `caret::varImp` will give us an importance measure using combinations of the absolute values of the weights </small>
+
+```{r, echo=FALSE, eval=FALSE}
+get_nn_importance <- function(nn, keep_gini = FALSE) {
+
+  importance_df <- nn %>% caret::varImp()
+  names <- importance_df %>% row.names()
+
+  importance_df <- importance_df %>%
+    as_tibble() %>% select(Overall) %>%
+    dplyr::arrange(desc(Overall)) %>%
+    bind_cols(Variable = names) %>%
+    rename(Importance = Overall) %>%
+    mutate(
+      `Importance Percent` = ((Importance/sum(.$Importance))) %>% round(digits=3) %>%
+        scales::percent()
+    )
+
+  if(keep_gini == FALSE) {
+    importance_df <- importance_df %>% select(-Importance)
+  }
+
+  return(importance_df)
+}
+```
+
+
+```{r, eval=TRUE, echo=FALSE}
 nn_collapsed_multinom <- run_neural_net(df = beer_dat %>% drop_na(!!p_vars), outcome = "style_collapsed", predictor_vars = p_vars, trace = FALSE, multinom = TRUE)
 
 nn_collapsed_multinom$nn %>% get_nn_importance() %>% kable()
@@ -1437,7 +1469,7 @@ nn_collapsed_out_add_glass_multinom <- run_neural_net(df = beer_dat %>% drop_na(
 ```
 
 
-```{r, eval=FALSE, echo=FALSE, dependson="add_glass_multinom"}
+```{r make_nn_glass_imp_all, eval=TRUE, echo=FALSE, dependson="add_glass_multinom"}
 # Sum up glass contributions
 nn_glass_imp <- nn_collapsed_out_add_glass_multinom$nn %>% get_nn_importance(keep_gini = TRUE)
 glass_cols <- nn_glass_imp$Variable[grepl("glass", nn_glass_imp$Variable)]
@@ -1464,10 +1496,9 @@ nn_glass_imp_all <- nn_glass_imp %>%
 Here summing up the contributions from all glasses.
 
 
-```{r, eval=TRUE, echo=FALSE}
-nn_glass_imp_all %>% kable()
+```{r display_nn_glass_imp_all, eval=TRUE, echo=FALSE, dependson="make_nn_glass_imp_all"}
+kable(nn_glass_imp_all)
 ```
-
 
 
 
@@ -1478,7 +1509,7 @@ So what's the answer?
 I'd give it a fuzzy yes.
 
 Fuzzy because:
-* We couldn't do better than ~40% accuracy
+* We couldn't do better than ~`r round((nn_collapsed_out$nn_accuracy[1] * 100), digits=0)`% accuracy
 * We had a lot of rows with missing predictors
 
 Unknowns:
@@ -1489,7 +1520,9 @@ Unknowns:
 So what's the answer?
 ========================================================
 
-```{r, echo=FALSE, eval=TRUE}
+<br>
+
+```{r, echo=FALSE, eval=TRUE, fig.width=9, fig.height=8, fig.align="center"}
 ggplot() +   
   geom_density2d(data = beer_necessities %>% filter(style_collapsed %in% keywords) %>% 
                filter(abv < 20 & abv > 3 & ibu < 200), 
@@ -1501,6 +1534,8 @@ ggplot() +
 ```
 
 ***
+
+<br>
 
 Plotting the landscape directly on our two main dimensions,
 
@@ -1521,7 +1556,6 @@ In no particular order, some thoughts I've had plus suggestions from others:
         * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
 * Shiny app features:
     * Beer searchability, tooltips over each point on hover
-* Hierarchical clustering; what style is the mother of all styles?
 * Some funky algorithm to generate new beer names
 
 
