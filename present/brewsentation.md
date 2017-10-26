@@ -53,9 +53,9 @@ autosize: true
   table, td, th {
     border: 1px solid black;
     font-size: 1pt;
-    padding: 5px;
-    cellpadding="0";
-    cellspacing="0";
+    padding: 5px, 5px, 5px, 5px;
+    <!-- cellpadding="0"; -->
+    <!-- cellspacing="0"; -->
     text-align: right;
     font-size: 1pt;
   }
@@ -66,6 +66,7 @@ autosize: true
   table { 
     border-spacing: 5px;
     overflow: scroll;
+    border: 1px solid black;
   }
   
   .small-code pre code {
@@ -186,20 +187,26 @@ How did this come about?
     
 How did this come about?
 ========================================================
-`Beer   ==   water + malted barley + hops + yeast + sometimes other stuff like fruit`
+`Beer   ==   water + malted barley + hops + yeast + `
+
+`sometimes other stuff like fruit`
+
+<br> 
+
 - We categorize it into different styles based on 
   - Type and ratio of ingredients
   - How the beer is made (e.g., how long and at what temperature it's brewed)
-  - Regional/historical differences 
+  - Regional and historical differences 
   
 
 How did this come about?
 ========================================================
 
 BUT
+
 - *How well do styles actually demarcate the beer landscape?*
   - Is there actually more inter-style variation than intra-style variation?
-  - Is there a more empiricially accurate way to categorize beers into super-groups?
+  - Is there a more empiricially clean way to categorize beers into super-groups?
 
 In other words, we're asking: are beer styles just a social construct?
 
@@ -912,6 +919,12 @@ I threw it into MySQL
    * Easily update the data if anything changes
    * Others easy access to the data if they want to build an app using it
    
+<br>
+
+
+Step 1 Complete   ✔️
+   
+
 
 A look at our outcome variable
 ========================================================
@@ -1104,6 +1117,9 @@ levels(beer_necessities$style)
 What's the best way to condense these?
 
 I want to e.g., lump American-Style India Pale Ale in with English-Style India Pale Ale.
+
+
+   
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -1589,7 +1605,6 @@ class: small-code
 
 Let's munge a bit. We'll need to split out ingredients from one column into many.
 
-<small>This is the second approach in our ingredients discussion earlier.</small>
 
 
 ```r
@@ -1621,7 +1636,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 
 
 ```r
-beer_dat <- split_ingredients(beer_dat, 
+beer_necessities <- split_ingredients(beer_necessities, 
                               ingredients_to_split = c("hops", "malt"))
 ```
 
@@ -2056,7 +2071,7 @@ So what's the answer?
 I'd give it a fuzzy yes.
 
 Fuzzy because:
-* We couldn't do better than ~51% accuracy
+* We couldn't do better than ~50% accuracy
 * We had a lot of rows with missing predictors
 
 Unknowns:
@@ -2087,13 +2102,13 @@ Future Directions
 ========================================================
 In no particular order, some thoughts I've had plus suggestions from others:
 
+* More Shiny app features
+    * Beer searchability, tooltips over each point on hover
 * Join on other data
-  * e.g., Untappd or something scraped from the interwebs
+  * e.g., [Untappd](!https://untappd.com/) or something scraped from the interwebs
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
         * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
-* Shiny app features:
-    * Beer searchability, tooltips over each point on hover
 * Some funky algorithm to generate new beer names
 
 
@@ -2123,33 +2138,35 @@ other attached packages:
 [19] broom_0.4.2          knitr_1.17          
 
 loaded via a namespace (and not attached):
- [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
- [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
- [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
-[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
-[13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
-[16] mnormt_1.5-5          rvest_0.3.2           quantreg_5.29        
-[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
-[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
-[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
-[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
-[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
-[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
-[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
-[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
-[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
-[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
-[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
-[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
-[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
-[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
-[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
-[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
-[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
-[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
-[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
-[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
-[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+ [1] nlme_3.1-131        pbkrtest_0.4-7      lubridate_1.6.0    
+ [4] devtools_1.13.3     RColorBrewer_1.1-2  httr_1.3.1         
+ [7] tools_3.3.3         backports_1.1.0     R6_2.2.2           
+[10] rpart_4.1-11        Hmisc_4.0-3         lazyeval_0.2.0     
+[13] mgcv_1.8-17         colorspace_1.3-2    withr_2.0.0        
+[16] tidyselect_0.2.2    gridExtra_2.2.1     mnormt_1.5-5       
+[19] curl_2.8.1          git2r_0.18.0        rvest_0.3.2        
+[22] quantreg_5.29       htmlTable_1.9       SparseM_1.74       
+[25] xml2_1.1.1          labeling_0.3        scales_0.5.0       
+[28] checkmate_1.8.3     psych_1.7.5         stringr_1.2.0      
+[31] digest_0.6.12       foreign_0.8-69      minqa_1.2.4        
+[34] base64enc_0.1-3     pkgconfig_2.0.1     htmltools_0.3.6    
+[37] lme4_1.1-13         highr_0.6           htmlwidgets_0.9    
+[40] rlang_0.1.2.9000    readxl_1.0.0        shiny_1.0.5.9000   
+[43] bindr_0.1           acepack_1.4.1       ModelMetrics_1.1.0 
+[46] car_2.1-5           magrittr_1.5        Formula_1.2-2      
+[49] Matrix_1.2-8        Rcpp_0.12.13        munsell_0.4.3      
+[52] stringi_1.1.5       MASS_7.3-47         plyr_1.8.4         
+[55] grid_3.3.3          parallel_3.3.3      crayon_1.3.4       
+[58] miniUI_0.1.1        haven_1.1.0         splines_3.3.3      
+[61] hms_0.3             ranger_0.8.0        reshape2_1.4.2     
+[64] codetools_0.2-15    stats4_3.3.3        glue_1.1.1         
+[67] evaluate_0.10.1     latticeExtra_0.6-28 data.table_1.10.4  
+[70] modelr_0.1.1        nloptr_1.0.4        httpuv_1.3.5.9000  
+[73] foreach_1.4.3       MatrixModels_0.4-1  cellranger_1.1.0   
+[76] gtable_0.2.0        assertthat_0.2.0    mime_0.5           
+[79] xtable_1.8-2        e1071_1.6-8         class_7.3-14       
+[82] survival_2.41-3     iterators_1.0.8     memoise_1.1.0      
+[85] cluster_2.0.5      
 ```
 
 

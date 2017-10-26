@@ -53,9 +53,9 @@ autosize: true
   table, td, th {
     border: 1px solid black;
     font-size: 1pt;
-    padding: 5px;
-    cellpadding="0";
-    cellspacing="0";
+    padding: 5px, 5px, 5px, 5px;
+    <!-- cellpadding="0"; -->
+    <!-- cellspacing="0"; -->
     text-align: right;
     font-size: 1pt;
   }
@@ -66,6 +66,7 @@ autosize: true
   table { 
     border-spacing: 5px;
     overflow: scroll;
+    border: 1px solid black;
   }
   
   .small-code pre code {
@@ -218,20 +219,26 @@ How did this come about?
     
 How did this come about?
 ========================================================
-`Beer   ==   water + malted barley + hops + yeast + sometimes other stuff like fruit`
+`Beer   ==   water + malted barley + hops + yeast + `
+
+`sometimes other stuff like fruit`
+
+<br> 
+
 - We categorize it into different styles based on 
   - Type and ratio of ingredients
   - How the beer is made (e.g., how long and at what temperature it's brewed)
-  - Regional/historical differences 
+  - Regional and historical differences 
   
 
 How did this come about?
 ========================================================
 
 BUT
+
 - *How well do styles actually demarcate the beer landscape?*
   - Is there actually more inter-style variation than intra-style variation?
-  - Is there a more empiricially accurate way to categorize beers into super-groups?
+  - Is there a more empiricially clean way to categorize beers into super-groups?
 
 In other words, we're asking: are beer styles just a social construct?
 
@@ -554,6 +561,12 @@ I threw it into MySQL
    * Easily update the data if anything changes
    * Others easy access to the data if they want to build an app using it
    
+<br>
+
+
+Step 1 Complete   `r emo::ji("heavy_check_mark")`
+   
+
 
 A look at our outcome variable
 ========================================================
@@ -572,6 +585,9 @@ levels(beer_necessities$style)
 What's the best way to condense these?
 
 I want to e.g., lump American-Style India Pale Ale in with English-Style India Pale Ale.
+
+
+   
 
 Step 2: Breathe sigh of relief, Collapse
 ========================================================
@@ -1083,7 +1099,6 @@ class: small-code
 
 Let's munge a bit. We'll need to split out ingredients from one column into many.
 
-<small>This is the second approach in our ingredients discussion earlier.</small>
 
 ```{r, eval=TRUE, echo=TRUE}
 split_ingredients <- function(df, ingredients_to_split) {
@@ -1113,7 +1128,7 @@ split_ingredients <- function(df, ingredients_to_split) {
 ```
 
 ```{r make_beer_dat, eval=FALSE, echo=TRUE}
-beer_dat <- split_ingredients(beer_dat, 
+beer_necessities <- split_ingredients(beer_necessities, 
                               ingredients_to_split = c("hops", "malt"))
 ```
 
@@ -1509,7 +1524,7 @@ So what's the answer?
 I'd give it a fuzzy yes.
 
 Fuzzy because:
-* We couldn't do better than ~`r round((nn_collapsed_out$nn_accuracy[1] * 100), digits=0)`% accuracy
+* We couldn't do better than ~`r round((nn_collapsed_out$nn_accuracy[1] * 100), digits = -1)`% accuracy
 * We had a lot of rows with missing predictors
 
 Unknowns:
@@ -1549,13 +1564,13 @@ Future Directions
 ========================================================
 In no particular order, some thoughts I've had plus suggestions from others:
 
+* More Shiny app features
+    * Beer searchability, tooltips over each point on hover
 * Join on other data
-  * e.g., Untappd or something scraped from the interwebs
+  * e.g., [Untappd](!https://untappd.com/) or something scraped from the interwebs
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
         * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
-* Shiny app features:
-    * Beer searchability, tooltips over each point on hover
 * Some funky algorithm to generate new beer names
 
 
