@@ -443,36 +443,128 @@ $status
 
 
 
-<!-- Quick funciton factory -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
+Quick funciton factory
+========================================================
+class:small-code
 
-<!-- Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID. -->
-
-<!-- ```{r func_fac, eval = TRUE, echo=TRUE} -->
-<!-- endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu") -->
-
-<!-- # Base function -->
-<!-- get_ <- function(id, ep) { -->
-<!--   jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key)) -->
-<!-- } -->
-
-<!-- # Create new get_<ep> functions -->
-<!-- endpoints %>% walk(~ assign(x = paste0("get_", .x), -->
-<!--                              value = partial(get_, ep = .x), -->
-<!--                              envir = .GlobalEnv)) -->
-<!-- ``` -->
-
-<!-- Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment. -->
-
-<!-- Testing testing -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
+Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
 
 
-<!-- ```{r, eval=TRUE, echo=TRUE} -->
-<!-- get_hop("3") -->
-<!-- ``` -->
+```r
+endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
+
+# Base function
+get_ <- function(id, ep) {
+  jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+}
+
+# Create new get_<ep> functions
+endpoints %>% walk(~ assign(x = paste0("get_", .x),
+                             value = partial(get_, ep = .x),
+                             envir = .GlobalEnv))
+```
+
+Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment.
+
+Testing testing
+========================================================
+class:small-code
+
+
+
+```r
+get_hop("3")
+```
+
+```
+$message
+[1] "READ ONLY MODE: Request Successful"
+
+$data
+$data$id
+[1] 3
+
+$data$name
+[1] "Ahtanum"
+
+$data$description
+[1] "An open-pollinated aroma variety developed in Washington, Ahtanum is used for its distinctive, somewhat Cascade-like aroma and for moderate bittering."
+
+$data$countryOfOrigin
+[1] "US"
+
+$data$alphaAcidMin
+[1] 5.7
+
+$data$betaAcidMin
+[1] 5
+
+$data$betaAcidMax
+[1] 6.5
+
+$data$humuleneMin
+[1] 16
+
+$data$humuleneMax
+[1] 20
+
+$data$caryophylleneMin
+[1] 9
+
+$data$caryophylleneMax
+[1] 12
+
+$data$cohumuloneMin
+[1] 30
+
+$data$cohumuloneMax
+[1] 35
+
+$data$myrceneMin
+[1] 50
+
+$data$myrceneMax
+[1] 55
+
+$data$farneseneMax
+[1] 1
+
+$data$category
+[1] "hop"
+
+$data$categoryDisplay
+[1] "Hops"
+
+$data$createDate
+[1] "2013-06-24 16:07:26"
+
+$data$updateDate
+[1] "2013-06-24 16:10:37"
+
+$data$country
+$data$country$isoCode
+[1] "US"
+
+$data$country$name
+[1] "UNITED STATES"
+
+$data$country$displayName
+[1] "United States"
+
+$data$country$isoThree
+[1] "USA"
+
+$data$country$numberCode
+[1] 840
+
+$data$country$createDate
+[1] "2012-01-03 02:41:33"
+
+
+
+$status
+[1] "success"
+```
 
 
 Digging In
@@ -820,41 +912,42 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 ```
 
 
-<!-- Quick note on Ingredients -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
-<!-- A few apporaches I used: -->
+Quick note on Ingredients
+========================================================
+class:small-code
+A few apporaches I used:
 
-<!-- * Concatenated into a single string during the unnesting process -->
-<!--   * `hop_name` and `malt_name` using this function  👉 -->
-<!-- * Split out into one hop per column and one malt per column -->
-<!--   * `hops_name_1`, `hops_name_2`, etc. -->
-<!-- * Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column  -->
-<!--   * Value is either 1 or 0  -->
+* Concatenated into a single string during the unnesting process
+  * `hop_name` and `malt_name` using this function  👉
+* Split out into one hop per column and one malt per column
+  * `hops_name_1`, `hops_name_2`, etc.
+* Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column
+  * Value is either 1 or 0
 
-<!-- <small> (Another would have been a nested list-col) </small> -->
+<small> (Another would have been a nested list-col) </small>
 
-<!-- *** -->
+***
 
-<!-- <br> -->
+<br>
 
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- unnest_ingredients <- function(df) { -->
-<!--   df$hops_name <- NA -->
-<!--   df$malt_name <- NA -->
 
-<!--   for (row in 1:nrow(df)) { -->
-<!--     if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) | -->
-<!--         !is.null(df[["ingredients.malt"]][[row]][["name"]])) { -->
+```r
+unnest_ingredients <- function(df) {
+  df$hops_name <- NA
+  df$malt_name <- NA
 
-<!--       df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ") -->
+  for (row in 1:nrow(df)) {
+    if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) |
+        !is.null(df[["ingredients.malt"]][[row]][["name"]])) {
 
-<!--       df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ") -->
-<!--     } -->
-<!--   } -->
-<!--   return(df) -->
-<!-- } -->
-<!-- ``` -->
+      df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ")
+
+      df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ")
+    }
+  }
+  return(df)
+}
+```
 
 
 
@@ -897,7 +990,7 @@ What we have <em>not</em> got: flavor profiles (fruity, hoppy, piney) and rating
       
 ***
 
-![plot of chunk unnamed-chunk-11](brewsentation-figure/unnamed-chunk-11-1.png)
+![plot of chunk unnamed-chunk-13](brewsentation-figure/unnamed-chunk-13-1.png)
 
 
 
@@ -1236,7 +1329,7 @@ Style Centers
 
 If beer styles are really self-contained, beer in each style should cluster tightly around these points.
 
-<img src="brewsentation-figure/unnamed-chunk-14-1.png" title="plot of chunk unnamed-chunk-14" alt="plot of chunk unnamed-chunk-14" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-16-1.png" title="plot of chunk unnamed-chunk-16" alt="plot of chunk unnamed-chunk-16" style="display: block; margin: auto;" />
 
 
 To the main question
@@ -1738,7 +1831,7 @@ Q: Do more *kinds* of hops generally make a beer more bitter?
 
 <br>
 
-<img src="brewsentation-figure/unnamed-chunk-21-1.png" title="plot of chunk unnamed-chunk-21" alt="plot of chunk unnamed-chunk-21" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-23-1.png" title="plot of chunk unnamed-chunk-23" alt="plot of chunk unnamed-chunk-23" style="display: block; margin: auto;" />
 
 
 
@@ -1748,7 +1841,7 @@ How do hops affect bitterness?
 class:small-code
 incremental:true
 
-![plot of chunk unnamed-chunk-22](brewsentation-figure/unnamed-chunk-22-1.png)
+![plot of chunk unnamed-chunk-24](brewsentation-figure/unnamed-chunk-24-1.png)
 
 Is the relationship significant?
 
@@ -1956,7 +2049,7 @@ par(mar=c(4.1, 0.1, 4.1, 7.1))
 NeuralNetTools::plotnet(nn_collapsed_out$nn, line_stag = 0.01, max_sp = TRUE)
 ```
 
-<img src="brewsentation-figure/unnamed-chunk-26-1.png" title="plot of chunk unnamed-chunk-26" alt="plot of chunk unnamed-chunk-26" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-28-1.png" title="plot of chunk unnamed-chunk-28" alt="plot of chunk unnamed-chunk-28" style="display: block; margin: auto;" />
 
 
 
@@ -2078,7 +2171,7 @@ So what's the answer?
 
 <br>
 
-<img src="brewsentation-figure/unnamed-chunk-31-1.png" title="plot of chunk unnamed-chunk-31" alt="plot of chunk unnamed-chunk-31" style="display: block; margin: auto;" />
+<img src="brewsentation-figure/unnamed-chunk-33-1.png" title="plot of chunk unnamed-chunk-33" alt="plot of chunk unnamed-chunk-33" style="display: block; margin: auto;" />
 
 ***
 
@@ -2103,6 +2196,7 @@ In no particular order, some thoughts I've had plus suggestions from others:
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
         * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
+* Hierarchical clustering to make a more scientific beer family tree
 * Some funky algorithm to generate new beer names
 
 
@@ -2137,28 +2231,29 @@ loaded via a namespace (and not attached):
  [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
 [10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
 [13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
-[16] mnormt_1.5-5          rvest_0.3.2           quantreg_5.29        
-[19] htmlTable_1.9         SparseM_1.74          xml2_1.1.1           
-[22] labeling_0.3          scales_0.5.0          checkmate_1.8.3      
-[25] psych_1.7.5           stringr_1.2.0         digest_0.6.12        
-[28] foreign_0.8-69        minqa_1.2.4           base64enc_0.1-3      
-[31] pkgconfig_2.0.1       htmltools_0.3.6       lme4_1.1-13          
-[34] highr_0.6             htmlwidgets_0.9       rlang_0.1.2.9000     
-[37] readxl_1.0.0          rstudioapi_0.7.0-9000 shiny_1.0.5.9000     
-[40] bindr_0.1             acepack_1.4.1         ModelMetrics_1.1.0   
-[43] car_2.1-5             magrittr_1.5          Formula_1.2-2        
-[46] Matrix_1.2-8          Rcpp_0.12.13          munsell_0.4.3        
-[49] stringi_1.1.5         MASS_7.3-47           plyr_1.8.4           
-[52] grid_3.3.3            parallel_3.3.3        crayon_1.3.4         
-[55] miniUI_0.1.1          haven_1.1.0           splines_3.3.3        
-[58] hms_0.3               ranger_0.8.0          reshape2_1.4.2       
-[61] codetools_0.2-15      stats4_3.3.3          glue_1.1.1           
-[64] evaluate_0.10.1       latticeExtra_0.6-28   data.table_1.10.4    
-[67] modelr_0.1.1          nloptr_1.0.4          httpuv_1.3.5.9000    
-[70] foreach_1.4.3         MatrixModels_0.4-1    cellranger_1.1.0     
-[73] gtable_0.2.0          assertthat_0.2.0      mime_0.5             
-[76] xtable_1.8-2          e1071_1.6-8           class_7.3-14         
-[79] survival_2.41-3       iterators_1.0.8       cluster_2.0.5        
+[16] mnormt_1.5-5          curl_2.8.1            rvest_0.3.2          
+[19] quantreg_5.29         htmlTable_1.9         SparseM_1.74         
+[22] xml2_1.1.1            labeling_0.3          scales_0.5.0         
+[25] checkmate_1.8.3       psych_1.7.5           stringr_1.2.0        
+[28] digest_0.6.12         foreign_0.8-69        minqa_1.2.4          
+[31] base64enc_0.1-3       pkgconfig_2.0.1       htmltools_0.3.6      
+[34] lme4_1.1-13           highr_0.6             htmlwidgets_0.9      
+[37] rlang_0.1.2.9000      readxl_1.0.0          rstudioapi_0.7.0-9000
+[40] shiny_1.0.5.9000      bindr_0.1             acepack_1.4.1        
+[43] ModelMetrics_1.1.0    car_2.1-5             magrittr_1.5         
+[46] Formula_1.2-2         Matrix_1.2-8          Rcpp_0.12.13         
+[49] munsell_0.4.3         stringi_1.1.5         MASS_7.3-47          
+[52] plyr_1.8.4            grid_3.3.3            parallel_3.3.3       
+[55] crayon_1.3.4          miniUI_0.1.1          haven_1.1.0          
+[58] splines_3.3.3         hms_0.3               ranger_0.8.0         
+[61] reshape2_1.4.2        codetools_0.2-15      stats4_3.3.3         
+[64] glue_1.1.1            evaluate_0.10.1       latticeExtra_0.6-28  
+[67] data.table_1.10.4     modelr_0.1.1          nloptr_1.0.4         
+[70] httpuv_1.3.5.9000     foreach_1.4.3         MatrixModels_0.4-1   
+[73] cellranger_1.1.0      gtable_0.2.0          assertthat_0.2.0     
+[76] mime_0.5              xtable_1.8-2          e1071_1.6-8          
+[79] class_7.3-14          survival_2.41-3       iterators_1.0.8      
+[82] cluster_2.0.5        
 ```
 
 

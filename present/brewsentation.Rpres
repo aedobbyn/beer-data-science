@@ -313,36 +313,36 @@ get_beer("GZQpRX")
 
 
 
-<!-- Quick funciton factory -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
+Quick funciton factory
+========================================================
+class:small-code
 
-<!-- Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID. -->
+Using `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
 
-<!-- ```{r func_fac, eval = TRUE, echo=TRUE} -->
-<!-- endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu") -->
+```{r func_fac, eval = TRUE, echo=TRUE}
+endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
 
-<!-- # Base function -->
-<!-- get_ <- function(id, ep) { -->
-<!--   jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key)) -->
-<!-- } -->
+# Base function
+get_ <- function(id, ep) {
+  jsonlite::fromJSON(paste0(base_url, "/", ep, "/", id, "/", key_preface, key))
+}
 
-<!-- # Create new get_<ep> functions -->
-<!-- endpoints %>% walk(~ assign(x = paste0("get_", .x), -->
-<!--                              value = partial(get_, ep = .x), -->
-<!--                              envir = .GlobalEnv)) -->
-<!-- ``` -->
+# Create new get_<ep> functions
+endpoints %>% walk(~ assign(x = paste0("get_", .x),
+                             value = partial(get_, ep = .x),
+                             envir = .GlobalEnv))
+```
 
-<!-- Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment. -->
+Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment.
 
-<!-- Testing testing -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
+Testing testing
+========================================================
+class:small-code
 
 
-<!-- ```{r, eval=TRUE, echo=TRUE} -->
-<!-- get_hop("3") -->
-<!-- ``` -->
+```{r, eval=TRUE, echo=TRUE}
+get_hop("3")
+```
 
 
 Digging In
@@ -450,41 +450,41 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 ```
 
 
-<!-- Quick note on Ingredients -->
-<!-- ======================================================== -->
-<!-- class:small-code -->
-<!-- A few apporaches I used: -->
+Quick note on Ingredients
+========================================================
+class:small-code
+A few apporaches I used:
 
-<!-- * Concatenated into a single string during the unnesting process -->
-<!--   * `hop_name` and `malt_name` using this function  `r emo::ji("point_right")` -->
-<!-- * Split out into one hop per column and one malt per column -->
-<!--   * `hops_name_1`, `hops_name_2`, etc. -->
-<!-- * Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column  -->
-<!--   * Value is either 1 or 0  -->
+* Concatenated into a single string during the unnesting process
+  * `hop_name` and `malt_name` using this function  `r emo::ji("point_right")`
+* Split out into one hop per column and one malt per column
+  * `hops_name_1`, `hops_name_2`, etc.
+* Sparse dataframe with each type of hop (like Cascade, Citra, etc.) as its own column
+  * Value is either 1 or 0
 
-<!-- <small> (Another would have been a nested list-col) </small> -->
+<small> (Another would have been a nested list-col) </small>
 
-<!-- *** -->
+***
 
-<!-- <br> -->
+<br>
 
-<!-- ```{r, eval=FALSE, echo=TRUE} -->
-<!-- unnest_ingredients <- function(df) { -->
-<!--   df$hops_name <- NA -->
-<!--   df$malt_name <- NA -->
+```{r, eval=FALSE, echo=TRUE}
+unnest_ingredients <- function(df) {
+  df$hops_name <- NA
+  df$malt_name <- NA
 
-<!--   for (row in 1:nrow(df)) { -->
-<!--     if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) | -->
-<!--         !is.null(df[["ingredients.malt"]][[row]][["name"]])) { -->
+  for (row in 1:nrow(df)) {
+    if (!is.null(df[["ingredients.hops"]][[row]][["name"]]) |
+        !is.null(df[["ingredients.malt"]][[row]][["name"]])) {
 
-<!--       df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ") -->
+      df[["hops_name"]][[row]] <- paste(df[["ingredients.hops"]][[row]][["name"]], collapse = ", ")
 
-<!--       df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ") -->
-<!--     } -->
-<!--   } -->
-<!--   return(df) -->
-<!-- } -->
-<!-- ``` -->
+      df[["malt_name"]][[row]] <- paste(df[["ingredients.malt"]][[row]][["name"]], collapse = ", ")
+    }
+  }
+  return(df)
+}
+```
 
 
 
@@ -1572,6 +1572,7 @@ In no particular order, some thoughts I've had plus suggestions from others:
 * Beer consumption: how is this trending over time, for each style?
     * What drives the trend? Supply or demand?
         * <small> Do brewers brew more sours causing people buy more of them or do people start liking sours and cause brewers to brew more? </small>
+* Hierarchical clustering to make a more scientific beer family tree
 * Some funky algorithm to generate new beer names
 
 
