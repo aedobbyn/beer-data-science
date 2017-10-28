@@ -7,6 +7,8 @@ library(tidyjson)
 library(jsonlite)    # fromJSON() is the same as content(GET())
 library(httr)
 
+source("./analyze/unnest.R")   # for unnest_it()
+
 # gather the three global variables used in all requests
 source("./key.R")
 base_url <- "http://api.brewerydb.com/v2"
@@ -16,22 +18,13 @@ key_preface <- "/?key="
 # http://api.brewerydb.com/v2/beers/?key=[yourkeyhere]
 
 endpoints <- c("beers", "breweries", "categories", "events",
-                    "featured", "features", "fluidsizes", "glassware",
-                    "locations", "guilds", "heartbeat", "ingredients",
-                    "search", "search/upc", "socialsites", "styles")
-
-single_param_endpoints <- c("beer", "brewery", "category", "event",
-                          "feature", "glass", "guild", "hop", "ingredient",
-                          "location", "socialsite", "style", "menu")
-
-
-
+                "featured", "features", "fluidsizes", "glassware",
+                "locations", "guilds", "heartbeat", "ingredients",
+                "search", "search/upc", "socialsites", "styles")
 
 
 # ----------- multiple pagination
 # find the total number of pages and use that to loop through
-
-source("./analyze/munge.R")   # for unnest_it()
 
 # including ingredients in here and flattening
 # full url: http://api.brewerydb.com/v2/beers/?key=<yourkeyhere>a&withIngredients=Y
@@ -55,5 +48,10 @@ paginated_request <- function(ep, addition) {
   full_request
 } 
 
+# ---- Examples for running: ----
+# Get all beers
+# beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
 
-first_p <- paginated_request("glassware", "")
+# Get all glassware (example of endpoint with only one page)
+# all_glassware <- paginated_request("glassware", "") 
+

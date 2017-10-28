@@ -1,9 +1,9 @@
-# run it
+# Do it all
 
-source("./get_beer.R")
-source("./munge.R")
-source("./collapse_styles.R")
-source("./split_ingredients.R")
+source("./run_it/unnest.R")   # source functions for unnesting to be used in paginated_request()
+source("./run_it/get_beer.R") # run paginated request(), getting all beers
+source("./run_it/collapse_styles.R")  # create a style_collapsed column
+source("./helpers/split_ingredients.R")  # if want to split ingredients into one per column
 
 
 # --------------- get all raw beer and breweries --------------
@@ -68,8 +68,7 @@ beer_necessities <- split_ingredients(beer_necessities_bundled, ingredients_2_sp
 simple_beer_necessities <- sample_n(beer_necessities, 200)
 
 
-
 # ------------------ pare to most popular styles ---------------
 # ----- pare down by style or style_collapsed? -----
-source("./most_popular_styles.R")
+source("./analyze/most_popular_styles.R")
 

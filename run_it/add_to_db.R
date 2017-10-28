@@ -1,6 +1,6 @@
 # add to mysql db
 
-source("./munge.R")
+# source("./get_beer.R")
 
 #### -------------------- MySQL ----------------------- ####
 library(RMySQL)

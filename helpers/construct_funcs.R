@@ -1,7 +1,3 @@
-# construct funcs
-
-source("./run_it/get_beer.R")
-
 # ---- build functions for requesting just a single beer, brewery, menu, etc. 
 # (from single_param_endpoints)
 # using purrr::partial and purr::walk

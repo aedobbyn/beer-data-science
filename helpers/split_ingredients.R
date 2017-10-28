@@ -1,11 +1,6 @@
-# split ingredients on commas
+# Split ingredients from one column into many on the comma
 
 library(stringr)
-
-sbn <- simple_beer_necessities
-
-# add columns we want to split up here
-
 
 split_ingredients <- function(df, ingredients_to_split) {
   
@@ -31,7 +26,6 @@ split_ingredients <- function(df, ingredients_to_split) {
         }
       }
       df[[names(df)[this_col]]] <- factor(df[[names(df)[this_col]]])
-      # browser()
     }
     
     
@@ -41,13 +35,10 @@ split_ingredients <- function(df, ingredients_to_split) {
 }
 
 ings_2_split <- c("hops_name", "malt_name")
-sbn_split <- split_ingredients(sbn, ings_2_split)
-
-View(sbn_split)
+now_split <- split_ingredients(beer_necessities, ings_2_split)
 
 
+### A more functional way of doing this using separate()
 
-# # a more functional way of doing this using separate()
-
-# split_sbn <- separate(data = simple_beer_necessities,
-#                       col = hops_name, into = setdiff(names(sbn_added), names(simple_beer_necessities)), sep = ", ")
+# now_split_2 <- separate(data = beer_necessities,
+#           col = hops_name, into = setdiff(names(foo), names(beer_necessities)), sep = ", ")

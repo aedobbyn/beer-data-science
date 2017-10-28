@@ -2,7 +2,7 @@
 library(forcats)
 
 # ------------------ collapse styles ---------------
-# create a new column that merges styles that contain certain keywords into the same style
+# Create a new column that merges styles that contain certain keywords into the same style
 
 # most general to most specific such that if something has india pale ale it will be
 # characterized as india pale ale not just pale ale
@@ -27,25 +27,8 @@ collapse_styles <- function(df) {
   return(df)
 }
 
-# # collapse styles, drop newly unused levels
-# popular_beer_dat <- collapse_styles(popular_beer_dat)
-# popular_beer_dat <- popular_beer_dat %>% droplevels(style_collapsed) %>% as_tibble()
-# 
-# clustered_beer$style_collapsed <- "x"
-# clustered_beer <- collapse_styles(clustered_beer)
-# clustered_beer$style_collapsed <- factor(clustered_beer$style_collapsed)
-# clustered_beer <- droplevels(clustered_beer)$style_collapsed %>% as_tibble() 
-# clustered_beer <- clustered_beer %>% 
-#   filter(
-#     !(style_collapsed == "x")
-#   )
-# 
-# beer_necessities <- collapse_styles(beer_necessities) 
-# beer_necessities <- droplevels(beer_necessities)$style_collapsed %>% as_tibble()
 
-
-
-# collapse some more
+# Collapse some more by hand
 collapse_further <- function(df) {
   df[["style_collapsed"]] <- df[["style_collapsed"]] %>%
     fct_collapse(
@@ -56,8 +39,7 @@ collapse_further <- function(df) {
 }
 
 
-# beer_necessities$style_collapsed <- beer_necessities$style_collapsed %>%
-#   fct_collapse(
-#     "Wheat" = c("Hefeweizen", "Wheat"),
-#     "Pilsener" = c("Pilsner", "American-Style Pilsener") # pilsener = pilsner = pils
-#   )
+# ------ Do the collapsing
+# beer_necessities <- beer_necessities %>% collapse_styles() %>% collapse_further()
+
+
