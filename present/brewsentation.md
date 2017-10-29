@@ -5,43 +5,17 @@ date:
 autosize: true
 
 <style>
+
+  <!-- First slide background -->
   .title-slide {
      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
       background-position: center center;
       background-attachment: fixed;
       background-repeat: no-repeat;
       background-size: 100% 100%;
+      overflow: fixed;
    }
-  
-  body {
-    overflow: scroll;
-    border-style: solid;
-  }
-  
-  strong { 
-    font-weight: bold;
-    color: black;
-  }
-
-  .cheers {
-      background-image: url(https://static.independent.co.uk/s3fs-public/styles/article_small/public/thumbnails/image/2016/12/30/17/beer-istock-izusek.jpg);
-      background-position: center center;
-      background-attachment: fixed;
-      background-repeat: no-repeat;
-      background-size: 100% 100%;
-      color: white;
-      background:transparent;
-    }
-    
-  .cheers .reveal .state-background {
-      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
-      background-position: center center;
-      background-attachment: fixed;
-      background-repeat: no-repeat;
-      background-size: 100% 100%;
-      color: white;
-    }
-    
+   
   .section .reveal .state-background {
       background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
       background-position: center center;
@@ -49,24 +23,43 @@ autosize: true
       background-repeat: no-repeat;
       background-size: 100% 100%;
   }
-
-  table, td, th {
-    border: 1px solid black;
-    font-size: 1pt;
-    padding: 5px, 5px, 5px, 5px;
-    <!-- cellpadding="0"; -->
-    <!-- cellspacing="0"; -->
-    text-align: right;
-    font-size: 1pt;
+  
+  <!-- Last slide background -->
+  
+  .cheers pre code {
+    font-size: .7em;
+    border-style: none;
+    color: white;
+    background: transparent;
   }
-  th {
-    background-color: #e1e3e8;
+
+  .cheers {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    <!-- color: white; -->
+    border-style: none;
+    background-size: 100% auto;
   }
   
-  table { 
-    border-spacing: 5px;
+  .cheers .reveal .state-background {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+
+  
+  <!-- Everything else -->
+  body {
     overflow: scroll;
-    border: 1px solid black;
+    border-style: solid;
   }
   
   .small-code pre code {
@@ -77,32 +70,23 @@ autosize: true
     font-size: .7em;
   }
   
-  .very-small-code-transparent {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
-    background-position: center center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    color: white;
-    border-style: none;
-    background-size: 100% auto;
+  b { 
+    font-weight: bold;
+    color: black;
+  }
+    
+  table, td, th {
+    border: 1px solid black;
+    border-spacing: 5px;
+    font-size: 1pt;
+    padding: 5px, 5px, 5px, 5px;
+    text-align: right;
+    font-size: 1pt;
+    overflow: scroll;
   }
   
-  .very-small-code-transparent .reveal .state-background {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
-    background-position: center center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    color: white;
-    border-style: none;
-    background-size: 100% auto;
-  }
-  
-  .very-small-code-transparent pre code {
-    font-size: .7em;
-    background: transparent;
-    border-style: none;
+  th {
+    background-color: #e1e3e8;
   }
   
   .footer {
@@ -113,19 +97,11 @@ autosize: true
 }
 
   .midcenter {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      background-color:transparent;
+    position: fixed;
+    top: 50%;
+    left: 50%;
   }
   
-  .leftcenter {
-      position: fixed;
-      top: 15%;
-      left: 5%;
-      right: 1%; 
-      background-color:transparent;
-  }
 </style>
 
 
@@ -2202,7 +2178,7 @@ In no particular order, some thoughts I've had plus suggestions from others:
 
 Cheers, all!
 ========================================================
-class: very-small-code-transparent  
+class: cheers
 
 
 ```
