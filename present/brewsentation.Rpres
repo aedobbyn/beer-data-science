@@ -25,21 +25,13 @@ autosize: true
   }
   
   <!-- Last slide background -->
-  
-  .cheers pre code {
-    font-size: .7em;
-    border-style: none;
-    color: white;
-    background: transparent;
-  }
-
   .cheers {
     background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
     background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-size: 100% 100%;
-    <!-- color: white; -->
+    color: white;
     border-style: none;
     background-size: 100% auto;
   }
@@ -54,7 +46,12 @@ autosize: true
     border-style: none;
     background-size: 100% auto;
   }
-
+  
+  .cheers pre code {
+    font-size: .7em;
+    background: transparent;
+    border-style: none;
+  }
   
   <!-- Everything else -->
   body {

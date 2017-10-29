@@ -25,21 +25,13 @@ autosize: true
   }
   
   <!-- Last slide background -->
-  
-  .cheers pre code {
-    font-size: .7em;
-    border-style: none;
-    color: white;
-    background: transparent;
-  }
-
   .cheers {
     background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
     background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
     background-size: 100% 100%;
-    <!-- color: white; -->
+    color: white;
     border-style: none;
     background-size: 100% auto;
   }
@@ -54,7 +46,12 @@ autosize: true
     border-style: none;
     background-size: 100% auto;
   }
-
+  
+  .cheers pre code {
+    font-size: .7em;
+    background: transparent;
+    border-style: none;
+  }
   
   <!-- Everything else -->
   body {
@@ -2202,34 +2199,35 @@ other attached packages:
 [19] broom_0.4.2          knitr_1.17          
 
 loaded via a namespace (and not attached):
- [1] nlme_3.1-131          pbkrtest_0.4-7        lubridate_1.6.0      
- [4] RColorBrewer_1.1-2    httr_1.3.1            tools_3.3.3          
- [7] backports_1.1.0       R6_2.2.2              rpart_4.1-11         
-[10] Hmisc_4.0-3           lazyeval_0.2.0        mgcv_1.8-17          
-[13] colorspace_1.3-2      tidyselect_0.2.2      gridExtra_2.2.1      
-[16] mnormt_1.5-5          curl_2.8.1            rvest_0.3.2          
-[19] quantreg_5.29         htmlTable_1.9         SparseM_1.74         
-[22] xml2_1.1.1            labeling_0.3          scales_0.5.0         
-[25] checkmate_1.8.3       psych_1.7.5           stringr_1.2.0        
-[28] digest_0.6.12         foreign_0.8-69        minqa_1.2.4          
-[31] base64enc_0.1-3       pkgconfig_2.0.1       htmltools_0.3.6      
-[34] lme4_1.1-13           highr_0.6             htmlwidgets_0.9      
-[37] rlang_0.1.2.9000      readxl_1.0.0          rstudioapi_0.7.0-9000
-[40] shiny_1.0.5.9000      bindr_0.1             acepack_1.4.1        
-[43] ModelMetrics_1.1.0    car_2.1-5             magrittr_1.5         
-[46] Formula_1.2-2         Matrix_1.2-8          Rcpp_0.12.13         
-[49] munsell_0.4.3         stringi_1.1.5         MASS_7.3-47          
-[52] plyr_1.8.4            grid_3.3.3            parallel_3.3.3       
-[55] crayon_1.3.4          miniUI_0.1.1          haven_1.1.0          
-[58] splines_3.3.3         hms_0.3               ranger_0.8.0         
-[61] reshape2_1.4.2        codetools_0.2-15      stats4_3.3.3         
-[64] glue_1.1.1            evaluate_0.10.1       latticeExtra_0.6-28  
-[67] data.table_1.10.4     modelr_0.1.1          nloptr_1.0.4         
-[70] httpuv_1.3.5.9000     foreach_1.4.3         MatrixModels_0.4-1   
-[73] cellranger_1.1.0      gtable_0.2.0          assertthat_0.2.0     
-[76] mime_0.5              xtable_1.8-2          e1071_1.6-8          
-[79] class_7.3-14          survival_2.41-3       iterators_1.0.8      
-[82] cluster_2.0.5        
+ [1] nlme_3.1-131        pbkrtest_0.4-7      lubridate_1.6.0    
+ [4] devtools_1.13.3     RColorBrewer_1.1-2  httr_1.3.1         
+ [7] tools_3.3.3         backports_1.1.0     R6_2.2.2           
+[10] rpart_4.1-11        Hmisc_4.0-3         lazyeval_0.2.0     
+[13] mgcv_1.8-17         colorspace_1.3-2    withr_2.0.0        
+[16] tidyselect_0.2.2    gridExtra_2.2.1     mnormt_1.5-5       
+[19] curl_2.8.1          git2r_0.18.0        rvest_0.3.2        
+[22] quantreg_5.29       htmlTable_1.9       SparseM_1.74       
+[25] xml2_1.1.1          labeling_0.3        scales_0.5.0       
+[28] checkmate_1.8.3     psych_1.7.5         stringr_1.2.0      
+[31] digest_0.6.12       foreign_0.8-69      minqa_1.2.4        
+[34] base64enc_0.1-3     pkgconfig_2.0.1     htmltools_0.3.6    
+[37] lme4_1.1-13         highr_0.6           htmlwidgets_0.9    
+[40] rlang_0.1.2.9000    readxl_1.0.0        shiny_1.0.5.9000   
+[43] bindr_0.1           acepack_1.4.1       ModelMetrics_1.1.0 
+[46] car_2.1-5           magrittr_1.5        Formula_1.2-2      
+[49] Matrix_1.2-8        Rcpp_0.12.13        munsell_0.4.3      
+[52] stringi_1.1.5       MASS_7.3-47         plyr_1.8.4         
+[55] grid_3.3.3          parallel_3.3.3      crayon_1.3.4       
+[58] miniUI_0.1.1        haven_1.1.0         splines_3.3.3      
+[61] hms_0.3             ranger_0.8.0        reshape2_1.4.2     
+[64] codetools_0.2-15    stats4_3.3.3        glue_1.1.1         
+[67] evaluate_0.10.1     latticeExtra_0.6-28 data.table_1.10.4  
+[70] modelr_0.1.1        nloptr_1.0.4        httpuv_1.3.5.9000  
+[73] foreach_1.4.3       MatrixModels_0.4-1  cellranger_1.1.0   
+[76] gtable_0.2.0        assertthat_0.2.0    mime_0.5           
+[79] xtable_1.8-2        e1071_1.6-8         class_7.3-14       
+[82] survival_2.41-3     iterators_1.0.8     memoise_1.1.0      
+[85] cluster_2.0.5      
 ```
 
 
