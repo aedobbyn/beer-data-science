@@ -6,7 +6,6 @@ autosize: true
 
 <style>
 
-  <!-- First slide background -->
   .title-slide {
      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
       background-position: center center;
@@ -24,36 +23,6 @@ autosize: true
       background-size: 100% 100%;
   }
   
-  <!-- Last slide background -->
-  .cheers {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
-    background-position: center center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    color: white;
-    border-style: none;
-    background-size: 100% auto;
-  }
-  
-  .cheers .reveal .state-background {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
-    background-position: center center;
-    background-attachment: fixed;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    color: white;
-    border-style: none;
-    background-size: 100% auto;
-  }
-  
-  .cheers pre code {
-    font-size: .7em;
-    background: transparent;
-    border-style: none;
-  }
-  
-  <!-- Everything else -->
   body {
     overflow: scroll;
     border-style: solid;
@@ -97,6 +66,34 @@ autosize: true
     position: fixed;
     top: 50%;
     left: 50%;
+  }
+  
+  .cheers {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .cheers .reveal .state-background {
+    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-position: center center;
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+    color: white;
+    border-style: none;
+    background-size: 100% auto;
+  }
+  
+  .cheers pre code {
+    font-size: .7em;
+    background: transparent;
+    border-style: none;
   }
   
 </style>
