@@ -6,13 +6,14 @@ library(forcats)
 
 # most general to most specific such that if something has india pale ale it will be
 # characterized as india pale ale not just pale ale
+
+keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "India Pale Lager", "Hefeweizen", 
+              "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", 
+              "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", 
+              "Barley Wine", "Dubbel")
 collapse_styles <- function(df) {
   df$style_collapsed <- vector(length=length(df$style))
-  keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged",
-                "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
-                "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel",
-                "Altbier")
-  
+
   for (beer in 1:nrow(df)) {
     if (grepl(paste(keywords, collapse="|"), df$style[beer])) {    # if one of the keywords exists in the style
       for (keyword in keywords) {         # loop through the keywords to see which one it matches
@@ -23,8 +24,10 @@ collapse_styles <- function(df) {
     } else {
       df$style_collapsed[beer] <- as.character(df$style[beer])       # else style_collapsed is just style
     }
-    df$style_collapsed <- factor(df$style_collapsed)
+    
+    if(trace_progress == TRUE) {message(paste0("Collapsing this ", df$style[beer], " to: ", df$style_collapsed[beer]))}
   }
+  df$style_collapsed <- factor(df$style_collapsed)
   return(df)
 }
 

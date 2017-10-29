@@ -10,7 +10,7 @@ library(httr)
 source("./analyze/unnest.R")   # for unnest_it()
 
 # gather the three global variables used in all requests
-source("./key.R")
+source("./run_it/key.R")
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
