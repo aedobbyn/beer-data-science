@@ -7,6 +7,7 @@ library(forcats)
 # most general to most specific such that if something has india pale ale it will be
 # characterized as india pale ale not just pale ale
 collapse_styles <- function(df) {
+  df$style_collapsed <- vector(length=length(df$style))
   keywords <- c("Lager", "Pale Ale", "India Pale Ale", "Double India Pale Ale", "India Pale Lager", "Hefeweizen", "Barrel-Aged",
                 "Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Porter",
                 "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel",
@@ -22,7 +23,7 @@ collapse_styles <- function(df) {
     } else {
       df$style_collapsed[beer] <- as.character(df$style[beer])       # else style_collapsed is just style
     }
-    print(df$style_collapsed[beer])
+    df$style_collapsed <- factor(df$style_collapsed)
   }
   return(df)
 }

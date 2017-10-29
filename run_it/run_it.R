@@ -9,18 +9,16 @@ source("./helpers/split_ingredients.R")  # if want to split ingredients into one
 # --------------- get all raw beer and breweries --------------
 # paginated_request() from get_beer.R
 all_beer_raw <- paginated_request("beers", "&withIngredients=Y")
-
 all_breweries <- paginated_request("breweries", "")  # if no addition desired, just add empty string
-
 all_glassware <- paginated_request("glassware", "")
 
 
 # --------------- get the columns we care about ---------------
 # unnest_ingredients() from munge.R
-all_beer <- unnest_ingredients(all_beer_raw) %>% as_tibble()
+beer_necessities <- unnest_ingredients(all_beer_raw) %>% as_tibble()
 
 # keep only columns we care about
-beer_necessities <- all_beer %>%
+beer_necessities <- beer_necessities %>%
   rename(
     glass = glass.name,
     srm = srm.name,
@@ -33,35 +31,23 @@ beer_necessities <- all_beer %>%
   )
 
 # set types
-beer_necessities$style <- factor(beer_necessities$style)
-beer_necessities$styleId <- factor(beer_necessities$styleId)
-beer_necessities$glass <- factor(beer_necessities$glass)
-
-beer_necessities$ibu <- as.numeric(beer_necessities$ibu)
-beer_necessities$srm <- as.numeric(beer_necessities$srm)
-beer_necessities$abv <- as.numeric(beer_necessities$abv)
+beer_necessities <- beer_necessities %>% dobtools::set_col_types(fac_regex = "style|glass",
+                                                                 num_regex = "abv|ibu|srm")
 
 
 # ------------------- collapse styles ------------------- 
 # collapse_styles() and collapse_further() from collapse_styles.R
-beer_necessities$style_collapsed <- NA
-beer_necessities <- collapse_styles(beer_necessities)
-
-beer_necessities$style_collapsed <- factor(beer_necessities$style_collapsed)
-beer_necessities <- collapse_further(beer_necessities)
+beer_necessities <- beer_necessities %>% collapse_styles() %>% collapse_further()
 
 # drop unused levels
 droplevels(beer_necessities)$style_collapsed %>% as_tibble() 
-
-# save this into beer_necessities_bundled as we'll use the name beer_necessities when we split out ingredients
-beer_necessities_bundled <- beer_necessities
 
 
 # ---------------- split out ingredients that were concatenated in `ingredient`_name
 # split_ingredients() from split_ingredients.R
 
 ingredients_2_split <- c("hops_name", "malt_name")
-beer_necessities <- split_ingredients(beer_necessities_bundled, ingredients_2_split) 
+beer_necessities_split <- split_ingredients(beer_necessities, ingredients_2_split) 
 
 
 # ------ simple beer necessities: random sample of 200
