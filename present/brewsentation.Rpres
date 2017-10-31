@@ -126,7 +126,7 @@ beer_necessities <- read_feather("./beer_necessities.feather") %>% as_tibble()
 beer_dat <- read_feather("./beer_dat.feather") %>% as_tibble()
 
 # Helper functions
-source("./analyze/key.R")
+source("./run_it/key.R")
 source("./helpers/run_neural_net.R")
 ```
 

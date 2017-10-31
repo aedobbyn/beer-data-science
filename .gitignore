@@ -20,6 +20,10 @@ compile/compile_cache/html/__packages
 *brewsentation-cache
 brewsentation-cache
 
+brewsentation_io.Rmd
+present/brewsentation_io_cache/
+present/brewsentation_io_files/
+
 *.dcf
 *.html
 *.csv
