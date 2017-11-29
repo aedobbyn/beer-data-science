@@ -62,7 +62,7 @@ source("./analyze/key.R")
 
 ***
 
-For some interactive clustering, check out the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
+For some interactive clustering, check out the [presentation](https://aedobbyn.github.io/beer-data-science/#/) given at the [Oktoberfest 2017 RLadies Chicago meetup](https://www.meetup.com/rladies-chicago/events/244346483/) or the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
 
 
 

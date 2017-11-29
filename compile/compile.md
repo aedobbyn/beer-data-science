@@ -11,7 +11,7 @@
 
 ***
 
-For some interactive clustering, check out the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
+For some interactive clustering, check out the [presentation](https://aedobbyn.github.io/beer-data-science/#/) given at the [Oktoberfest 2017 RLadies Chicago meetup](https://www.meetup.com/rladies-chicago/events/244346483/) or the [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) built from the same dataset.
 
 
 
@@ -333,8 +333,7 @@ The `cap_it()` function from the dobtools package will capitalize the first lett
 
 ```r
 beer_caps <- function(to_cap) {
-  if(to_cap %in% c("abv", "ibu", "srm", "id",
-                 "Abv", "Ibu", "Srm", "Id")) {
+  if(grepl("abv|ibu|srm|id|Abv|Ibu|Srm|Id", to_cap)) {
   to_cap <- to_cap %>% toupper()
   } else {
      to_cap <- to_cap              
@@ -595,7 +594,7 @@ pick_ingredient_get_beer <- function (ingredient_want, df, grouper) {
   spread_ingredients <- function(df) {
     df_spread <- df %>% 
       mutate(
-        row = 1:nrow(df)        # Add a unique idenfitier for each row which we'll need in order to spread; we'll drop this later
+        row = 1:nrow(df)    # Add a unique idenfitier for each row which we'll need in order to spread; we'll drop this later
       ) %>%                                 
       spread(
         key = ing_names,
@@ -705,7 +704,8 @@ beer_ingredients_join_all <-
 beer_ingredients_join_all <- beer_ingredients_join_all %>% 
   select(
     id, name, total_hops, total_malt, everything(), -description
-  )
+  ) %>% 
+  as_tibble()
 
 # Keep only beers that fall into a style_collapsed bucket
 # We're not filtering by levels in beer_necessities$style_collapsed because those levels contain more than what's in just the keywords of collapse_styles()

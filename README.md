@@ -12,7 +12,8 @@ I set about answering this with a mix of clustering (k-means) and classification
 
 #### Structure
 - Markdown report in [`/compile`](https://github.com/aedobbyn/beer-data-science/blob/master//compile/compile.md)
-- Presentation in .Rpres and .html in [`/present`](https://github.com/aedobbyn/beer-data-science/blob/master/present)
+- [Presentation](https://aedobbyn.github.io/beer-data-science/#/) given at RLadies Oktoberfest meetup 
+    - .Rpres code in [`/present`](https://github.com/aedobbyn/beer-data-science/blob/master/present)
 - [Shiny app](https://amandadobbyn.shinyapps.io/clusterfun/) code in [`/clusterfun`](https://github.com/aedobbyn/beer-data-science/blob/master/clusterfun)
 - Step-by-step scripts for getting and munging data in [`/run_it`](https://github.com/aedobbyn/beer-data-science/blob/master/run_it)
 
