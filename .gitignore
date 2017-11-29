@@ -32,3 +32,4 @@ present/brewsentation_io_files/
 *.rdx
 
 !brewsentation.html
+!*index.html
