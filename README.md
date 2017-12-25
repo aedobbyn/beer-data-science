@@ -2,7 +2,7 @@
 
 This is a preliminary, strictly for-fun foray into beer data. Pairs well with most session IPAs.
 
-You can find the **main report in [`compile/compile.md`](https://github.com/aedobbyn/beer-data-science/blob/master/compile/compile.md)** or flip through the [**presentation slides**](https://aedobbyn.github.io/beer-data-science/#/) for a talk given at RLadies Chicago. (The code behind those slides is in the [`present`](https://github.com/aedobbyn/beer-data-science/blob/master/present) directory.)
+You can find the **main report in [`compile/compile.md`](https://github.com/aedobbyn/beer-data-science/blob/master/compile/compile.md)**, read an [**interview**](https://medium.com/@Earlybird/chatting-with-data-scientist-amanda-dobbyn-about-analyzing-beer-styles-10a7a3278dfd) about the project, or flip through the [**presentation slides**](https://aedobbyn.github.io/beer-data-science/#/) for a talk given at RLadies Chicago. (The code behind those slides is in the [`present`](https://github.com/aedobbyn/beer-data-science/blob/master/present) directory.)
 
 <br>
 
