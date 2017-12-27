@@ -1,0 +1,44 @@
+---
+title: On Brewing Beer-in-Hand Data Science
+author:
+  name: Amanda Dobbyn
+  email: amanda.e.dobbyn@gmail.com
+  twitter: dobbleobble
+output:
+  html_notebook:
+    toc: true
+    theme: yeti
+  pdf_document:
+    keep_tex: true
+    toc: false
+  github_document:
+    
+    toc: true
+# output:
+#   html_document:
+#     keep_md: true
+#     toc: false
+#     theme: yeti
+#   github_document:
+#     toc: true
+#   pdf_document:
+#     keep_tex: true
+#     toc: false
+editor_options: 
+  chunk_output_type: inline
+---
+
+<br>
+
+One day after work shooting it with a coworker, we were supplied with beer and a whiteboard. Failsafe great combination. Said coworker's name is Kris. I don't pretend to beer a beer aficionado, but Kris is the real deal; plus he's an amazing programmer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, Alpha King on maltiness and remember not just that it's a 4.5/5 stars but that it's pretty hoppy all things considered. 
+
+Main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer was hoppy *for an IPA* or was sour *for a wheat beer*. That's important because very sour wheat beer might be a very *not* sour sour beer. At this point we started drawing some distributional curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to better distinguish what was fruity for a  
+
+Some portion of the way through beer number two I started thinking about he concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot. 
+
+But, are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? This brought me to thinking about clustering, of course. If styles *do* define the beer landscape well then they should match up with clusters well. If not, well, that would be some evidence that there's more of a mush out there and that maybe some stouts are actually closer to porters than they are to the typeical stout, or whatever the case may be.
+
+So! Where to get the datas, though. The perennial question. Well, luckily enough, Kris 
+
+
+
