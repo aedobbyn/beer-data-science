@@ -28,17 +28,50 @@ editor_options:
   chunk_output_type: inline
 ---
 
-<br>
+&nbsp;
 
-One day after work shooting it with a coworker, we were supplied with beer and a whiteboard. Failsafe great combination. Said coworker's name is Kris. I don't pretend to beer a beer aficionado, but Kris is the real deal; plus he's an amazing programmer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, Alpha King on maltiness and remember not just that it's a 4.5/5 stars but that it's pretty hoppy all things considered. 
+One day after work shooting it with a coworker, we were supplied with beer and a whiteboard. Failsafe great combination. Said coworker's name is <a href = https://kro.ski/>Kris</a>. I don't pretend to be a beer aficionado, but Kris is the real deal; plus he's an amazing web developer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, Alpha King on maltiness and remember not just that it's a 4.5/5 stars but that it's pretty hoppy all things considered. 
 
-Main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer was hoppy *for an IPA* or was sour *for a wheat beer*. That's important because very sour wheat beer might be a very *not* sour sour beer. At this point we started drawing some distributional curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to better distinguish what was fruity for a  
+
+Main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer was hoppy <em>for an IPA</em> or was sour <em>for a wheat beer</em>. That's important because very sour wheat beer might be a very <em>not</em> sour sour beer. At this point we started drawing some distributional curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to better distinguish what was fruity for a  
 
 Some portion of the way through beer number two I started thinking about he concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot. 
 
-But, are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? This brought me to thinking about clustering, of course. If styles *do* define the beer landscape well then they should match up with clusters well. If not, well, that would be some evidence that there's more of a mush out there and that maybe some stouts are actually closer to porters than they are to the typeical stout, or whatever the case may be.
+But, are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? This brought me to thinking about clustering, of course. If styles <em>do</em> define the beer landscape well then they should match up with clusters well. If not, well, that would be some evidence that there's more of a mush out there and that maybe some stouts are actually closer to porters than they are to the typeical stout, or whatever the case may be.
 
-So! Where to get the datas, though. The perennial question. Well, luckily enough, Kris 
+So! Where to get the datas, though. The perennial question. Well, Kris had his beers from an online database called <a href = http://www.brewerydb.com/>BreweryDB</a>. Armed with a URL and a question I was interested in, I decided to check it out. BreweryDB offers a RESTful API; once you've created an API key, you can hand that over in a URL and receive data back as JSON. The one caveat here is you won't get everything the API has to offer without creating a <a href = "http://www.brewerydb.com/developers/premium">premium</a> key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints.
 
+Since it's not super sensitive, I store my key in a gitignored file that I source in whenever I need to hit the API.
+
+In the browser,
+
+&nbsp;
+
+<img src="./img/got_a_beer.jpg"></img>
+
+&nbsp;
+
+I used the <code>jsonlite</code> package to 
+
+
+<pre><code>
+base_url <- "http://api.brewerydb.com/v2"
+key_preface <- "/?key="
+
+get_beer <- function(id) {
+  fromJSON(paste0(base_url, "/beer/", id, "/", key_preface, key))
+}
+</code></pre>
+
+
+Now we can reqeust a given beer by its ID and get a JSON object back.
+
+<pre><code>
+get_beer("GZQpRX")
+</code></pre>
+
+
+&nbsp;
+&nbsp;
 
 
