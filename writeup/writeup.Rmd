@@ -28,50 +28,199 @@ editor_options:
   chunk_output_type: inline
 ---
 
-&nbsp;
+```{r setup, include=FALSE}
+library(knitr)
+knitr::opts_chunk$set(cache=TRUE, eval=FALSE)
 
-One day after work shooting it with a coworker, we were supplied with beer and a whiteboard. Failsafe great combination. Said coworker's name is <a href = https://kro.ski/>Kris</a>. I don't pretend to be a beer aficionado, but Kris is the real deal; plus he's an amazing web developer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, Alpha King on maltiness and remember not just that it's a 4.5/5 stars but that it's pretty hoppy all things considered. 
+# Set the working directory path to one directory up so this .Rmd file's working directory is the same as the R Project directory. This way we don't have to change the file paths when sourcing in.
+knitr::opts_chunk$set(root.dir=normalizePath('../'))
+knitr::opts_knit$set(root.dir=normalizePath('../'))
+```
+
+```{r source_in, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+devtools::install_github("aedobbyn/dobtools")
+library(dobtools)
+library(tidyverse)
+library(feather)
+library(jsonlite)
+library(emo)
+
+# Data
+beer_necessities <- read_feather("./beer_necessities.feather") %>% as_tibble()
+
+# Helpers
+source("./run_it/key.R")
+```
 
 
-Main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer was hoppy <em>for an IPA</em> or was sour <em>for a wheat beer</em>. That's important because very sour wheat beer might be a very <em>not</em> sour sour beer. At this point we started drawing some distributional curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to better distinguish what was fruity for a  
+```{r beer_caps, echo=FALSE, eval=TRUE}
+# For cap_a_word_partial()
+words_to_cap <- c("abv", "ibu", "srm", "id", 
+                "Abv", "Ibu", "Srm", "Id")
+```
+
+
+<br>
+
+One day after work shooting it with a coworker, we were supplied with beer and a whiteboard. Failsafe great combination. Said coworker's name is [Kris](https://kro.ski/). I don't pretend to be a beer aficionado, but Kris is the real deal; plus he's an amazing web developer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, Alpha King on maltiness and remember not just that it's a 4.5/5 stars but that it's pretty hoppy all things considered. 
+
+
+Main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer was hoppy *for an IPA* or was sour *for a wheat beer*. That's important because very sour wheat beer might be a very <em>not</em> sour sour beer. At this point we started drawing some distributional curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to better distinguish what was fruity for a  
 
 Some portion of the way through beer number two I started thinking about he concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot. 
 
 But, are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? This brought me to thinking about clustering, of course. If styles <em>do</em> define the beer landscape well then they should match up with clusters well. If not, well, that would be some evidence that there's more of a mush out there and that maybe some stouts are actually closer to porters than they are to the typeical stout, or whatever the case may be.
 
-So! Where to get the datas, though. The perennial question. Well, Kris had his beers from an online database called <a href = http://www.brewerydb.com/>BreweryDB</a>. Armed with a URL and a question I was interested in, I decided to check it out. BreweryDB offers a RESTful API; once you've created an API key, you can hand that over in a URL and receive data back as JSON. The one caveat here is you won't get everything the API has to offer without creating a <a href = "http://www.brewerydb.com/developers/premium">premium</a> key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints.
+So! Where to get the datas, though. The perennial question. Well, Kris had his beers from an online database called [BreweryDB](http://www.brewerydb.com/developers). Armed with a URL and a question I was interested in, I decided to check it out. BreweryDB offers a RESTful API; once you've created an API key, you can hand that over in a URL and receive data back as JSON. The one caveat here is you won't get everything the API has to offer without creating a [premium](http://www.brewerydb.com/developers/premium) key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints.
 
 Since it's not super sensitive, I store my key in a gitignored file that I source in whenever I need to hit the API.
 
-In the browser,
+The format is outlined in the documentation, but generally if you're requesting data on a single beer, that looks something like `http://api.brewerydb.com/v2/beer/BEER_ID_HERE/?key=/YOUR_KEY_HERE`.
+
+In the browser, that request looks like:
 
 &nbsp;
 
-<img src="./img/got_a_beer.jpg"></img>
+![got_a_beer](./img/got_a_beer.jpg)
 
 &nbsp;
 
-I used the <code>jsonlite</code> package to 
+So to take that JSON and fit it into a dataframe, I turned to the excellent `jsonlite` package, which makes it easy to convert from JSON to R objects and vice versa. The main function we'll need from them is `fromJSON`.
 
+To get our feet wet, we can write a little function that takes a beer ID and returns a nested list of data.
 
-<pre><code>
+```{r}
 base_url <- "http://api.brewerydb.com/v2"
 key_preface <- "/?key="
 
 get_beer <- function(id) {
   fromJSON(paste0(base_url, "/beer/", id, "/", key_preface, key))
 }
-</code></pre>
+```
 
 
-Now we can reqeust a given beer by its ID and get a JSON object back.
+Now we can reqeust a given beer by its ID and get a JSON object back. `fromJSON` keeps the nested structure of the JSON object by turning it into a nested list.
 
-<pre><code>
+```{r, eval=TRUE}
 get_beer("GZQpRX")
-</code></pre>
+```
 
 
 &nbsp;
+
+If we wanted to go back to JSON we can take a list like that and, you guessed it, use `toJSON`:
+
+```{r, eval=TRUE}
+get_hop("3") %>% toJSON()
+```
+
+&nbsp;
+
+
+BreweryDB's got several endpoints that take a single parameter, an ID. I wanted functions for each of these endpoints so I could quickly take a look at the structure of the data returned. I didn't want to construct them all by hand like we did with `get_beer()` above. This seemed like a good time to write a function factory. We'll use `purrr::walk()` and `assign()` we can create functions to GET any beer, brewery, category, etc. if we know its ID.
+
+First, a vector of all the single parameter endpoints:
+
+```{r}
+endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guild", "hop", "ingredient", "location", "socialsite", "style", "menu")
+```
+
+
+We'll feed each these through a generic function for getting data about a single ID, `id`. 
+
+
+```{r}
+# Base function
+get_ <- function(id, ep) {
+  jsonlite::fromJSON(paste0(base_url, "/", ep, 
+                "/", id, "/", key_preface, key))
+}
+```
+
+Then we use `purrr::walk()` and `purrr::partial()` to create `get` functions from each of these endpoints in one fell swoop.
+
+
+```{r}
+# Create new get_<ep> functions
+endpoints %>% walk(~ assign(x = paste0("get_", .x),
+                    value = partial(get_, ep = .x),
+                    envir = .GlobalEnv))
+```
+
+
+What's happening here is that we're piping each endpoint through `assign()` as the `.x` argument. `.x` serves as both the second half of our new function name, `get_<ep>`, and the endpoint argument of `get_()` we defined above (that is, the `ep` argument in the `fromJSON()` call). This means we're using the same word in both our newly minted function name and as its only argument.
+`assign` is the same thing as the `<-` function, but lets us specify an environment a little bit easier.
+
+Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment so we can do something like:
+
+```{r, eval=TRUE, echo=TRUE}
+get_hop("3")
+```
+
+
+
+This is good stuff for exploring the type of data we can get back from each of the endpoints that take a singe ID. However, for this project I'm mainly just interested in beers and their associated data. So after a bit of poking around using other endpoints, I started thinking about how to build up a dataset of beers and all their associated attributes that reasonably relate to their style.
+
+<br>
+
+#### Building the DB
+
+So our main workhorse function is going to be `get_beer()`. Looking back at the structure of the data, we've got a nested list with things like `abv`, and `isOrganic`. I'd like to get that nested list into a dataframe with as few list columns as possible. (If you're not familiar, a list-col is a column whose values are themselves lists, allowing for different length vectors inside the same column.)
+
+Other things are more deeply nested. 
+
+```{r, echo=TRUE, eval=TRUE}
+get_beer("GZQpRX")$data$style
+```
+
+In these cases, we really only care about the `name` portion; I'm okay with chucking the description of the style.
+
+```{r, echo=TRUE, eval=TRUE}
+get_beer("GZQpRX")$data$style$name
+```
+
+
+
+```{r, eval=TRUE, echo=TRUE}
+unnest_it <- function(df) {
+  unnested <- df
+  for(col in seq_along(df[["data"]])) {
+    if(! is.null(ncol(df[["data"]][[col]]))) {
+      if(! is.null(df[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+      } else {
+        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+      }
+    }
+  }
+  return(unnested)
+}
+```
+
+
+```{r get_beer, eval=FALSE}
+paginated_request <- function(ep, addition, trace_progress = TRUE) {    
+  full_request <- NULL
+  first_page <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                , "&p=1"))
+  number_of_pages <- ifelse(!(is.null(first_page$numberOfPages)), 
+                            first_page$numberOfPages, 1)      
+
+    for (page in 1:number_of_pages) {                               
+    this_request <- fromJSON(paste0(base_url, "/", ep, "/", key_preface, key
+                                    , "&p=", page, addition),
+                             flatten = TRUE) 
+    this_req_unnested <- unnest_it(this_request)    #  <- request unnested here
+    
+    if(trace_progress == TRUE) {message(paste0("Page ", this_req_unnested$currentPage))} # if TRUE, print the page we're on
+    
+    full_request <- bind_rows(full_request, this_req_unnested[["data"]])
+  }
+  return(full_request)
+} 
+```
+
+
 &nbsp;
 
 

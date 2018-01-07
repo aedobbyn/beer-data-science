@@ -252,7 +252,7 @@ From where?
 Step 1: GET one Beer
 ========================================================
 
-Once we've got a key, we can use a beer's unique BreweryDB ID and our key to tet data on that beer.
+Once we've got a key, we can use a beer's unique BreweryDB ID and our key to get data on that beer.
 
 <small>`http://api.brewerydb.com/v2/beer/<BEER_ID_HERE>/?key=/<YOUR_KEY_HERE>` </small>
 
