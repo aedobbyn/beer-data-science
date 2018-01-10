@@ -824,18 +824,18 @@ class:small-code
 
 So, we'll unravel the `data` part of the response, grab whatever we want there, and glue it together into a dataframe. 
 
-If the particular list item we're unnesting has a `name` portion (like `$style$name`), great, we'll grab that for the column. Otherwise, we'll take whatever's first.
+If the particular list item we're unnesting has a `name` portion (like `$style$name`), great, we'll grab that for the column. Otherwise, we'll take whatever's first. 
 
 
 ```r
-unnest_it <- function(df) {
-  unnested <- df
-  for(col in seq_along(df[["data"]])) {
-    if(! is.null(ncol(df[["data"]][[col]]))) {
-      if(! is.null(df[["data"]][[col]][["name"]])) {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+unnest_it <- function(lst) {
+  unnested <- lst
+  for(col in seq_along(lst[["data"]])) {
+    if(! is.null(ncol(lst[["data"]][[col]]))) {
+      if(! is.null(lst[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- lst[["data"]][[col]][["name"]]
       } else {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+        unnested[["data"]][[col]] <- lst[["data"]][[col]][[1]]
       }
     }
   }
@@ -843,7 +843,8 @@ unnest_it <- function(df) {
 }
 ```
 
-<small>Note that this is a `for` loop so it's pretty slow 😔. Optimizing it is on the docket.</small>
+This approach is a bit slow because it uses a a `for` loop 😔. Optimizing it is on the docket.
+
 
 Grabbing all Beers
 ========================================================

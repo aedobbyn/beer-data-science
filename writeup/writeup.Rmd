@@ -165,7 +165,11 @@ This is good stuff for exploring the type of data we can get back from each of t
 
 #### Building the DB
 
-So our main workhorse function is going to be `get_beer()`. Looking back at the structure of the data, we've got a nested list with things like `abv`, and `isOrganic`. I'd like to get that nested list into a dataframe with as few list columns as possible. (If you're not familiar, a list-col is a column whose values are themselves lists, allowing for different length vectors inside the same column.)
+So our main workhorse function is going to be `get_beer()`. The next challenge is going to be how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once; our response is limited to a certain number of responses per page. 
+
+Helpfully, the response tells us what the total number of pages is for this particular endpoint; `numberOfPages` is the same for all pages, so we'll take it from the first page and save that in `number_of_pages`. We know which page we're on from `currentPage`. We'll send requests and unnest each until we hit `number_of_pages`.
+
+Looking back at the structure of the data, we've got a nested list with things like `abv`, and `isOrganic`. I'd like to get that nested list into a dataframe with as few list columns as possible. (If you're not familiar, a list-col is a column whose values are themselves lists, allowing for different length vectors inside the same column.)
 
 Other things are more deeply nested. 
 
@@ -173,23 +177,24 @@ Other things are more deeply nested.
 get_beer("GZQpRX")$data$style
 ```
 
-In these cases, we really only care about the `name` portion; I'm okay with chucking the description of the style.
+In these cases, we really only care about what's contained in the `name` vector; I'm okay with chucking the description of the style.
 
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$style$name
 ```
 
 
+We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector in the top level of the `data` portion of the response and, particular list item we're unnesting has a `name` portion (like `$style$name`), we'll grab that. Otherwise, we'll just take the first vector in the data response. We only need to resort to this second option in one case that I'm aware of, which is glassware.
 
 ```{r, eval=TRUE, echo=TRUE}
-unnest_it <- function(df) {
-  unnested <- df
-  for(col in seq_along(df[["data"]])) {
-    if(! is.null(ncol(df[["data"]][[col]]))) {
-      if(! is.null(df[["data"]][[col]][["name"]])) {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][["name"]]
+unnest_it <- function(lst) {
+  unnested <- lst
+  for(col in seq_along(lst[["data"]])) {
+    if(! is.null(ncol(lst[["data"]][[col]]))) {
+      if(! is.null(lst[["data"]][[col]][["name"]])) {
+        unnested[["data"]][[col]] <- lst[["data"]][[col]][["name"]]
       } else {
-        unnested[["data"]][[col]] <- df[["data"]][[col]][[1]]
+        unnested[["data"]][[col]] <- lst[["data"]][[col]][[1]]
       }
     }
   }
@@ -220,6 +225,15 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 } 
 ```
 
+
+```{r, echo=TRUE, eval=FALSE}
+beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
+```
+
+
+```{r, echo=FALSE, eval=TRUE, fig.align="center"}
+kable(beer_necessities[115:120, ] %>% select(id, name, style, style_collapsed, glass, abv, ibu, srm, hops_name, malt_name))
+```
 
 &nbsp;
 
