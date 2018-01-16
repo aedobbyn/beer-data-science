@@ -30,7 +30,7 @@ editor_options:
 
 ```{r setup, include=FALSE}
 library(knitr)
-knitr::opts_chunk$set(cache=TRUE, eval=FALSE)
+knitr::opts_chunk$set(cache=TRUE, eval=TRUE)
 
 # Set the working directory path to one directory up so this .Rmd file's working directory is the same as the R Project directory. This way we don't have to change the file paths when sourcing in.
 knitr::opts_chunk$set(root.dir=normalizePath('../'))
@@ -111,7 +111,7 @@ get_beer("GZQpRX")
 If we wanted to go back to JSON we can take a list like that and, you guessed it, use `toJSON()`:
 
 ```{r, eval=TRUE}
-get_hop("3") %>% toJSON()
+get_beer("GZQpRX") %>% toJSON()
 ```
 
 &nbsp;
@@ -274,7 +274,13 @@ I defined a few keywords that appeared in the most popular styles. Most of the s
 keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
 ```
 
+`collapse_styles()` is going to do kind of what it says on the tin -- add a new column to our dataframe for the general collapsed styles and find out what that should be for each beer. 
 
+One important detail of `keywords` is that *order matters*. I intentionally ordered keywords that are contained within one another from most general to most specific.
+
+Take the first three keywords: `"Pale Ale", "India Pale Ale", "Double India Pale Ale"`. I think the distinction between these three styles is important. What we're going to do is, for every beer, loop through all the keywords and if we find a match between its `style` and one of these `keywords`, assign that keyword to its `style_collaped`. Since looping through in the order of the keywords, the *last* match we get to will be the one that ultimately is assigned as that beer's `style_collaped`.
+
+So, if a beer's style is Super Duper Strong Imperial Double India Pale Ale, it'll first be assigned the `style_collapsed` "Pale Ale", then "India Pale Ale", and finally "Double India Pale Ale". That's what we want, because "Double India Pale Ale" is the most specific of those three and closest in practice to Super Duper Strong Imperial Double India Pale Ale.
 
 
 ```{r collapse_styles}
@@ -298,6 +304,13 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
+
+
+Yay so that wasn't optimized at all and took a while but now we've got a column in our dataframe with only `r length(levels(beer_necessities$style_collapsed))` instead of `r length(levels(beer_necessities$style))`. We're off to the races and now's probably a good time to crack a cold one before moving onto some actual analysis.
+
+If you'd like to check out a presentation on the full project given at the Oktoberfest edition of RLadies Chicago, you can head over to https://aedobbyn.github.io/beer-data-science/. All code is up at https://github.com/aedobbyn/beer-data-science. Pull requests more than welcome.
+
+Cheers!
 
 
 
