@@ -64,7 +64,9 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of RLadies Chicago, a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab beer data from BreweryDB API and do a first bit of cleaning on it.
 
-I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts. 
+I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts.
+
+![pour](./img/pour.jpg)
 
 ### Backstory
 
@@ -73,6 +75,8 @@ One day after work shooting it with a coworker, [Kris](https://kro.ski/), we wer
 The main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer tasted smoky *for a porter* or was hoppy *for a wheat beer*. That's important because a very hoppy wheat beer might be considred quite a mildly hopped IPA. At this point we started drawing some distributional density curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to make these types of "for a" distinctions on the style level.  
 
 This is about when I started thinking about the concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot. The categories people typically recognize as beer syles.
+
+![beer_network](./img/beer_network.jpg)
 
 But: are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? Assuming that beers do necessarily fit well into styles is a bit circular; we only have the style paradigmn to work off of so, if we're tasked with classifying a beer we're likely to reach for style as an easy way to bucket beers.
 
@@ -83,6 +87,8 @@ So! Where to get the data, though. The usual question. Well, Kris had his beers 
 ### Getting Data
 
 BreweryDB offers a RESTful API; what that means is that once you've created an API key [^1], you can hand that key over in a URL with query parameters and receive data back. The one caveat here is you won't get everything the API has to offer without creating a [premium](http://www.brewerydb.com/developers/premium) key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints beyond what you get at the free tier. 
+
+![get_beers](./img/get_beers.jpg)
 
 A look through the [BreweryDB API documentation](http://www.brewerydb.com/developers/docs) shows how you should structure your request in order to be handed back the data you want. You can get that data back as JSON (the default), XML, or serialized PHP. We'll be asking for JSON. If you're requesting data on a single beer, you'd supply a URL that contains the endpoint `beer`, the beer's ID, and your key like so:  `http://api.brewerydb.com/v2/beer/BEER_ID_HERE/?key=/YOUR_KEY_HERE`.
 
@@ -175,13 +181,19 @@ This is good stuff for exploring the type of data we can get back from each of t
 
 ### Building the Dataset
 
-So since we're mostly interested in beer, our main workhorse endpoing is going to be `beers`. The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. We can specify page with the `&p=` parameter in the URL.
+So since we're mostly interested in beer, our main workhorse endpoing is going to be `beers`. 
+
+![grab_all_beers](./img/grab_all_beers.jpg)
+
+The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. We can specify page with the `&p=` parameter in the URL.
 
 The strategy I took, implemented in `paginated_request()`, was to go page by page, ask for all 50 beers on the page and tack that page's data on to the bottom of the one before it.
 
 Helpfully, the `numberOfPages` variable in each page of the response tells us what the total number of pages is for this particular endpoint; it's is the same no matter what page we're on, so we'll take it from the first page and save that in our own variable, `number_of_pages`. We know which page we're on from `currentPage`. So since we know which page we're on and how many total pages there are, we can send requests and unnest each one into a datataframe until we hit `number_of_pages`. We attach each of the freshly unnested dataframes to all the ones that came before it, and, when we're done, return the whole thing.
 
-What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more cat videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating memory or vectorizing it `r emo::ji("relaxed")`.)
+What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more funny animal videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating memory or vectorizing it `r emo::ji("relaxed")`.)
+
+![onward](./img/onward.gif)
 
 
 ```{r get_beer, eval=FALSE}
@@ -252,6 +264,8 @@ beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients
 ```
 
 We ask for ingredients in our addition so we know which particular hops and malts are included in each beer. These were unnested using a similar procedure.
+
+![such_taps](./img/such_taps.jpg)
 
 Let's take a look at some of what we've got:
 
@@ -325,16 +339,23 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 }
 ```
 
+If we set `trace_progress` to `TRUE` we can make sure things are working as intended.
 
+![collapse_styles](./img/collapse_styles.jpg)
 
 Cool, now we've got a factor column in our dataframe with only `r length(keywords)` instead of `r length(levels(beer_necessities$style))` levels. 
 
 After a little time spent reading documentation, crafting a few functions for grabbing the beer we need and getting it into a tidy data structure that's easy to manipulate, we're off to the races. Now's probably a good time to crack a cold one before moving onto some actual analysis! In my case, that actual analysis mainly involved looking at clusters of beers by building this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
 
+![clusterfun](./img/clusterfun.jpg)
+
 
 If you made it this far and are interested in reading more of my yammering on about the subject, my upstanding coworker [Eddie](https://www.linkedin.com/in/eddievb/), founder of the honourable Earlybird Software Open Beer Consortium, took the time to [interview](https://medium.com/earlybird-software/chatting-with-data-scientist-amanda-dobbyn-about-analyzing-beer-styles-10a7a3278dfd) me about the project. Once again, all the code for the project is up at https://github.com/aedobbyn/beer-data-science. Pull requests are more than welcome.
 
 Cheers and happy exploring!
+
+
+![cheers](./img/cheers.jpg)
 
 
 [^1]: Since it's not super sensitive information, I store my key in a gitignored file that I `source()` in whenever I need to hit the API. You could also save the key as a global variable in an `.Renviron` file in your home directory and access it with `Sys.getenv()`.
