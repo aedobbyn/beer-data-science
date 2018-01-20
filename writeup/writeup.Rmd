@@ -30,14 +30,14 @@ editor_options:
 
 ```{r setup, include=FALSE}
 library(knitr)
-knitr::opts_chunk$set(cache=TRUE, eval=TRUE)
+knitr::opts_chunk$set(cache=TRUE)
 
 # Set the working directory path to one directory up so this .Rmd file's working directory is the same as the R Project directory. This way we don't have to change the file paths when sourcing in.
 knitr::opts_chunk$set(root.dir=normalizePath('../'))
 knitr::opts_knit$set(root.dir=normalizePath('../'))
 ```
 
-```{r source_in, eval=TRUE, echo=FALSE, message=FALSE, warning=FALSE}
+```{r source_in, echo=FALSE, message=FALSE, warning=FALSE}
 devtools::install_github("aedobbyn/dobtools")
 library(dobtools)
 library(tidyverse)
@@ -53,7 +53,7 @@ source("./run_it/key.R")
 ```
 
 
-```{r beer_caps, echo=FALSE, eval=TRUE}
+```{r beer_caps, echo=FALSE}
 # For cap_a_word_partial()
 words_to_cap <- c("abv", "ibu", "srm", "id", 
                 "Abv", "Ibu", "Srm", "Id")
@@ -62,13 +62,13 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 <br>
 
-This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of RLadies Chicago, a few people were interested in getting ahold of some beer data for themselves. This quick post goes through some of the get-off-and-running steps that I took to grab beer the data from BreweryDB API and do a first bit of cleaning.
+This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of RLadies Chicago, a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab beer data from BreweryDB API and do a first bit of cleaning on it.
 
 I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts. 
 
 ### Backstory
 
-One day after work shooting it with a coworker, we were supplied with beer and a whiteboard, which in my book is a failsafe great combination. Said coworker's name is [Kris](https://kro.ski/). I don't pretend to be a beer aficionado, but Kris is the real deal, in addition to his full-time job of being an excellent web developer. Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, [Deschutes's Fresh Squeezed IPA}(https://www.beeradvocate.com/beer/profile/63/60330/) on maltiness and mouthfeel and a host of other dimensions. That way you could remember not just that it's a 4.5/5 stars but that it's pretty juicy, all things considered. 
+One day after work shooting it with a coworker, [Kris](https://kro.ski/), we were supplied with beer and a whiteboard, which in my book is a failsafe great combination. I don't pretend to be a beer aficionado, but Kris is the real deal; in addition to being an excellent web developer, Kris and his girlfriend man the popular Instagram account [kmkbeer](https://ink361.com/app/users/ig-6733117611/kmkbeer/photos). Around this time, Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, [Deschutes's Fresh Squeezed IPA](https://www.beeradvocate.com/beer/profile/63/60330/) on maltiness, sweetness and a host of other dimensions. That way you could remember not just that it's a 4.5/5 stars but that it's pretty juicy, all things considered. 
 
 The main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer tasted smoky *for a porter* or was hoppy *for a wheat beer*. That's important because a very hoppy wheat beer might be considred quite a mildly hopped IPA. At this point we started drawing some distributional density curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to make these types of "for a" distinctions on the style level.  
 
@@ -110,7 +110,7 @@ get_beer <- function(id) {
 
 Okay so now we can reqeust a given beer by its ID:
 
-```{r, eval=TRUE}
+```{r get_alphaking}
 get_beer("GZQpRX")
 ```
 
@@ -119,7 +119,7 @@ get_beer("GZQpRX")
 
 If we wanted to go back to JSON we can take a list like that and, you guessed it, use `toJSON()`:
 
-```{r, eval=TRUE}
+```{r}
 get_beer("GZQpRX") %>% toJSON()
 ```
 
@@ -162,7 +162,7 @@ What's happening here is that we're piping each endpoint through `assign()` as t
 
 Now we have the functions `get_beer()`, `get_brewery()`, `get_category()`, etc. in our global environment so we can do something like:
 
-```{r, eval=TRUE, echo=TRUE}
+```{r get_hop}
 get_hop("3")
 ```
 
@@ -213,20 +213,20 @@ Looking back at the structure of the data resulting from `get_beer()`, we've got
 
 Some bits of the data that we want are nested at deeper levels than others. For example, `$data$style` contains not just the `name` of the style but also the style's `description`, its `shortName`, the typical minimum ABV in `abvMin`, etc.
 
-```{r, echo=TRUE, eval=TRUE}
+```{r style}
 get_beer("GZQpRX")$data$style
 ```
 
 In these cases, we really only care about what's contained in the `name` vector; I'm okay with chucking the style attributes.
 
-```{r, echo=TRUE, eval=TRUE}
+```{r style_name}
 get_beer("GZQpRX")$data$style$name
 ```
 
 
 We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector in the top level of the `data` portion of the response and, if particular list item we're unnesting has a `name` portion (like `$style$name`), it will grab that value and stick it in the appropriate column. Otherwise, we'll just take whatever the first vector is in the data response. (We only need to resort to this second option in one case that I'm aware of, which is glassware -- glassware doesn't have a `name`.)
 
-```{r, eval=TRUE, echo=TRUE}
+```{r unnest_it}
 unnest_it <- function(lst) {
   unnested <- lst
   for(col in seq_along(lst[["data"]])) {
@@ -247,7 +247,7 @@ unnest_it <- function(lst) {
 Okay, so we run the thing and assign it to the object `beer_necessities`. 
 <!-- (I meant to change the name a long time ago but now it stuck and changing it would almost certainly break more things than it's worth `r emo::ji("woman_shrugging_medium_light_skin_tone")`). -->
 
-```{r, echo=TRUE, eval=FALSE}
+```{r beer_necessities, eval=FALSE}
 beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
 ```
 
@@ -255,14 +255,14 @@ We ask for ingredients in our addition so we know which particular hops and malt
 
 Let's take a look at some of what we've got:
 
-```{r, echo=FALSE, eval=TRUE, fig.align="center"}
+```{r beer_necessities_kable, echo=FALSE, fig.align="center"}
 knitr::kable(beer_necessities[115:120, ] %>% select(id, name, style, style_collapsed, glass, abv, ibu, srm, hops_name, malt_name))
 ```
 
 The three main "predictor" variables we've got are ABV, IBU, and SRM. They stand for alcohol by volume, International Bitterness Units, and Standard Reference Method, respectively. What they mean is: how alcoholic is the beer, how bitter is it, and what color is it on a scale of light to dark.
 
 
-```{r}
+```{r beer_necessities_glimpse}
 glimpse(beer_necessities)
 ```
 
@@ -273,13 +273,13 @@ Much tidier. Next, I put the data in a couple different places: 1) a local MySQL
 
 &nbsp;
 
-### Munging Step 1
+### Initial Munge
 
 The last thing I'll get into here is the first bit of transforming I did once I'd gotten the data.
 
 Looking through the outcome variable, style, I noticed that we've got `r length(levels(beer_necessities$style))` total styles. A lot of these are styles that I'd really consider sub-styles. Like, should American-Style Amber (Low Calorie) Lager and American-Style Amber Lager *really* be considered two different style beers? You may think the disctinciton is important -- and if you do, let me know why! -- but I say probably not.
 
-```{r, eval=TRUE}
+```{r style_levels}
 levels(beer_necessities$style)
 ```
 
@@ -289,7 +289,7 @@ The goal of my fist bit of munging will be to lump some of those sub-styles of b
 For that reason, I decided to do the lumping based on the text of the style itself. I defined a few keywords that appeared in the most popular styles. 
 
 
-```{r keywords, eval=TRUE}
+```{r keywords}
 keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
 ```
 
@@ -327,15 +327,24 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 
 
 
-Cool, now we've got a factor column in our dataframe with only `r length(levels(beer_necessities$style_collapsed))` instead of `r length(levels(beer_necessities$style))` levels. We're off to the races and now's probably a good time to crack a cold one before moving onto some actual analysis! For me, mainly involved looking at clusters of beers using this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
+Cool, now we've got a factor column in our dataframe with only `r length(keywords)` instead of `r length(levels(beer_necessities$style))` levels. 
 
-Once again, all the code for the project is up at https://github.com/aedobbyn/beer-data-science. Pull requests and beer contributions are more than welcome.
+After a little time spent reading documentation, crafting a few functions for grabbing the beer we need and getting it into a tidy data structure that's easy to manipulate, we're off to the races. Now's probably a good time to crack a cold one before moving onto some actual analysis! In my case, that actual analysis mainly involved looking at clusters of beers by building this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
 
-Cheers!
+
+If you made it this far and are interested in reading more of my yammering on about the subject, my upstanding coworker [Eddie](https://www.linkedin.com/in/eddievb/), founder of the honourable Earlybird Software Open Beer Consortium, took the time to [interview](https://medium.com/earlybird-software/chatting-with-data-scientist-amanda-dobbyn-about-analyzing-beer-styles-10a7a3278dfd) me about the project. Once again, all the code for the project is up at https://github.com/aedobbyn/beer-data-science. Pull requests are more than welcome.
+
+Cheers and happy exploring!
 
 
 [^1]: Since it's not super sensitive information, I store my key in a gitignored file that I `source()` in whenever I need to hit the API. You could also save the key as a global variable in an `.Renviron` file in your home directory and access it with `Sys.getenv()`.
 
 [^2]: [`feather`](https://github.com/wesm/feather) is a binary file format so it's fast to read in *and* saves your types so you don't need to worry about `stringsAsFactors` or setting your types after you read in your data like you'd need to with a typical CSV file. It's a great way to port data between R and Python as well.
+
+
+
+```{r sessionInfo}
+sessionInfo()
+```
 
 
