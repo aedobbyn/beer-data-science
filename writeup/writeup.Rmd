@@ -62,7 +62,7 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 <br>
 
-This past summer I spent a chunk of time doing some beer-in-hand data science on beer data. A few people who've heard about the project were interested in getting some beer data and looking to see what they could find for themselves. This quick post goes through some of the get-off-and-running steps for using R to grab beer the data from BreweryDB API and do a first bit of cleaning.
+This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of RLadies Chicago, a few people were interested in getting ahold of some beer data for themselves. This quick post goes through some of the get-off-and-running steps that I took to grab beer the data from BreweryDB API and do a first bit of cleaning.
 
 I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts. 
 
@@ -175,13 +175,13 @@ This is good stuff for exploring the type of data we can get back from each of t
 
 ### Building the Dataset
 
-So since we're mostly interested in beer, our main workhorse function is going to be `get_beer()`. The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. We can specify page with the `&p=` parameter in the URL.
+So since we're mostly interested in beer, our main workhorse endpoing is going to be `beers`. The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. We can specify page with the `&p=` parameter in the URL.
 
 The strategy I took, implemented in `paginated_request()`, was to go page by page, ask for all 50 beers on the page and tack that page's data on to the bottom of the one before it.
 
 Helpfully, the `numberOfPages` variable in each page of the response tells us what the total number of pages is for this particular endpoint; it's is the same no matter what page we're on, so we'll take it from the first page and save that in our own variable, `number_of_pages`. We know which page we're on from `currentPage`. So since we know which page we're on and how many total pages there are, we can send requests and unnest each one into a datataframe until we hit `number_of_pages`. We attach each of the freshly unnested dataframes to all the ones that came before it, and, when we're done, return the whole thing.
 
-What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more cat videos I mean stats lectures you can watch before you've gotten your data back.
+What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more cat videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating memory or vectorizing it `r emo::ji("relaxed")`.)
 
 
 ```{r get_beer, eval=FALSE}
@@ -209,22 +209,22 @@ paginated_request <- function(ep, addition, trace_progress = TRUE) {
 
 You'll notice a little helper funciton inside the for loop called `unnest_it()`. I'll explain what that's doing.
 
-Looking back at the structure of the data, we've got a nested list with things like `abv`, and `isOrganic`. I'd like to get that nested list into a dataframe with as few list columns as possible. (If you're not familiar, a list-col is a column whose values are themselves lists, allowing for different length vectors inside the same row. They are neat but not what we're here for right now.)
+Looking back at the structure of the data resulting from `get_beer()`, we've got a nested list with things like `abv`, and `isOrganic`. The goal is get that nested list into a dataframe with as few list columns as possible. (If you're not familiar, a list-col is a column whose values are themselves lists, allowing for different length vectors in each row. They are neat but not what we're here for right now.)
 
-Some bits of the data that we want are nested at deeper levels than others.
+Some bits of the data that we want are nested at deeper levels than others. For example, `$data$style` contains not just the `name` of the style but also the style's `description`, its `shortName`, the typical minimum ABV in `abvMin`, etc.
 
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$style
 ```
 
-In these cases, we really only care about what's contained in the `name` vector; I'm okay with chucking the description of the style.
+In these cases, we really only care about what's contained in the `name` vector; I'm okay with chucking the style attributes.
 
 ```{r, echo=TRUE, eval=TRUE}
 get_beer("GZQpRX")$data$style$name
 ```
 
 
-We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector in the top level of the `data` portion of the response and, if particular list item we're unnesting has a `name` portion (like `$style$name`), grab that. Otherwise, we'll just take the first vector in the data response. We only need to resort to this second option in one case that I'm aware of, which is glassware -- glassware doesn't have a `$name`.
+We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector in the top level of the `data` portion of the response and, if particular list item we're unnesting has a `name` portion (like `$style$name`), it will grab that value and stick it in the appropriate column. Otherwise, we'll just take whatever the first vector is in the data response. (We only need to resort to this second option in one case that I'm aware of, which is glassware -- glassware doesn't have a `name`.)
 
 ```{r, eval=TRUE, echo=TRUE}
 unnest_it <- function(lst) {
@@ -244,12 +244,14 @@ unnest_it <- function(lst) {
 
 
 
-Cool, so we run the thing and save it to the object `beer_necessities`. (I meant to change this a long time ago but now it stuck and changing it would almost certainly break more things than it's worth so `r emo::ji("woman_shrugging_medium_light_skin_tone")`).
+Okay, so we run the thing and assign it to the object `beer_necessities`. 
+<!-- (I meant to change the name a long time ago but now it stuck and changing it would almost certainly break more things than it's worth `r emo::ji("woman_shrugging_medium_light_skin_tone")`). -->
 
 ```{r, echo=TRUE, eval=FALSE}
 beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
 ```
 
+We ask for ingredients in our addition so we know which particular hops and malts are included in each beer. These were unnested using a similar procedure.
 
 Let's take a look at some of what we've got:
 
@@ -257,13 +259,16 @@ Let's take a look at some of what we've got:
 knitr::kable(beer_necessities[115:120, ] %>% select(id, name, style, style_collapsed, glass, abv, ibu, srm, hops_name, malt_name))
 ```
 
+The three main "predictor" variables we've got are ABV, IBU, and SRM. They stand for alcohol by volume, International Bitterness Units, and Standard Reference Method, respectively. What they mean is: how alcoholic is the beer, how bitter is it, and what color is it on a scale of light to dark.
+
+
 ```{r}
 glimpse(beer_necessities)
 ```
 
 
 
-Grool! Next, I put the data in a couple different places: a local MySQL database using the `RMySQL` which relies on the more generic database package `DBI`, and a `.feather` file, which I highly recommend. [`feather`](https://github.com/wesm/feather) is a binary file format so it's fast to read in *and* saves your types so you don't need to worry about `stringsAsFactors` or setting your types after you `read_csv()` or anything like that. It's a great way to share data between R and Python as well.
+Much tidier. Next, I put the data in a couple different places: 1) a local MySQL database using the `RMySQL` package which relies on the more generic database package `DBI`, and 2) a `.feather` file [^2], which I highly recommend.
 
 
 &nbsp;
@@ -272,28 +277,31 @@ Grool! Next, I put the data in a couple different places: a local MySQL database
 
 The last thing I'll get into here is the first bit of transforming I did once I'd gotten the data.
 
-Looking through my outcome variable, style, I noticed that we've got `r length(levels(beer_necessities$style))` total styles. A lot of these that I'd really consider sub-styles. Like should American-Style Amber (Low Calorie) Lager and American-Style Amber Lager really be considered two different beers? You may quibble with me, but I say probably not.
+Looking through the outcome variable, style, I noticed that we've got `r length(levels(beer_necessities$style))` total styles. A lot of these are styles that I'd really consider sub-styles. Like, should American-Style Amber (Low Calorie) Lager and American-Style Amber Lager *really* be considered two different style beers? You may think the disctinciton is important -- and if you do, let me know why! -- but I say probably not.
 
 ```{r, eval=TRUE}
 levels(beer_necessities$style)
 ```
 
-So the goal of my fist bit of munging will be to lump some of those sub-styles of beer in with their closest cousins. Thinking about the best way of doing this objectively, I eventually decided to do the lumping based on the text of the style itself. 
 
-I defined a few keywords that appeared in the most popular styles. Most of the sub-styles tended to contain one of these keywords plus some modifiers; in other words, sub-styles were longer versions of the main styles.
+The goal of my fist bit of munging will be to lump some of those sub-styles of beer in with their closest cousins. Thinking about the best way of doing this objectively, I noticed that most of the sub-styles tended to contain another broader style plus some modifiers; in other words, sub-styles were longer versions of the main styles.
+
+For that reason, I decided to do the lumping based on the text of the style itself. I defined a few keywords that appeared in the most popular styles. 
 
 
 ```{r keywords, eval=TRUE}
 keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "India Pale Lager", "Hefeweizen", "Barrel-Aged","Wheat", "Pilsner", "Pilsener", "Amber", "Golden", "Blonde", "Brown", "Black", "Stout", "Imperial Stout", "Fruit", "Porter", "Red", "Sour", "Kölsch", "Tripel", "Bitter", "Saison", "Strong Ale", "Barley Wine", "Dubbel")
 ```
 
-`collapse_styles()` is going to do kind of what it says on the tin -- add a new column to our dataframe for the general collapsed styles and find out what that should be for each beer. 
+Next I wrote the function below called `collapse_styles()`.
+
+`collapse_styles()` is going to do kind of what it says on the tin -- for each beer, find out which keyword, or `style_collapsed` to lump each `style` into. 
 
 One important detail of `keywords` is that *order matters*. I intentionally ordered keywords that are contained within one another from most general to most specific.
 
-Take the first three keywords: `"Pale Ale", "India Pale Ale", "Double India Pale Ale"`. I think the distinction between these three styles is important. What we're going to do is, for every beer, loop through all the keywords and if we find a match between its `style` and one of these `keywords`, assign that keyword to its `style_collaped`. Since looping through in the order of the keywords, the *last* match we get to will be the one that ultimately is assigned as that beer's `style_collaped`.
+Take the first three keywords: `"Pale Ale", "India Pale Ale", "Double India Pale Ale"`. I think the distinction between these three styles is important because they are three of the most popular styles in BreweryDB and because they taste noticeably different. What we're going to do is, for every beer, loop through all the keywords and if we find a match between its `style` and one of these `keywords` and assign that keyword as its `style_collaped`. Since we're looping through the keywords in the order we've defined above, the *last* match we get to will be the one that ultimately is assigned as that beer's `style_collaped`.
 
-So, if a beer's style is Super Duper Strong Imperial Double India Pale Ale, it'll first be assigned the `style_collapsed` "Pale Ale", then "India Pale Ale", and finally "Double India Pale Ale". That's what we want, because "Double India Pale Ale" is the most specific of those three and closest in practice to Super Duper Strong Imperial Double India Pale Ale.
+That means that if a beer's style is Super Duper Strong Imperial Double India Pale Ale, it'll first be assigned the `style_collapsed` "Pale Ale", then "India Pale Ale", and finally "Double India Pale Ale". That's exactly what we want because "Double India Pale Ale" is the most specific of those three and, presumably, closest in spirit to Super Duper Strong Imperial Double India Pale Ale.
 
 
 ```{r collapse_styles}
@@ -319,14 +327,15 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 
 
 
-Yay so that wasn't optimized at all and took a while but now we've got a column in our dataframe with only `r length(levels(beer_necessities$style_collapsed))` instead of `r length(levels(beer_necessities$style))`. We're off to the races and now's probably a good time to crack a cold one before moving onto some actual analysis.
+Cool, now we've got a factor column in our dataframe with only `r length(levels(beer_necessities$style_collapsed))` instead of `r length(levels(beer_necessities$style))` levels. We're off to the races and now's probably a good time to crack a cold one before moving onto some actual analysis! For me, mainly involved looking at clusters of beers using this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
 
-If you'd like to check out a presentation on the full project given at the Oktoberfest edition of RLadies Chicago, you can head over to https://aedobbyn.github.io/beer-data-science/. All code is up at https://github.com/aedobbyn/beer-data-science. Pull requests more than welcome.
+Once again, all the code for the project is up at https://github.com/aedobbyn/beer-data-science. Pull requests and beer contributions are more than welcome.
 
 Cheers!
 
 
 [^1]: Since it's not super sensitive information, I store my key in a gitignored file that I `source()` in whenever I need to hit the API. You could also save the key as a global variable in an `.Renviron` file in your home directory and access it with `Sys.getenv()`.
 
+[^2]: [`feather`](https://github.com/wesm/feather) is a binary file format so it's fast to read in *and* saves your types so you don't need to worry about `stringsAsFactors` or setting your types after you read in your data like you'd need to with a typical CSV file. It's a great way to port data between R and Python as well.
 
 
