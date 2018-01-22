@@ -6,14 +6,14 @@ author:
   twitter: dobbleobble
 output:
   html_notebook:
-    toc: true
+    toc: false
     theme: yeti
   pdf_document:
     keep_tex: true
     toc: false
   github_document:
     
-    toc: true
+    toc: false
 # output:
 #   html_document:
 #     keep_md: true
@@ -62,7 +62,7 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 <br>
 
-This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of RLadies Chicago, a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab beer data from BreweryDB API and do a first bit of cleaning on it.
+This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of [RLadies Chicago](https://www.meetup.com/rladies-chicago/), a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab beer data from BreweryDB API and do a first bit of cleaning on it.
 
 I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts.
 
@@ -193,7 +193,7 @@ Helpfully, the `numberOfPages` variable in each page of the response tells us wh
 
 What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more funny animal videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating memory or vectorizing it `r emo::ji("relaxed")`.)
 
-![onward](./img/onward.gif)
+<center>![onward](./img/onward.gif)</center>
 
 
 ```{r get_beer, eval=FALSE}
