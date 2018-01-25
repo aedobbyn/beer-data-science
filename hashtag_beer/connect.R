@@ -1,8 +1,11 @@
+library(tidyverse)
 library(RMySQL)
-library(dbplyr)
 library(feather)
+library(widyr)
+library(igraph)
+library(ggraph)
 
-db_pw <- decrypt_kc_pw("hashtag_beer_db_pw")
+db_pw <- keyringr::decrypt_kc_pw("hashtag_beer_db_pw")
 
 sql <- 
 "select posts.`short_code`, posts.`comment_count`, posts.like_count, tags.tag, post_tag.`post_id`, post_tag.`tag_id` from posts
@@ -27,9 +30,9 @@ hashtag_pairwise <- hashtag_beer %>%
   pairwise_count(tag, short_code) %>% 
   arrange(desc(n))
 
-hashtag_pairwise_cor <- hashtag_beer %>%
-  pairwise_cor(tag, short_code) %>% 
-  arrange(desc(n))
+# hashtag_pairwise_cor <- hashtag_beer %>%
+#   pairwise_cor(tag, short_code) %>% 
+#   arrange(desc(correlation))
 
 hashtag_pairwise_unique <- hashtag_pairwise %>% 
   mutate (rn = row_number()) %>% 
@@ -37,12 +40,11 @@ hashtag_pairwise_unique <- hashtag_pairwise %>%
   select(-rn)
 
 hashtag_graph <- hashtag_pairwise %>%
-  filter(n > 50) %>% 
+  filter(n > 20) %>% 
   graph_from_data_frame()
 
 hashtag_graph %>% 
   ggraph(layout = "fr") +
-  geom_edge_link(show.legend = FALSE) +
   geom_edge_link(alpha = 0.2, show.legend = FALSE) +    # aes(edge_width = n)
   geom_node_point(color = "lightblue", size = 5) +
   geom_node_text(aes(label = name), repel = TRUE) +
