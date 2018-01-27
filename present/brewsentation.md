@@ -7,7 +7,7 @@ autosize: true
 <style>
 
   .title-slide {
-     background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+     background-image: url(https://cdn.stocksnap.io/img-thumbs/960w/ZXWXE8FAJN.jpg);
       background-position: center center;
       background-attachment: fixed;
       background-repeat: no-repeat;
@@ -16,7 +16,7 @@ autosize: true
    }
    
   .section .reveal .state-background {
-      background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+      background-image: url(https://cdn.stocksnap.io/img-thumbs/960w/ZXWXE8FAJN.jpg);
       background-position: center center;
       background-attachment: fixed;
       background-repeat: no-repeat;
@@ -69,7 +69,7 @@ autosize: true
   }
   
   .cheers {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-image: url(https://cdn.stocksnap.io/img-thumbs/960w/ZXWXE8FAJN.jpg);
     background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
@@ -80,7 +80,7 @@ autosize: true
   }
   
   .cheers .reveal .state-background {
-    background-image: url(http://bitpine.com/av/storage/d6883b03/avfb6baf1401d03eb2b7d.jpg);
+    background-image: url(https://cdn.stocksnap.io/img-thumbs/960w/ZXWXE8FAJN.jpg);
     background-position: center center;
     background-attachment: fixed;
     background-repeat: no-repeat;
