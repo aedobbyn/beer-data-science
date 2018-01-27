@@ -24,6 +24,8 @@ brewsentation_io.Rmd
 present/brewsentation_io_cache/
 present/brewsentation_io_files/
 
+img_old
+
 *.dcf
 *.html
 *.csv
