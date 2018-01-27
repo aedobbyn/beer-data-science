@@ -31,6 +31,6 @@ present/brewsentation_io_files/
 *.rdb
 *.rdx
 
-!brewsentation.html
+!*brewsentation.html
 !*index.html
 !*writeup.Rmd
