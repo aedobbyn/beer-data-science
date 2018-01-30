@@ -5,7 +5,8 @@ author:
   email: amanda.e.dobbyn@gmail.com
   twitter: dobbleobble
 output:
-  html_notebook:
+  # html_notebook:
+  html_document:
     toc: false
     theme: yeti
   pdf_document:
@@ -13,16 +14,6 @@ output:
     toc: false
   github_document:
     toc: false
-# output:
-#   html_document:
-#     keep_md: true
-#     toc: false
-#     theme: yeti
-#   github_document:
-#     toc: true
-#   pdf_document:
-#     keep_tex: true
-#     toc: false
 editor_options: 
   chunk_output_type: inline
 ---
@@ -37,7 +28,7 @@ knitr::opts_knit$set(root.dir=normalizePath('../'))
 ```
 
 ```{r source_in, echo=FALSE, message=FALSE, warning=FALSE}
-devtools::install_github("aedobbyn/dobtools")
+# devtools::install_github("aedobbyn/dobtools")
 library(dobtools)
 library(tidyverse)
 library(feather)

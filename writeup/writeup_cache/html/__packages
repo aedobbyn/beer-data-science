@@ -1,0 +1,13 @@
+base
+knitr
+dobtools
+tidyverse
+ggplot2
+tibble
+tidyr
+readr
+purrr
+dplyr
+feather
+jsonlite
+emo
