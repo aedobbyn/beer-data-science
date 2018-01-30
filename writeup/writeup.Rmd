@@ -12,7 +12,6 @@ output:
     keep_tex: true
     toc: false
   github_document:
-    
     toc: false
 # output:
 #   html_document:
@@ -62,47 +61,51 @@ words_to_cap <- c("abv", "ibu", "srm", "id",
 
 <br>
 
-This past summer I spent a chunk of time doing some [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science) on, well, beer data. After I gave a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis at the aptly-named Oktoberfest edition of [RLadies Chicago](https://www.meetup.com/rladies-chicago/), a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab beer data from BreweryDB API and do a first bit of cleaning on it.
+This past summer I spent a chunk of time gathering and analyzing beer data in what I started calling [beer-in-hand data science](https://github.com/aedobbyn/beer-data-science). I ended up giving a [talk](https://aedobbyn.github.io/beer-data-science/) on the analysis to the wonderful women of [RLadies Chicago](https://www.meetup.com/rladies-chicago/), and afterward a few people were interested in getting ahold of some beer data for themselves. I hope to spread the wealth in this quick post by going through some of the get-off-and-running steps that I took to grab the data and get it into a usable, clean format.
 
 I'll give a little backstory on why I started diving into beer data, which you can feel free to skip if you're just interested in the data extraction and wrangling parts.
 
-![pour](./img/pour.jpg)
+![](./img/pour.jpg)
 
 ### Backstory
 
-One day after work shooting it with a coworker, [Kris](https://kro.ski/), we were supplied with beer and a whiteboard, which in my book is a failsafe great combination. I don't pretend to be a beer aficionado, but Kris is the real deal; in addition to being an excellent web developer, Kris and his girlfriend man the popular Instagram account [kmkbeer](https://ink361.com/app/users/ig-6733117611/kmkbeer/photos). Around this time, Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, [Deschutes's Fresh Squeezed IPA](https://www.beeradvocate.com/beer/profile/63/60330/) on maltiness, sweetness and a host of other dimensions. That way you could remember not just that it's a 4.5/5 stars but that it's pretty juicy, all things considered. 
+It's a typical Thursday around beer o'clock and a few coworkers and I are hanging out in the office. We've got some brews and whiteboard which, as my coworker [Kris](https://kro.ski/) points out, is a failsafe great combination. I don't pretend to be a beer aficionado, but Kris is the real deal; in addition to being an excellent web developer, Kris and his girlfriend man the popular Instagram account [kmkbeer](https://ink361.com/app/users/ig-6733117611/kmkbeer/photos). Around this time, Kris had started building an app for rating beers on a variety of dimensions, so you could rate, say, [Deschutes's Fresh Squeezed IPA](https://www.beeradvocate.com/beer/profile/63/60330/) on maltiness, sweetness and a host of other dimensions. That way you could remember not just that it's a 4.5/5 stars but that it's pretty juicy, all things considered. 
 
-The main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer tasted smoky *for a porter* or was hoppy *for a wheat beer*. That's important because a very hoppy wheat beer might be considred quite a mildly hopped IPA. At this point we started drawing some distributional density curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to make these types of "for a" distinctions on the style level.  
+The main sticking point -- and this is where the whiteboard markers came out -- is that you'd want to be able to capture that a beer tasted smoky *for a porter* or was hoppy *for a wheat beer*. That's important because a very hoppy wheat beer might be considred quite a mildly hopped IPA. At this point we started drawing some distribution density curves and thinking about setting priors for every style. That prior would be the flavor baseline for each type of beer, allowing you to make these types of "for a" distinctions on the style level.  
 
-This is about when I started thinking about the concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot. The categories people typically recognize as beer syles.
+This is about when I started thinking about the concept of beer "styles" in general. You've got -- at the highest split -- your ales and your lagers, and then within those categories you've got pale ales and IPLs and kölschs and double IPAs and whatnot; that is, the categories people typically recognize as beer syles.
 
-![beer_network](./img/beer_network.jpg)
+<br>
 
-But: are styles even the best way of dividing up beers? Or is it just the easiest and most immediate thing we've got? Assuming that beers do necessarily fit well into styles is a bit circular; we only have the style paradigmn to work off of so, if we're tasked with classifying a beer we're likely to reach for style as an easy way to bucket beers.
+![](./img/beer_network.jpg)
 
-This brought me to thinking about clustering, of course. If styles <em>do</em> define the beer landscape well then, I figured, styles should match up with clusters pretty well. If they don't, well, that would be some evidence that the beer landscape is more of an overlapping mush than a few neat, cut-and-dry buckets and that maybe some stouts are actually closer to porters than they are to the typical stout, or whatever the case may be.
+<br>
 
-So! Where to get the data, though. The usual question. Well, Kris had his beers from an online database called [BreweryDB](http://www.brewerydb.com/developers), so, armed with a URL and a question I was interested in, I decided to check it out. 
+But: are styles even the best way of dividing up beers? Or is it just the easiest and most immediate heuristic we've got? Assuming that beers do necessarily fit well into styles is a bit circular; we only have the style paradigm to work off of, so if we're tasked with classifying a beer we're likely to reach for style as an easy way to bucket beers.
+
+This brought me to thinking about clustering, of course. If styles <em>do</em> define the beer landscape well, then styles boundaries should more or less match up with cluster boundaries. If they don't, well, that would be some evidence that the beer landscape is more of an overlapping mush than a few natrually neat, cut-and-dry buckets and that maybe some stouts are actually closer to porters than they are to the typical stout, or whatever the case may be.
+
+So! Where to get the data, though. The usual question. Well, Kris mentioned an online database called [BreweryDB](http://www.brewerydb.com/developers), so, armed with a URL and a question I was interested in, I decided to check it out. 
 
 ### Getting Data
 
-BreweryDB offers a RESTful API; what that means is that once you've created an API key [^1], you can hand that key over in a URL with query parameters and receive data back. The one caveat here is you won't get everything the API has to offer without creating a [premium](http://www.brewerydb.com/developers/premium) key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints beyond what you get at the free tier. 
+BreweryDB offers a RESTful API; if you're not familiar, what that means is that once you've created an API key [^1], you can hand that key over in a URL with certain query parameters and receive data back. The documentation will tell you how what types of data are available and how you should structure your request to get the data you want. The one caveat in the BreweryDB case is you won't get everything the API has to offer without creating a [premium](http://www.brewerydb.com/developers/premium) key ($6 a month); once you do, you'll get unlimited requests and a few extra endpoints beyond what you get at the free tier. 
 
-![get_beers](./img/get_beers.jpg)
+![](./img/get_beers.jpg)
 
-A look through the [BreweryDB API documentation](http://www.brewerydb.com/developers/docs) shows how you should structure your request in order to be handed back the data you want. You can get that data back as JSON (the default), XML, or serialized PHP. We'll be asking for JSON. If you're requesting data on a single beer, you'd supply a URL that contains the endpoint `beer`, the beer's ID, and your key like so:  `http://api.brewerydb.com/v2/beer/BEER_ID_HERE/?key=/YOUR_KEY_HERE`.
+A look through the [BreweryDB API documentation](http://www.brewerydb.com/developers/docs) shows that we can get data back as JSON (the default), XML, or serialized PHP. We'll be asking for JSON. If you're requesting data on a single beer, you'd supply a URL that contains the endpoint `beer`, the beer's ID, and your key like so:  `http://api.brewerydb.com/v2/beer/BEER_ID_HERE/?key=/YOUR_KEY_HERE`.
 
 If you entered such a URL in the browser, the response looks like:
 
-&nbsp;
+<br>
 
-![got_a_beer](./img/got_a_beer.jpg)
+![](./img/got_a_beer.jpg)
 
-&nbsp;
+<br>
 
-That's beer data! But not that useful yet. We want to take that JSON and fit it into a dataframe. To do that, I turned to the excellent `jsonlite` package, which has a few functions for converting from JSON to R objects (generally lists) and vice versa. The main function we'll need is `fromJSON()`. Underneath `jsonlite` is are the `httr` and `curl` packages that allows you to construct HTTP requests in a straightforward way; what `fromJSON()` in particular does is take a URL, write a GET request for you, and give you back the reponse as a nested list.
+That's beer data! But not that useful yet. We want to take that JSON and fit it into a tidy dataframe. To do that, I turned to the excellent `jsonlite` package, which has a few functions for converting from JSON to R objects (generally lists because they can be easily nested like JSON) and vice versa. The main function we'll need is `fromJSON()`. Underneath `jsonlite` are the `httr` and `curl` packages that allows you to construct HTTP requests in a straightforward way; what `fromJSON()` in particular does is take a URL, write a GET request for you, and give you back the reponse as a nested list.
 
-To get our feet wet, we can generalize our URL write a little function that takes a beer ID and returns a nested list of data.
+To get our feet wet, we can generalize the URL from above and write a little function that takes a beer ID and returns a nested list of data.
 
 ```{r get_beer_func}
 base_url <- "http://api.brewerydb.com/v2"
@@ -132,7 +135,7 @@ get_beer("GZQpRX") %>% toJSON()
 &nbsp;
 
 
-BreweryDB's got several endpoints that take a single parameter, an ID, just like the beer endpoint that we based our function on. I wanted a function for each of these endpoints so I could quickly take a look at the structure of the data returned. Rather than construct them all by hand like we did with `get_beer()`, this seemed like a good time to write a function factory to create functions to GET any beer, brewery, category, etc. if we know its ID.
+BreweryDB's got several endpoints that take a single parameter, an ID, just like the `beer` endpoint that we based our function on. I wanted a function for each of these endpoints so I could quickly take a look at the structure of the data returned. Rather than construct them all by hand like we did with `get_beer()`, this seemed like a good time to write a function factory to create functions to GET any beer, brewery, category, etc. if we know its ID.
 
 First, a vector of all the single-parameter endpoints:
 
@@ -141,7 +144,7 @@ endpoints <- c("beer", "brewery", "category", "event", "feature", "glass", "guil
 ```
 
 
-We'll first write a generic function for getting data about a single ID, `id` from an endpoint `ep`. 
+Next we'll write a generic function for getting data about a single ID, `id` from an endpoint `ep`. 
 
 
 ```{r get_}
@@ -181,20 +184,27 @@ This is good stuff for exploring the type of data we can get back from each of t
 
 ### Building the Dataset
 
-So since we're mostly interested in beer, our main workhorse endpoing is going to be `beers`. 
+So since we're mostly interested in beer, our main workhorse endpoint is going to be `beers`. This is different from the `beer` endpoint because we'll get multiple beers back, rather than specifying a single ID. The documentation shows what a response to this endpoint might look like.
 
-![grab_all_beers](./img/grab_all_beers.jpg)
+<br>
 
-The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. We can specify page with the `&p=` parameter in the URL.
+![](./img/grab_all_beers.jpg)
 
-The strategy I took, implemented in `paginated_request()`, was to go page by page, ask for all 50 beers on the page and tack that page's data on to the bottom of the one before it.
+<br>
 
-Helpfully, the `numberOfPages` variable in each page of the response tells us what the total number of pages is for this particular endpoint; it's is the same no matter what page we're on, so we'll take it from the first page and save that in our own variable, `number_of_pages`. We know which page we're on from `currentPage`. So since we know which page we're on and how many total pages there are, we can send requests and unnest each one into a datataframe until we hit `number_of_pages`. We attach each of the freshly unnested dataframes to all the ones that came before it, and, when we're done, return the whole thing.
+The next challenge is how best to go about getting all the beers BreweryDB's got. We can't simply ask for all of them at once because our response from any one call to the API is limited to 50 beers per page. What we can do is a specify page number with the `&p=` parameter.
 
-What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more funny animal videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating memory or vectorizing it `r emo::ji("relaxed")`.)
+The strategy I took, implemented in `paginated_request()` below, was to go page by page, ask for all 50 beers on the page and tack that page's data on to the bottom of all the ones that came before it.
+
+Helpfully, the `numberOfPages` variable in each response tells us what the total number of pages is for this particular endpoint; it's is the same no matter what page we're on, so we'll take it from the first page and save that in our own variable, `number_of_pages`. We know which page we're on from `currentPage`. So since we know which page we're on and how many total pages there are, we can send requests and unnest each response into a datataframe until we hit `number_of_pages`. We attach each of the freshly unnested dataframes to all the ones that came before it, and, when we're done, return the whole thing.
+
+What the `addition` parameter of our function does is let you paste any other parameters onto the end of the URL. If you want it on, `trace_progress` tells you what page you're on so you can more accurately judge how many more funny animal videos I mean stats lectures you can watch before you've gotten your data back. (It's worth noting that this function isn't optimized for speed at all, so queue up those videos or speed it up a bit by pre-allocating space for the `full_request` or vectorizing the function `r emo::ji("relaxed")`.)
+
+<br>
 
 <center>![onward](./img/onward.gif)</center>
 
+<br>
 
 ```{r get_beer, eval=FALSE}
 paginated_request <- function(ep, addition, trace_progress = TRUE) {    
@@ -236,7 +246,7 @@ get_beer("GZQpRX")$data$style$name
 ```
 
 
-We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector in the top level of the `data` portion of the response and, if particular list item we're unnesting has a `name` portion (like `$style$name`), it will grab that value and stick it in the appropriate column. Otherwise, we'll just take whatever the first vector is in the data response. (We only need to resort to this second option in one case that I'm aware of, which is glassware -- glassware doesn't have a `name`.)
+We'll write a helper function to put that into code. What `unnest_it()` will do is go along each vector on the top level of the `data` portion of the response and, if the particular list item we're unnesting has a `name` attribute (like `$style$name`), it will grab that value and stick it in the appropriate column. Otherwise, we'll just take whatever the first vector is in the data response. (We only need to resort to this second option in one case that I'm aware of, which is glassware -- glassware doesn't have a `name`.)
 
 ```{r unnest_it}
 unnest_it <- function(lst) {
@@ -256,8 +266,7 @@ unnest_it <- function(lst) {
 
 
 
-Okay, so we run the thing and assign it to the object `beer_necessities`. 
-<!-- (I meant to change the name a long time ago but now it stuck and changing it would almost certainly break more things than it's worth `r emo::ji("woman_shrugging_medium_light_skin_tone")`). -->
+Okay, so we run the thing and assign it to the object `beer_necessities`. (I meant to change the name a long time ago but now it stuck and changing it would almost certainly break more things than it's worth `r emo::ji("sweat_smile")`).
 
 ```{r beer_necessities, eval=FALSE}
 beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients=Y")
@@ -265,7 +274,11 @@ beer_necessities <- paginated_request(ep = "beers", addition = "&withIngredients
 
 We ask for ingredients in our addition so we know which particular hops and malts are included in each beer. These were unnested using a similar procedure.
 
-![such_taps](./img/such_taps.jpg)
+<br>
+
+![](./img/such_taps.jpg)
+
+<br>
 
 Let's take a look at some of what we've got:
 
@@ -273,7 +286,7 @@ Let's take a look at some of what we've got:
 knitr::kable(beer_necessities[115:120, ] %>% select(id, name, style, style_collapsed, glass, abv, ibu, srm, hops_name, malt_name))
 ```
 
-The three main "predictor" variables we've got are ABV, IBU, and SRM. They stand for alcohol by volume, International Bitterness Units, and Standard Reference Method, respectively. What they mean is: how alcoholic is the beer, how bitter is it, and what color is it on a scale of light to dark.
+The three main "predictor" variables we've got are ABV, IBU, and SRM. They stand for alcohol by volume, International Bitterness Units (really), and Standard Reference Method, respectively. What they mean is: how alcoholic is the beer, how bitter is it, and what color is it on a scale of light to dark.
 
 
 ```{r beer_necessities_glimpse}
@@ -291,16 +304,16 @@ Much tidier. Next, I put the data in a couple different places: 1) a local MySQL
 
 The last thing I'll get into here is the first bit of transforming I did once I'd gotten the data.
 
-Looking through the outcome variable, style, I noticed that we've got `r length(levels(beer_necessities$style))` total styles. A lot of these are styles that I'd really consider sub-styles. Like, should American-Style Amber (Low Calorie) Lager and American-Style Amber Lager *really* be considered two different style beers? You may think the disctinciton is important -- and if you do, let me know why! -- but I say probably not.
+Looking through the outcome variable, style, I noticed that we've got `r length(levels(beer_necessities$style))` total styles. A lot of these are styles that I'd really consider sub-styles. Like, should American-Style Amber (Low Calorie) Lager and American-Style Amber Lager *really* be considered two different style beers? You may think these small distinctions are important -- and if you do, let me know why! -- but I say probably not.
 
 ```{r style_levels}
 levels(beer_necessities$style)
 ```
 
 
-The goal of my fist bit of munging will be to lump some of those sub-styles of beer in with their closest cousins. Thinking about the best way of doing this objectively, I noticed that most of the sub-styles tended to contain another broader style plus some modifiers; in other words, sub-styles were longer versions of the main styles.
+The goal of my fist bit of munging will be to lump some of those sub-styles of beer in with their closest cousins. Thinking about the best way of doing this objectively, I noticed that the *text* of most of the sub-styles tended to contain another broader style plus some modifiers; in other words, sub-styles were longer versions of the main styles.
 
-For that reason, I decided to do the lumping based on the text of the style itself. I defined a few keywords that appeared in the most popular styles. 
+For that reason, I decided to do the lumping based on the style strings themselves. I defined a few keywords that appeared in the most popular styles. These keywords are going to be our new collapsed styles.
 
 
 ```{r keywords}
@@ -309,13 +322,13 @@ keywords <- c("Pale Ale", "India Pale Ale", "Double India Pale Ale", "Lager", "I
 
 Next I wrote the function below called `collapse_styles()`.
 
-`collapse_styles()` is going to do kind of what it says on the tin -- for each beer, find out which keyword, or `style_collapsed` to lump each `style` into. 
+`collapse_styles()` is going to do kind of what it says on the tin -- for each beer, find out which keyword, i.e. `style_collapsed`, to lump each `style` into. 
 
 One important detail of `keywords` is that *order matters*. I intentionally ordered keywords that are contained within one another from most general to most specific.
 
-Take the first three keywords: `"Pale Ale", "India Pale Ale", "Double India Pale Ale"`. I think the distinction between these three styles is important because they are three of the most popular styles in BreweryDB and because they taste noticeably different. What we're going to do is, for every beer, loop through all the keywords and if we find a match between its `style` and one of these `keywords` and assign that keyword as its `style_collaped`. Since we're looping through the keywords in the order we've defined above, the *last* match we get to will be the one that ultimately is assigned as that beer's `style_collaped`.
+Take the first three keywords: `"Pale Ale", "India Pale Ale", "Double India Pale Ale"`. I think the distinction between these three styles is important because they are three of the most popular styles in BreweryDB and because they taste noticeably different. So I want to make sure that Pale Ales don't get bundled up into India Pale Ales. What we're going to do is, for every beer, loop through all the keywords and if we find a match between its `style` and one of these `keywords` we'll assign that keyword as its `style_collaped`. Since we're looping through the keywords in the order we've defined above, the *last* match we get to will be the one that ultimately is assigned as that beer's `style_collaped`.
 
-That means that if a beer's style is Super Duper Strong Imperial Double India Pale Ale, it'll first be assigned the `style_collapsed` "Pale Ale", then "India Pale Ale", and finally "Double India Pale Ale". That's exactly what we want because "Double India Pale Ale" is the most specific of those three and, presumably, closest in spirit to Super Duper Strong Imperial Double India Pale Ale.
+That means that if a beer's style is Super Duper Strong Imperial Double India Pale Ale, it'll first be assigned the `style_collapsed` "Pale Ale", then "India Pale Ale", and finally it'll settle into "Double India Pale Ale". That's exactly what we want because "Double India Pale Ale" is the most specific of those three and, presumably, closest in spirit to Super Duper Strong Imperial Double India Pale Ale.
 
 
 ```{r collapse_styles}
@@ -341,26 +354,35 @@ collapse_styles <- function(df, trace_progress = TRUE) {
 
 If we set `trace_progress` to `TRUE` we can make sure things are working as intended.
 
-![collapse_styles](./img/collapse_styles.jpg)
+<br>
 
-Cool, now we've got a factor column in our dataframe with only `r length(keywords)` instead of `r length(levels(beer_necessities$style))` levels. 
+![](./img/collapse_styles.jpg)
 
-After a little time spent reading documentation, crafting a few functions for grabbing the beer we need and getting it into a tidy data structure that's easy to manipulate, we're off to the races. Now's probably a good time to crack a cold one before moving onto some actual analysis! In my case, that actual analysis mainly involved looking at clusters of beers by building this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
+<br>
 
-![clusterfun](./img/clusterfun.jpg)
+Cool, now we've got a factor column in our dataframe with only `r length(keywords)` levels instead of `r length(levels(beer_necessities$style))`.
 
+<br>
+
+After a little time spent reading documentation, crafting a few functions for grabbing the beer data we need and getting it into a tidy data structure that's easy to manipulate, we're off to the races. Now's probably a good time to crack a cold one before moving onto some actual analysis! In my case, that actual analysis mainly involved looking at clusters of beers by building this [Shiny app ](https://amandadobbyn.shinyapps.io/clusterfun/) and trying to predict a beer's style using a random forest and a small neural net.
+
+<br>
+
+![](./img/clusterfun.jpg)
+
+<br>
 
 If you made it this far and are interested in reading more of my yammering on about the subject, my upstanding coworker [Eddie](https://www.linkedin.com/in/eddievb/), founder of the honourable Earlybird Software Open Beer Consortium, took the time to [interview](https://medium.com/earlybird-software/chatting-with-data-scientist-amanda-dobbyn-about-analyzing-beer-styles-10a7a3278dfd) me about the project. Once again, all the code for the project is up at https://github.com/aedobbyn/beer-data-science. Pull requests are more than welcome.
 
 Cheers and happy exploring!
 
 
-![cheers](./img/cheers.jpg)
+![](./img/cheers.jpg)
 
 
-[^1]: Since it's not super sensitive information, I store my key in a gitignored file that I `source()` in whenever I need to hit the API. You could also save the key as a global variable in an `.Renviron` file in your home directory and access it with `Sys.getenv()`.
+[^1]: Since it's not super sensitive information, I store my key in a gitignored file that I `source()` in whenever I need to hit the API. You could also save the key as a global variable in an `.Renviron` file in your home directory and access it with `Sys.getenv()`, or use the excellent package `keyringr` to store it in your personal keychain.
 
-[^2]: [`feather`](https://github.com/wesm/feather) is a binary file format so it's fast to read in *and* saves your types so you don't need to worry about `stringsAsFactors` or setting your types after you read in your data like you'd need to with a typical CSV file. It's a great way to port data between R and Python as well.
+[^2]: [`feather`](https://github.com/wesm/feather) is a binary file format so it's fast to read in *and* saves your types. That means you don't need to worry about `stringsAsFactors` or setting types after you read in your data like you'd need to with a typical CSV file. It's a great way to port data between R and Python as well.
 
 
 
